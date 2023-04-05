@@ -1,4 +1,4 @@
-# Finance Extractor
+# Finance
 
 ## About
 
@@ -14,3 +14,7 @@ Then run:
 npm install
 npm run start
 ```
+
+## Roadmap
+
+- [ ] Find a better name

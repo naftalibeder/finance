@@ -1,5 +1,5 @@
 {
-  "name": "finance-extractor",
+  "name": "finance",
   "version": "0.0.1",
   "description": "A tool for extracting personal financial transaction information",
   "main": "index.js",
