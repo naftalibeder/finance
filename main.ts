@@ -43,6 +43,7 @@ const authenticate = async (context: BrowserContext, page: Page) => {
   let loc: Locator;
 
   await page.goto("https://client.schwab.com/app/accounts/transactionhistory");
+
   try {
     loc = page.locator("#meganav-menu-utl-logout");
     await loc.waitFor({ state: "attached", timeout: 2000 });
