@@ -1,0 +1,17 @@
+{
+  "name": "finance-extractor",
+  "version": "0.0.1",
+  "description": "A tool for extracting personal financial transaction information",
+  "main": "index.js",
+  "scripts": {
+    "start": "npx tsc && source .env && node dist/main.js \"$USERNAME\" \"$PASSWORD\" \"$ACCOUNT_NAME\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "18.15.11",
+    "playwright-core": "1.32.1",
+    "typescript": "5.0.3"
+  }
+}
