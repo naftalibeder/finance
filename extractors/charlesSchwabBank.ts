@@ -1,20 +1,15 @@
-import { Locator, Page } from "playwright-core";
-import { Extractor, ExtractorContext, Transaction } from "../types";
 import fs from "fs";
-import { parse } from "csv-parse";
+import { Locator, Page } from "playwright-core";
+import { Extractor, ExtractorContext } from "../types";
 
-const run = async (
+const getData = async (
   browserPage: Page,
   extractorContext: ExtractorContext
-): Promise<Transaction[]> => {
+): Promise<string> => {
   await authenticate(browserPage, extractorContext);
   const rawData = await getRawData(browserPage, extractorContext);
-  // const rawData = fs.readFileSync(
-  //   "./tmp/test.txt",
-  //   { encoding: "utf-8" }
-  // );
-  const transactions = await parseTransactions(rawData, extractorContext);
-  return transactions;
+  // const rawData = fs.readFileSync("./tmp/test.txt", { encoding: "utf-8" });
+  return rawData;
 };
 
 const authenticate = async (
@@ -106,82 +101,8 @@ const getRawData = async (
   return rawData;
 };
 
-const parseTransactions = async (
-  rawData: string,
-  extractorContext: ExtractorContext
-): Promise<Transaction[]> => {
-  const { deleteRows, columnMap } = extractorContext;
-
-  // Remove non-transaction lines.
-
-  console.log(`Cleaning raw data (removing ${deleteRows} rows)`);
-
-  let rawDataCleaned = rawData;
-
-  if (deleteRows.length > 0) {
-    const rows = rawData.split("\n");
-    deleteRows.forEach((d, i) => {
-      if (d < 0) {
-        deleteRows[i] = rows.length - 1 + d;
-      }
-    });
-    deleteRows.sort((a, b) => b - a);
-    deleteRows.forEach((d, _) => {
-      rows.splice(d, 1);
-    });
-    rawDataCleaned = rows.join("\n");
-  }
-
-  // Get generic records from each row.
-
-  let records: string[][];
-  try {
-    records = await new Promise<string[][]>((res, rej) => {
-      const rows: string[][] = [];
-
-      const parser = parse({
-        delimiter: ",",
-      });
-      parser.on("readable", () => {
-        let row: string[];
-        while ((row = parser.read()) !== null) {
-          rows.push(row);
-        }
-      });
-      parser.on("error", (e) => {
-        rej(e);
-      });
-      parser.on("end", () => {
-        console.log("Parser ended");
-        res(rows);
-      });
-      parser.write(rawDataCleaned);
-      parser.end();
-    });
-    console.log("Parser success:", records);
-  } catch (e) {
-    console.error("Parser error:", e);
-    return [];
-  }
-
-  // Convert generic records to transactions.
-
-  let transactions: Transaction[] = [];
-  for (const r of records) {
-    const transaction: Transaction = {
-      date: r[columnMap.date],
-      payee: r[columnMap.payee],
-      price: r[columnMap.price],
-      description: r[columnMap.description],
-    };
-    transactions.push(transaction);
-  }
-
-  return transactions;
-};
-
 const extractor: Extractor = {
-  run,
+  getData,
 };
 
 export { extractor };

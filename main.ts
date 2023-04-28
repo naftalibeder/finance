@@ -8,6 +8,7 @@ import {
 import { Config } from "./types";
 import { BROWSER_CONTEXT_PATH } from "./constants";
 import extractors from "./extractors";
+import { parseTransactions } from "./utils";
 
 const main = async () => {
   const [browser, browserContext] = await setUp();
@@ -18,18 +19,15 @@ const main = async () => {
   for (const e of config.extractorContexts) {
     const browserPage = await browserContext.newPage();
 
-    console.log("Running extractor:", e.bank);
+    console.log(`Running extractor for ${e.bank}`);
 
     const extractor = extractors[e.bank];
-    const transactions = await extractor.run(browserPage, e);
+    const rawData = await extractor.getData(browserPage, e);
+    const transactions = await parseTransactions(rawData, e);
 
-    console.log("Got transactions:", transactions);
-
-    fs.writeFileSync(
-      `./out/${e.bank}.${e.account}.json`,
-      JSON.stringify(transactions, undefined, 2),
-      { encoding: "utf-8" }
-    );
+    fs.writeFileSync(`db.json`, JSON.stringify(transactions, undefined, 2), {
+      encoding: "utf-8",
+    });
 
     await browserContext.storageState({ path: BROWSER_CONTEXT_PATH });
     await browserPage.close();
