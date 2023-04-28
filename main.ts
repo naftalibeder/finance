@@ -2,145 +2,60 @@ import fs from "fs";
 import {
   Browser,
   BrowserContext,
+  BrowserContextOptions,
   firefox,
-  Locator,
-  Page,
 } from "playwright-core";
-
-const CONTEXT_PATH = "tmp/context.json";
-
-const [, , USERNAME, PASSWORD, ACCOUNT_NAME] = process.argv;
-
-if (!USERNAME || !PASSWORD) {
-  throw "No username or password provided";
-}
+import { Config } from "./types";
+import { BROWSER_CONTEXT_PATH } from "./constants";
+import extractors from "./extractors";
 
 const main = async () => {
-  const [browser, context, page] = await setUp();
+  const [browser, browserContext] = await setUp();
 
-  await authenticate(context, page);
-  const raw = await getData(page);
-  const parsed = await parseData(raw);
+  const configStr = fs.readFileSync("./config.json", { encoding: "utf-8" });
+  const config = JSON.parse(configStr) as Config;
 
-  await tearDown(browser, context, page);
-};
+  for (const e of config.extractorContexts) {
+    const browserPage = await browserContext.newPage();
 
-const setUp = async (): Promise<[Browser, BrowserContext, Page]> => {
-  console.log("Launching browser");
+    console.log("Running extractor:", e.bank);
 
-  const browser = await firefox.launch({ headless: false });
-  const context = await browser.newContext({
-    storageState: fs.existsSync(CONTEXT_PATH) ? CONTEXT_PATH : undefined,
-  });
-  const page = await context.newPage();
+    const extractor = extractors[e.bank];
+    const transactions = await extractor.run(browserPage, e);
 
-  return [browser, context, page];
-};
+    console.log("Got transactions:", transactions);
 
-const authenticate = async (context: BrowserContext, page: Page) => {
-  console.log("Checking authentication");
+    fs.writeFileSync(
+      `./out/${e.bank}.${e.account}.json`,
+      JSON.stringify(transactions, undefined, 2),
+      { encoding: "utf-8" }
+    );
 
-  let loc: Locator;
-
-  await page.goto("https://client.schwab.com/app/accounts/transactionhistory");
-
-  try {
-    loc = page.locator("#meganav-menu-utl-logout");
-    await loc.waitFor({ state: "attached", timeout: 2000 });
-
-    console.log("Already authenticated; continuing");
-    return;
-  } catch (e) {
-    console.log("Not authenticated yet");
+    await browserContext.storageState({ path: BROWSER_CONTEXT_PATH });
+    await browserPage.close();
   }
 
-  const loginFrame = page.frames()[2];
-
-  loc = loginFrame.locator("#loginIdInput");
-  await loc.type(USERNAME);
-
-  loc = loginFrame.locator("#passwordInput");
-  await loc.type(PASSWORD);
-
-  loc = loginFrame.locator("#btnLogin");
-  await loc.click();
-
-  await context.storageState({ path: CONTEXT_PATH });
-
-  console.log("Authenticated");
+  await tearDown(browser, browserContext);
 };
 
-const getData = async (page: Page): Promise<string> => {
-  let loc: Locator;
+const setUp = async (): Promise<[Browser, BrowserContext]> => {
+  const browser = await firefox.launch({ headless: true });
 
-  // History and export.
+  let options: BrowserContextOptions = {};
+  if (fs.existsSync(BROWSER_CONTEXT_PATH)) {
+    options.storageState = BROWSER_CONTEXT_PATH;
+  }
 
-  console.log("Navigating to export page");
+  console.log("Launching browser with options:", options);
 
-  const dashboardFrame = page.mainFrame();
-
-  loc = dashboardFrame.locator("#meganav-secondary-menu-hist");
-  await loc.click();
-
-  loc = dashboardFrame.locator(".sdps-account-selector");
-  await loc.click();
-
-  loc = dashboardFrame.locator(".sdps-account-selector__list-item", {
-    hasText: ACCOUNT_NAME,
-  });
-  await loc.click();
-
-  loc = dashboardFrame.locator(".transactions-history-container");
-  await loc.click();
-
-  loc = dashboardFrame.locator("#bttnExport button");
-  await loc.click();
-
-  // Popup.
-
-  console.log("Launching export popup");
-
-  const popupPage = await page.waitForEvent("popup");
-  await popupPage.waitForLoadState("domcontentloaded");
-  await popupPage.waitForLoadState("networkidle");
-
-  loc = popupPage.locator(".button-primary");
-  await loc.click();
-
-  // File handling.
-
-  console.log("Waiting for download");
-
-  const download = await page.waitForEvent("download");
-  const filePath = await download.path();
-  const text = fs.readFileSync(filePath!, { encoding: "utf-8" });
-
-  console.log("File saved");
-
-  return text;
+  const browserContext = await browser.newContext(options);
+  return [browser, browserContext];
 };
 
-const parseData = async (text: string): Promise<string[]> => {
-  console.log("Parsing and normalizing file");
-
-  const lines = text.split("\n");
-
-  const displayCt = 10;
-  console.log(`Found ${lines.length - 1} lines (showing first ${displayCt})`);
-  console.log(lines.slice(0, displayCt));
-
-  return lines;
-};
-
-const tearDown = async (
-  browser: Browser,
-  context: BrowserContext,
-  page: Page
-) => {
+const tearDown = async (browser: Browser, browserContext: BrowserContext) => {
   console.log("Saving and closing browser");
 
-  await page.close();
-  await context.storageState({ path: CONTEXT_PATH });
+  await browserContext.storageState({ path: BROWSER_CONTEXT_PATH });
   await browser.close();
 };
 

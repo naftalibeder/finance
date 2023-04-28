@@ -4,7 +4,7 @@
   "description": "A tool for extracting personal financial transaction information",
   "main": "index.js",
   "scripts": {
-    "start": "npx tsc && source .env && node dist/main.js \"$USERNAME\" \"$PASSWORD\" \"$ACCOUNT_NAME\""
+    "start": "npx tsc && node dist/main.js"
   },
   "keywords": [],
   "author": "",
@@ -13,5 +13,8 @@
     "@types/node": "18.15.11",
     "playwright-core": "1.32.1",
     "typescript": "5.0.3"
+  },
+  "dependencies": {
+    "csv-parse": "5.3.8"
   }
 }
