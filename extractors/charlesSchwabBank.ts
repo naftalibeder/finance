@@ -1,20 +1,20 @@
 import fs from "fs";
 import { Locator, Page } from "playwright-core";
-import { Extractor, ExtractorContext } from "../types";
+import { Extractor, ExtractorAccount, ExtractorCredentials } from "../types";
 
 const getData = async (
   browserPage: Page,
-  extractorContext: ExtractorContext
+  account: ExtractorAccount,
+  credentials: ExtractorCredentials
 ): Promise<string> => {
-  await authenticate(browserPage, extractorContext);
-  const rawData = await getRawData(browserPage, extractorContext);
-  // const rawData = fs.readFileSync("./tmp/test.txt", { encoding: "utf-8" });
+  await authenticate(browserPage, credentials);
+  const rawData = await getRawData(browserPage, account);
   return rawData;
 };
 
 const authenticate = async (
   browserPage: Page,
-  extractorContext: ExtractorContext
+  credentials: ExtractorCredentials
 ) => {
   console.log("Checking authentication");
 
@@ -37,10 +37,10 @@ const authenticate = async (
   const loginFrame = browserPage.frames()[2];
 
   loc = loginFrame.locator("#loginIdInput");
-  await loc.type(extractorContext.username);
+  await loc.type(credentials.username);
 
   loc = loginFrame.locator("#passwordInput");
-  await loc.type(extractorContext.password);
+  await loc.type(credentials.password);
 
   loc = loginFrame.locator("#btnLogin");
   await loc.click();
@@ -50,7 +50,7 @@ const authenticate = async (
 
 const getRawData = async (
   browserPage: Page,
-  extractorContext: ExtractorContext
+  account: ExtractorAccount
 ): Promise<string> => {
   let loc: Locator;
 
@@ -67,7 +67,7 @@ const getRawData = async (
   await loc.click();
 
   loc = dashboardFrame.locator(".sdps-account-selector__list-item", {
-    hasText: extractorContext.account,
+    hasText: account.info.number,
   });
   await loc.click();
 

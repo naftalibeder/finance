@@ -1,11 +1,17 @@
+import fs from "fs";
 import { parse } from "csv-parse";
-import { ExtractorContext, Transaction } from "./types";
+import {
+  Database,
+  ExtractorAccount,
+  ExtractorTransactionKey,
+  Transaction,
+} from "./types";
 
 export const parseTransactions = async (
   rawData: string,
-  extractorContext: ExtractorContext
+  account: ExtractorAccount
 ): Promise<Transaction[]> => {
-  const { deleteRows, columnMap } = extractorContext;
+  const { info, deleteRows, columnMap } = account;
 
   // Remove non-transaction lines.
 
@@ -64,20 +70,39 @@ export const parseTransactions = async (
   console.log("Converting rows to transactions");
 
   let transactions: Transaction[] = [];
-  for (const r of records) {
-    const priceStr = r[columnMap.price];
-    const priceAmount = parseFloat(priceStr.replace("$", ""));
+  for (const rec of records) {
+    const recNorm: Record<ExtractorTransactionKey, string> = {
+      date: rec[columnMap.date] ?? "",
+      account: rec[columnMap.account] ?? "",
+      payee: rec[columnMap.payee] ?? "",
+      price: rec[columnMap.price] ?? "",
+      priceWithdrawal: rec[columnMap.priceWithdrawal] ?? "",
+      priceDeposit: rec[columnMap.priceDeposit] ?? "",
+      description: rec[columnMap.description] ?? "",
+    };
+
+    let priceAmount = 0;
+    if (recNorm.price.length > 0) {
+      const priceStr = recNorm.price.replace("$", "");
+      priceAmount = parseFloat(priceStr);
+    } else if (recNorm.priceWithdrawal.length > 0) {
+      const priceStr = recNorm.priceWithdrawal.replace("$", "");
+      priceAmount = parseFloat(priceStr) * -1;
+    } else if (recNorm.priceDeposit.length > 0) {
+      const priceStr = recNorm.priceDeposit.replace("$", "");
+      priceAmount = parseFloat(priceStr);
+    }
     const priceCurrency = "USD";
 
     const transaction: Transaction = {
-      date: new Date(r[columnMap.date]).toLocaleDateString("en-CA"),
-      account: extractorContext.account,
-      payee: r[columnMap.payee],
+      date: new Date(recNorm.date).toLocaleDateString("en-CA"),
+      account: info.slug,
+      payee: recNorm.payee,
       price: {
         amount: priceAmount,
         currency: priceCurrency,
       },
-      description: r[columnMap.description],
+      description: recNorm.description,
     };
     transactions.push(transaction);
   }
@@ -85,4 +110,45 @@ export const parseTransactions = async (
   console.log(`Found ${transactions.length} transactions`);
 
   return transactions;
+};
+
+export const addToDatabase = (transactions: Transaction[]): number => {
+  const dbPath = "db.json";
+
+  // Load the database.
+
+  let db: Database = {
+    transactions: [],
+  };
+  if (fs.existsSync(dbPath)) {
+    const dbStr = fs.readFileSync(dbPath, { encoding: "utf-8" });
+    db = JSON.parse(dbStr);
+  }
+
+  // Add transactions, skipping duplicates.
+
+  let addCt = 0;
+  transactions.forEach((t) => {
+    const existing = db.transactions.find((o) => {
+      return (
+        o.date === t.date &&
+        o.account === t.account &&
+        o.price.amount === t.price.amount
+      );
+    });
+
+    if (existing) {
+      return;
+    }
+
+    db.transactions.push(t);
+    addCt += 1;
+  });
+
+  // Resave the database.
+
+  const dbStrUpdated = JSON.stringify(db, undefined, 2);
+  fs.writeFileSync(dbPath, dbStrUpdated, { encoding: "utf-8" });
+
+  return addCt;
 };

@@ -1,18 +1,31 @@
 import { Page } from "playwright-core";
-import { BankName, Transaction } from ".";
+import { BankSlug, Transaction } from ".";
 
 export type Extractor = {
   getData: (
     browserPage: Page,
-    extractorContext: ExtractorContext
+    account: ExtractorAccount,
+    credentials: ExtractorCredentials
   ) => Promise<string>;
 };
 
-export type ExtractorContext = {
-  bank: BankName;
+export type ExtractorAccount = {
+  info: {
+    bankSlug: BankSlug;
+    slug: string;
+    display: string;
+    number: string;
+  };
+  deleteRows: number[];
+  columnMap: Record<ExtractorTransactionKey, number>;
+};
+
+export type ExtractorCredentials = {
   username: string;
   password: string;
-  account: string;
-  deleteRows: number[];
-  columnMap: Record<keyof Transaction, number>;
 };
+
+export type ExtractorTransactionKey =
+  | keyof Transaction
+  | "priceWithdrawal"
+  | "priceDeposit";

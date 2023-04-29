@@ -8,7 +8,7 @@ import {
 import { Config } from "./types";
 import { BROWSER_CONTEXT_PATH } from "./constants";
 import extractors from "./extractors";
-import { parseTransactions } from "./utils";
+import { addToDatabase, parseTransactions } from "./utils";
 
 const main = async () => {
   const [browser, browserContext] = await setUp();
@@ -16,18 +16,25 @@ const main = async () => {
   const configStr = fs.readFileSync("./config.json", { encoding: "utf-8" });
   const config = JSON.parse(configStr) as Config;
 
-  for (const e of config.extractorContexts) {
+  for (const account of config.accounts) {
     const browserPage = await browserContext.newPage();
+    const tmpFilePath = `tmp/${account.info.bankSlug}.${account.info.slug}.csv`;
 
-    console.log(`Running extractor for ${e.bank}`);
+    console.log(
+      `Running extractor for ${account.info.bankSlug} ${account.info.slug}`
+    );
 
-    const extractor = extractors[e.bank];
-    const rawData = await extractor.getData(browserPage, e);
-    const transactions = await parseTransactions(rawData, e);
+    const extractor = extractors[account.info.bankSlug];
+    const credentials = config.credentials[account.info.bankSlug];
 
-    fs.writeFileSync(`db.json`, JSON.stringify(transactions, undefined, 2), {
-      encoding: "utf-8",
-    });
+    const rawData = await extractor.getData(browserPage, account, credentials);
+    fs.writeFileSync(tmpFilePath, rawData, { encoding: "utf-8" });
+    // const rawData = fs.readFileSync(tmpFilePath, { encoding: "utf-8" }); // Uncomment if debugging.
+
+    const transactions = await parseTransactions(rawData, account);
+    const addCt = addToDatabase(transactions);
+
+    console.log(`Added ${addCt} new transactions`);
 
     await browserContext.storageState({ path: BROWSER_CONTEXT_PATH });
     await browserPage.close();

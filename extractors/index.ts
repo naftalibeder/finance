@@ -1,7 +1,7 @@
-import { BankName, Extractor } from "../types";
+import { BankSlug, Extractor } from "../types";
 import { extractor as charlesSchwabBank } from "./charlesSchwabBank";
 
-const extractors: Record<BankName, Extractor> = {
+const extractors: Record<BankSlug, Extractor> = {
   "charles-schwab-bank": charlesSchwabBank,
 };
 

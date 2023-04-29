@@ -1,5 +1,6 @@
-import { ExtractorContext } from ".";
+import { BankSlug, ExtractorAccount, ExtractorCredentials } from ".";
 
 export type Config = {
-  extractorContexts: ExtractorContext[];
+  accounts: ExtractorAccount[];
+  credentials: Record<BankSlug, ExtractorCredentials>;
 };
