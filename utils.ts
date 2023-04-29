@@ -6,6 +6,7 @@ import {
   ExtractorTransactionKey,
   Transaction,
 } from "./types";
+import { DB_PATH } from "./constants";
 
 export const parseTransactions = async (
   rawData: string,
@@ -113,15 +114,13 @@ export const parseTransactions = async (
 };
 
 export const addToDatabase = (transactions: Transaction[]): number => {
-  const dbPath = "db.json";
-
   // Load the database.
 
   let db: Database = {
     transactions: [],
   };
-  if (fs.existsSync(dbPath)) {
-    const dbStr = fs.readFileSync(dbPath, { encoding: "utf-8" });
+  if (fs.existsSync(DB_PATH)) {
+    const dbStr = fs.readFileSync(DB_PATH, { encoding: "utf-8" });
     db = JSON.parse(dbStr);
   }
 
@@ -148,7 +147,7 @@ export const addToDatabase = (transactions: Transaction[]): number => {
   // Resave the database.
 
   const dbStrUpdated = JSON.stringify(db, undefined, 2);
-  fs.writeFileSync(dbPath, dbStrUpdated, { encoding: "utf-8" });
+  fs.writeFileSync(DB_PATH, dbStrUpdated, { encoding: "utf-8" });
 
   return addCt;
 };

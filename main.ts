@@ -5,15 +5,15 @@ import {
   BrowserContextOptions,
   firefox,
 } from "playwright-core";
-import { Config } from "./types";
-import { BROWSER_CONTEXT_PATH } from "./constants";
 import extractors from "./extractors";
 import { addToDatabase, parseTransactions } from "./utils";
+import { Config } from "./types";
+import { BROWSER_CONTEXT_PATH, CONFIG_PATH } from "./constants";
 
 const main = async () => {
   const [browser, browserContext] = await setUp();
 
-  const configStr = fs.readFileSync("./config.json", { encoding: "utf-8" });
+  const configStr = fs.readFileSync(CONFIG_PATH, { encoding: "utf-8" });
   const config = JSON.parse(configStr) as Config;
 
   for (const account of config.accounts) {
