@@ -2,11 +2,11 @@
 
 ## About
 
-It's a transactions extractor that currently works only with Schwab.
+A private, self-hostable transactions extractor that doesn't require trusting anyone else with your financial data or credentials.
 
 ## Instructions
 
-Duplicate `.env.sample` to `.env` and update its fields.
+Set up a configuration file at `../data/config.json`. See [Config.ts](./types/Config.ts) for reference.
 
 Then run:
 
