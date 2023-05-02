@@ -5,7 +5,8 @@ export type Extractor = {
   getData: (
     browserPage: Page,
     account: ExtractorAccount,
-    credentials: ExtractorCredentials
+    credentials: ExtractorCredentials,
+    range: ExtractorDateRange
   ) => Promise<string>;
 };
 
@@ -16,8 +17,13 @@ export type ExtractorAccount = {
     display: string;
     number: string;
   };
-  deleteRows: number[];
   columnMap: Record<ExtractorTransactionKey, number>;
+  skip: boolean;
+};
+
+export type ExtractorDateRange = {
+  start: Date;
+  end: Date;
 };
 
 export type ExtractorCredentials = {

@@ -1,1 +1,1 @@
-export type BankSlug = "charles-schwab-bank";
+export type BankSlug = "charles-schwab-bank" | "chase-bank";
