@@ -4,11 +4,10 @@ import { parse } from "csv-parse";
 import {
   Database,
   ExtractorAccount,
-  ExtractorDateRange,
   ExtractorTransactionKey,
   Transaction,
 } from "./types";
-import { DB_PATH } from "./constants";
+import { DB_PATH } from "../constants";
 
 export const parseTransactions = async (
   rawData: string,
