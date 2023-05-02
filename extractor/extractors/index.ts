@@ -1,4 +1,4 @@
-import { BankSlug, Extractor } from "../types";
+import { BankSlug, Extractor } from "../../types";
 import { extractor as charlesSchwabBank } from "./charlesSchwabBank";
 import { extractor as chaseBank } from "./chaseBank";
 

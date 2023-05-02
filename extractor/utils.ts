@@ -1,13 +1,10 @@
-import fs from "fs";
 import readline from "readline";
 import { parse } from "csv-parse";
 import {
-  Database,
   ExtractorAccount,
   ExtractorTransactionKey,
   Transaction,
-} from "./types";
-import { DB_PATH } from "../constants";
+} from "../types";
 
 export const parseTransactions = async (
   rawData: string,
@@ -112,50 +109,6 @@ const buildTransaction = (
     description: rowNorm.description,
   };
   return transaction;
-};
-
-export const addTransactionsToDatabase = (
-  transactions: Transaction[]
-): number => {
-  // Load the database.
-
-  let db: Database = {
-    transactions: [],
-  };
-  if (fs.existsSync(DB_PATH)) {
-    const dbStr = fs.readFileSync(DB_PATH, { encoding: "utf-8" });
-    db = JSON.parse(dbStr);
-  }
-
-  // Add transactions, skipping duplicates.
-
-  let addCt = 0;
-  let skipCt = 0;
-  transactions.forEach((t) => {
-    const existing = db.transactions.find((o) => {
-      return (
-        o.date === t.date &&
-        o.payee === t.payee &&
-        o.account === t.account &&
-        o.price.amount === t.price.amount
-      );
-    });
-
-    if (existing) {
-      skipCt += 1;
-      return;
-    }
-
-    db.transactions.push(t);
-    addCt += 1;
-  });
-
-  // Resave the database.
-
-  const dbStrUpdated = JSON.stringify(db, undefined, 2);
-  fs.writeFileSync(DB_PATH, dbStrUpdated, { encoding: "utf-8" });
-
-  return addCt;
 };
 
 export const getUserInput = async (message: string): Promise<string> => {

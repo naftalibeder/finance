@@ -6,13 +6,10 @@ import {
   firefox,
 } from "playwright-core";
 import extractors from "./extractors";
-import {
-  addTransactionsToDatabase,
-  parseTransactions,
-  toYYYYMMDD,
-} from "./utils";
-import { Config } from "./types";
+import { parseTransactions, toYYYYMMDD } from "./utils";
+import { Config } from "../types";
 import { CONFIG_PATH, TMP_DIR } from "../constants";
+import db from "../db";
 
 const BROWSER_CONTEXT_PATH = `${TMP_DIR}/browser-context.json`;
 
@@ -56,7 +53,7 @@ export const run = async () => {
       // const rawData = fs.readFileSync(tmpFilePath, { encoding: "utf-8" }); // Uncomment if debugging.
 
       const transactions = await parseTransactions(rawData, account);
-      const addCt = addTransactionsToDatabase(transactions);
+      const addCt = db.addTransactions(transactions);
       console.log(`Added ${addCt} new transactions for range ${prettyRange}`);
 
       if (addCt === 0) {

@@ -5,7 +5,7 @@ import {
   ExtractorAccount,
   ExtractorCredentials,
   ExtractorDateRange,
-} from "../types";
+} from "../../types";
 import { getUserInput } from "../utils";
 
 const getData = async (
