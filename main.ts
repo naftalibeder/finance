@@ -11,7 +11,7 @@ const main = async () => {
     res.send(view);
   });
 
-  app.get("/extract", async (req, res) => {
+  app.post("/extract", async (req, res) => {
     await extractor.run();
     res.send("Extraction complete.");
   });

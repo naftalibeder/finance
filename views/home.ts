@@ -3,14 +3,10 @@ import db from "../db";
 export const home = (): string => {
   const transactions = db.getTransactions();
 
-  let html = "";
-
-  html += "<button>Extract</button>";
-
-  html += `<p>${transactions.length} transactions</p>`;
-  html += "<table>";
+  let tableHtml = "";
+  tableHtml += "<table>";
   transactions.forEach((t) => {
-    html += `
+    tableHtml += `
     <tr>
       <td>${t.account}</td>
       <td>${t.date}</td>
@@ -19,7 +15,19 @@ export const home = (): string => {
     </tr>
     `;
   });
-  html += "</table>";
+  tableHtml += "</table>";
+
+  let html = `
+  <script>
+    const onClickRefresh = () => fetch('/extract', { method: 'POST' });
+  </script>
+  
+  <button onclick="onClickRefresh()">Refresh</button>
+
+  <p>${transactions.length} transactions</p>
+
+  ${tableHtml}
+  `;
 
   return html;
 };
