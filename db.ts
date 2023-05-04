@@ -1,10 +1,11 @@
 import fs from "fs";
 import { DB_PATH } from "./constants";
-import { Database, Transaction } from "./types";
+import { Account, Database, Transaction } from "./types";
 
 const loadDatabase = (): Database => {
   if (!fs.existsSync(DB_PATH)) {
     return {
+      accounts: [],
       transactions: [],
     };
   }
@@ -12,6 +13,27 @@ const loadDatabase = (): Database => {
   const data = fs.readFileSync(DB_PATH, { encoding: "utf-8" });
   const db = JSON.parse(data) as Database;
   return db;
+};
+
+const writeDatabase = (db: Database) => {
+  const dbStrUpdated = JSON.stringify(db, undefined, 2);
+  fs.writeFileSync(DB_PATH, dbStrUpdated, { encoding: "utf-8" });
+};
+
+const getAccounts = (): Account[] => {
+  const db = loadDatabase();
+  return db.accounts;
+};
+
+const updateAccount = (account: Account) => {
+  const db = loadDatabase();
+  const index = db.accounts.findIndex((o) => o.id === account.id);
+  if (index > -1) {
+    db.accounts[index] = account;
+  } else {
+    db.accounts.push(account);
+  }
+  writeDatabase(db);
 };
 
 const getTransactions = (): Transaction[] => {
@@ -29,7 +51,7 @@ const addTransactions = (newTransactions: Transaction[]): number => {
       return (
         u.date === n.date &&
         u.payee === n.payee &&
-        u.account === n.account &&
+        u.accountId === n.accountId &&
         u.price.amount === n.price.amount
       );
     });
@@ -45,10 +67,9 @@ const addTransactions = (newTransactions: Transaction[]): number => {
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
-  const dbStrUpdated = JSON.stringify(db, undefined, 2);
-  fs.writeFileSync(DB_PATH, dbStrUpdated, { encoding: "utf-8" });
+  writeDatabase(db);
 
   return addCt;
 };
 
-export default { getTransactions, addTransactions };
+export default { getAccounts, updateAccount, getTransactions, addTransactions };

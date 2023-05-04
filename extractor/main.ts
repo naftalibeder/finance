@@ -7,7 +7,7 @@ import {
 } from "playwright-core";
 import extractors from "./extractors";
 import { parseTransactions, toYYYYMMDD } from "./utils";
-import { Config } from "../types";
+import { Account, Config } from "../types";
 import { CONFIG_PATH, TMP_DIR } from "../constants";
 import db from "../db";
 
@@ -19,47 +19,64 @@ export const run = async () => {
   const configStr = fs.readFileSync(CONFIG_PATH, { encoding: "utf-8" });
   const config = JSON.parse(configStr) as Config;
 
-  for (const account of config.accounts) {
-    if (account.skip) {
+  for (const accountConfig of config.accounts) {
+    if (accountConfig.skip) {
       continue;
     }
 
     const browserPage = await browserContext.newPage();
 
-    const extractor = extractors[account.info.bankSlug];
-    const credentials = config.credentials[account.info.bankSlug];
+    const extractor = extractors[accountConfig.info.bankId];
+    const credentials = config.credentials[accountConfig.info.bankId];
 
     console.log(
-      `Running extractor for ${account.info.bankSlug} ${account.info.slug}`
+      `Running extractor for ${accountConfig.info.bankId} ${accountConfig.info.id}`
     );
 
-    let end = new Date();
+    const accountValue = await extractor.getAccountValue(
+      browserPage,
+      accountConfig,
+      credentials
+    );
+    if (!accountValue) {
+      continue;
+    }
+    const account: Account = {
+      id: accountConfig.info.id,
+      number: accountConfig.info.number,
+      price: accountValue,
+    };
+    db.updateAccount(account);
+    console.log(`Updated account value: ${account.price.amount}`);
 
+    let end = new Date();
     while (true) {
-      const spanMs = 1000 * 60 * 60 * 24 * 30 * 6; // ~6 months.
+      const spanMs = 1000 * 60 * 60 * 24 * 365; // ~1 year.
       const start = new Date(end.valueOf() - spanMs);
       const prettyRange = `${toYYYYMMDD(start)}-${toYYYYMMDD(end)}`;
       console.log(`Extracting date range ${prettyRange}`);
 
-      const rawData = await extractor.getData(
+      const transactionData = await extractor.getTransactionData(
         browserPage,
-        account,
+        accountConfig,
         credentials,
         { start, end }
       );
-
-      const tmpFilePath = `tmp/${account.info.bankSlug}.${account.info.slug}.${prettyRange}.csv`;
-      fs.writeFileSync(tmpFilePath, rawData, { encoding: "utf-8" });
-      // const rawData = fs.readFileSync(tmpFilePath, { encoding: "utf-8" }); // Uncomment if debugging.
-
-      const transactions = await parseTransactions(rawData, account);
+      const transactions = await parseTransactions(
+        transactionData,
+        accountConfig
+      );
       const addCt = db.addTransactions(transactions);
       console.log(`Added ${addCt} new transactions for range ${prettyRange}`);
+
+      // Uncomment if debugging.
+      // const tmpFilePath = `tmp/${accountConfig.info.bankId}.${accountConfig.info.id}.${prettyRange}.csv`;
+      // fs.writeFileSync(tmpFilePath, transactionData, { encoding: "utf-8" });
+      // const rawData = fs.readFileSync(tmpFilePath, { encoding: "utf-8" });
 
       if (addCt === 0) {
         break;
       }
-
       end = start;
     }
 

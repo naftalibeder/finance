@@ -3,11 +3,12 @@ import { parse } from "csv-parse";
 import {
   ExtractorAccount,
   ExtractorTransactionKey,
+  Price,
   Transaction,
 } from "../types";
 
 export const parseTransactions = async (
-  rawData: string,
+  transactionData: string,
   account: ExtractorAccount
 ): Promise<Transaction[]> => {
   console.log("Parsing extracted data");
@@ -39,7 +40,7 @@ export const parseTransactions = async (
       parser.on("end", () => {
         res(ts);
       });
-      parser.write(rawData);
+      parser.write(transactionData);
       parser.end();
     });
   } catch (e) {
@@ -62,7 +63,7 @@ const buildTransaction = (
 
   const rowNorm: Record<ExtractorTransactionKey, string> = {
     date: row[columnMap.date] ?? "",
-    account: row[columnMap.account] ?? "",
+    accountId: row[columnMap.accountId] ?? "",
     payee: row[columnMap.payee] ?? "",
     price: row[columnMap.price] ?? "",
     priceWithdrawal: row[columnMap.priceWithdrawal] ?? "",
@@ -70,9 +71,8 @@ const buildTransaction = (
     description: row[columnMap.description] ?? "",
   };
 
-  // TODO: Handle "01/18/2022 as of 01/15/2022" etc.
-  const date = new Date(rowNorm.date);
-  if (isNaN(date.getTime())) {
+  const date = toDate(rowNorm.date);
+  if (!date) {
     return undefined;
   }
   const dateStr = toYYYYMMDD(date);
@@ -87,25 +87,17 @@ const buildTransaction = (
   } else if (rowNorm.priceDeposit.length > 0) {
     priceStr = rowNorm.priceDeposit;
   }
-
-  // TODO: Handle other currencies.
-  priceStr = priceStr.replace("$", "");
-  const priceCurrency = "USD";
-
-  let priceAmount = parseFloat(priceStr);
-  if (isNaN(priceAmount)) {
+  const price = toPrice(priceStr);
+  if (!price) {
     return undefined;
   }
-  priceAmount = priceAmount * multiplier;
+  price.amount = price.amount * multiplier;
 
   const transaction: Transaction = {
     date: dateStr,
-    account: info.slug,
+    accountId: info.id,
     payee: rowNorm.payee,
-    price: {
-      amount: priceAmount,
-      currency: priceCurrency,
-    },
+    price,
     description: rowNorm.description,
   };
   return transaction;
@@ -124,6 +116,32 @@ export const getUserInput = async (message: string): Promise<string> => {
   });
 
   return input;
+};
+
+// TODO: Handle "01/18/2022 as of 01/15/2022" etc.
+export const toDate = (s: string): Date | undefined => {
+  const date = new Date(s);
+  if (isNaN(date.getTime())) {
+    return undefined;
+  }
+
+  return date;
+};
+
+// TODO: Handle other currencies. Consider https://github.com/dinerojs/dinero.js.
+export const toPrice = (s: string): Price | undefined => {
+  const valueStr = s.replace("$", "").replace(",", "");
+  const currency = "USD";
+
+  const amount = parseFloat(valueStr);
+  if (isNaN(amount)) {
+    return undefined;
+  }
+
+  return {
+    amount,
+    currency,
+  };
 };
 
 export const toYYYYMMDD = (d: Date): string => {

@@ -5,24 +5,49 @@ import {
   ExtractorAccount,
   ExtractorCredentials,
   ExtractorDateRange,
+  Price,
 } from "../../types";
-import { getUserInput } from "../utils";
+import { getUserInput, toPrice } from "../utils";
 
-const getData = async (
+const getAccountValue = async (
+  browserPage: Page,
+  account: ExtractorAccount,
+  credentials: ExtractorCredentials
+): Promise<Price | undefined> => {
+  await loadAccountsPage(browserPage);
+  await enterCredentials(browserPage, credentials);
+  await enterTwoFactorCode(browserPage);
+  const accountValue = await scrapeAccountValue(browserPage, account);
+  return accountValue;
+};
+
+const getTransactionData = async (
   browserPage: Page,
   account: ExtractorAccount,
   credentials: ExtractorCredentials,
   range: ExtractorDateRange
 ): Promise<string> => {
-  await loadDashboard(browserPage);
+  await loadHistoryPage(browserPage);
   await enterCredentials(browserPage, credentials);
   await enterTwoFactorCode(browserPage);
-  const rawData = await getRawData(browserPage, account, range);
-  return rawData;
+  const transactionData = await scrapeTransactionData(
+    browserPage,
+    account,
+    range
+  );
+  return transactionData;
 };
 
-const loadDashboard = async (browserPage: Page) => {
-  console.log("Loading dashboard");
+const loadAccountsPage = async (browserPage: Page) => {
+  console.log("Loading accounts page");
+
+  await browserPage.goto(
+    "https://client.schwab.com/clientapps/accounts/summary"
+  );
+};
+
+const loadHistoryPage = async (browserPage: Page) => {
+  console.log("Loading history page");
 
   await browserPage.goto(
     "https://client.schwab.com/app/accounts/transactionhistory"
@@ -44,7 +69,6 @@ const enterCredentials = async (
   try {
     loc = loginFrame.locator("#loginIdInput");
     await loc.waitFor({ state: "attached", timeout: 2000 });
-
     console.log("Not authenticated yet; continuing");
   } catch (e) {
     console.log("Already authenticated; skipping");
@@ -74,12 +98,22 @@ const enterTwoFactorCode = async (browserPage: Page) => {
 
   console.log("Checking if two-factor code is needed");
 
+  const dashboardFrame = browserPage.frames()[0];
+
+  try {
+    loc = dashboardFrame.locator("#site-header");
+    await loc.waitFor({ state: "attached", timeout: 500 });
+    console.log("Two-factor code is not needed; skipping");
+    return;
+  } catch (e) {
+    console.log("Two-factor code is needed; continuing");
+  }
+
   const contactOptionsFrame = browserPage.frames()[0];
 
   try {
     loc = contactOptionsFrame.locator("#otp_sms");
     await loc.waitFor({ state: "attached", timeout: 5000 });
-
     console.log("Two-factor code is needed; continuing");
   } catch (e) {
     console.log("Two-factor code is not needed; skipping");
@@ -104,7 +138,27 @@ const enterTwoFactorCode = async (browserPage: Page) => {
   loc.click();
 };
 
-const getRawData = async (
+const scrapeAccountValue = async (
+  browserPage: Page,
+  account: ExtractorAccount
+): Promise<Price | undefined> => {
+  let loc: Locator;
+
+  console.log("Getting account value");
+
+  const dashboardFrame = browserPage.frames()[0];
+
+  loc = dashboardFrame
+    .locator("single-account")
+    .filter({ hasText: account.info.display })
+    .locator("div.balance-container-cs > div > span")
+    .first();
+  let text = await loc.evaluate((o) => o.childNodes[2].textContent ?? "");
+  const price = toPrice(text);
+  return price;
+};
+
+const scrapeTransactionData = async (
   browserPage: Page,
   account: ExtractorAccount,
   range: ExtractorDateRange
@@ -115,7 +169,7 @@ const getRawData = async (
 
   console.log("Navigating to export page");
 
-  const dashboardFrame = browserPage.mainFrame();
+  const dashboardFrame = browserPage.frames()[0];
 
   loc = dashboardFrame.locator("#meganav-secondary-menu-hist");
   await loc.click();
@@ -166,15 +220,16 @@ const getRawData = async (
 
   const download = await browserPage.waitForEvent("download");
   const downloadPath = await download.path();
-  const rawData = fs.readFileSync(downloadPath!, { encoding: "utf-8" });
+  const transactionData = fs.readFileSync(downloadPath!, { encoding: "utf-8" });
 
   console.log("Downloaded data");
 
-  return rawData;
+  return transactionData;
 };
 
 const extractor: Extractor = {
-  getData,
+  getAccountValue,
+  getTransactionData,
 };
 
 export { extractor };
