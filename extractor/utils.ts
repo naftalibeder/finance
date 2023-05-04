@@ -6,6 +6,7 @@ import {
   Price,
   Transaction,
 } from "../types";
+import { Frame, FrameLocator, Page } from "playwright-core";
 
 export const parseTransactions = async (
   transactionData: string,
@@ -103,6 +104,20 @@ const buildTransaction = (
   return transaction;
 };
 
+export const getSelectorExists = async (
+  frame: Frame | FrameLocator,
+  selector: string,
+  timeout: number
+): Promise<boolean> => {
+  try {
+    const loc = frame.locator(selector);
+    await loc.waitFor({ state: "attached", timeout });
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
 export const getUserInput = async (message: string): Promise<string> => {
   const input = await new Promise<string>((res) => {
     const r = readline.createInterface({
@@ -116,6 +131,10 @@ export const getUserInput = async (message: string): Promise<string> => {
   });
 
   return input;
+};
+
+export const toPretty = (o: ExtractorAccount): string => {
+  return `${o.info.bankId}-${o.info.id}`;
 };
 
 // TODO: Handle "01/18/2022 as of 01/15/2022" etc.

@@ -7,7 +7,7 @@ import {
   ExtractorDateRange,
   Price,
 } from "../../types";
-import { getUserInput, toPrice } from "../utils";
+import { getSelectorExists, getUserInput, toPrice } from "../utils";
 
 const getAccountValue = async (
   browserPage: Page,
@@ -64,16 +64,25 @@ const enterCredentials = async (
 
   console.log("Checking if credentials are needed");
 
-  const loginFrame = browserPage.frameLocator("#lmsSecondaryLogin");
-
-  try {
-    loc = loginFrame.locator("#loginIdInput");
-    await loc.waitFor({ state: "attached", timeout: 2000 });
-    console.log("Not authenticated yet; continuing");
-  } catch (e) {
-    console.log("Already authenticated; skipping");
+  const dashboardExists = await getDashboardExists(browserPage);
+  if (dashboardExists) {
+    console.log("Dashboard found; skipping");
     return;
   }
+
+  const loginFrame = browserPage.frameLocator("#lmsSecondaryLogin");
+
+  const loginPageExists = await getSelectorExists(
+    loginFrame,
+    "#loginIdInput",
+    5000
+  );
+  if (!loginPageExists) {
+    console.log("Login page not found; skipping");
+    return;
+  }
+
+  console.log("Login is needed");
 
   // Input credentials.
 
@@ -98,29 +107,27 @@ const enterTwoFactorCode = async (browserPage: Page) => {
 
   console.log("Checking if two-factor code is needed");
 
-  const dashboardFrame = browserPage.frames()[0];
-
-  try {
-    loc = dashboardFrame.locator("#site-header");
-    await loc.waitFor({ state: "attached", timeout: 500 });
-    console.log("Two-factor code is not needed; skipping");
-    return;
-  } catch (e) {
-    console.log("Two-factor code is needed; continuing");
-  }
-
-  const contactOptionsFrame = browserPage.frames()[0];
-
-  try {
-    loc = contactOptionsFrame.locator("#otp_sms");
-    await loc.waitFor({ state: "attached", timeout: 5000 });
-    console.log("Two-factor code is needed; continuing");
-  } catch (e) {
-    console.log("Two-factor code is not needed; skipping");
+  const dashboardExists = await getDashboardExists(browserPage);
+  if (dashboardExists) {
+    console.log("Dashboard found; skipping");
     return;
   }
 
-  loc = contactOptionsFrame.locator("#otp_sms");
+  const twoFactorFrame = browserPage.frames()[0];
+
+  const twoFactorPageExists = await getSelectorExists(
+    twoFactorFrame,
+    "#otp_sms",
+    5000
+  );
+  if (!twoFactorPageExists) {
+    console.log("Two-factor page not found; skipping");
+    return;
+  }
+
+  console.log("Two-factor code is needed");
+
+  loc = twoFactorFrame.locator("#otp_sms");
   loc.click();
 
   // Input code.
@@ -225,6 +232,17 @@ const scrapeTransactionData = async (
   console.log("Downloaded data");
 
   return transactionData;
+};
+
+const getDashboardExists = async (browserPage: Page): Promise<boolean> => {
+  try {
+    const loc = browserPage.frames()[0].locator("#site-header");
+    await loc.waitFor({ state: "attached", timeout: 500 });
+    return true;
+  } catch (e) {
+    console.log("Two-factor code is needed; continuing");
+    return false;
+  }
 };
 
 const extractor: Extractor = {
