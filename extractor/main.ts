@@ -26,16 +26,13 @@ export const run = async () => {
 
   const configStr = fs.readFileSync(CONFIG_PATH, { encoding: "utf-8" });
   const config = JSON.parse(configStr) as Config;
+  const accounts = config.accounts.filter((o) => !o.skip);
 
-  console.log(`Preparing extraction for ${config.accounts.length} accounts`);
+  console.log(`Preparing extraction for ${accounts} accounts`);
 
   const [browser, browserContext] = await setUp();
 
   for (const extractorAccount of config.accounts) {
-    if (extractorAccount.skip) {
-      continue;
-    }
-
     console.log(`Starting extraction for ${toPretty(extractorAccount)}`);
 
     const extractor = extractors[extractorAccount.info.bankId];
@@ -94,7 +91,7 @@ const setUp = async (): Promise<[Browser, BrowserContext]> => {
 
   console.log("Launching browser with options:", options);
 
-  const browser = await firefox.launch({ headless: false });
+  const browser = await firefox.launch({ headless: true });
   const browserContext = await browser.newContext(options);
 
   console.log("Launched browser");
