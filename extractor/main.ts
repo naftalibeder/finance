@@ -19,8 +19,12 @@ import { CONFIG_PATH, TMP_DIR } from "../constants";
 import db from "../db";
 
 const BROWSER_CONTEXT_PATH = `${TMP_DIR}/browser-context.json`;
+const HEADLESS = true;
 
 export const run = async () => {
+  const tmpRunDir = `${TMP_DIR}/${new Date()}`;
+  fs.mkdirSync(tmpRunDir);
+
   const startTime = Date.now();
   let totalAddCt = 0;
 
@@ -28,7 +32,7 @@ export const run = async () => {
   const config = JSON.parse(configStr) as Config;
   const accounts = config.accounts.filter((o) => !o.skip);
 
-  console.log(`Preparing extraction for ${accounts} accounts`);
+  console.log(`Preparing extraction for ${accounts.length} accounts`);
 
   const [browser, browserContext] = await setUp();
 
@@ -49,7 +53,7 @@ export const run = async () => {
       );
     } catch (e) {
       console.log("Error getting account value:", e);
-      await takeErrorScreenshot(browserPage);
+      await takeErrorScreenshot(browserPage, tmpRunDir);
       continue;
     }
 
@@ -58,12 +62,13 @@ export const run = async () => {
         browserPage,
         extractor,
         extractorAccount,
-        credentials
+        credentials,
+        tmpRunDir
       );
       totalAddCt += addCt;
     } catch (e) {
       console.log("Error getting transactions:", e);
-      await takeErrorScreenshot(browserPage);
+      await takeErrorScreenshot(browserPage, tmpRunDir);
       continue;
     }
 
@@ -91,7 +96,7 @@ const setUp = async (): Promise<[Browser, BrowserContext]> => {
 
   console.log("Launching browser with options:", options);
 
-  const browser = await firefox.launch({ headless: true });
+  const browser = await firefox.launch({ headless: HEADLESS });
   const browserContext = await browser.newContext(options);
 
   console.log("Launched browser");
@@ -130,7 +135,8 @@ const updateTransactions = async (
   browserPage: Page,
   extractor: Extractor,
   extractorAccount: ExtractorAccount,
-  credentials: ExtractorCredentials
+  credentials: ExtractorCredentials,
+  tmpRunDir: string
 ): Promise<number> => {
   let end = new Date();
   let totalAddCt = 0;
@@ -138,7 +144,7 @@ const updateTransactions = async (
   while (true) {
     const spanMs = 1000 * 60 * 60 * 24 * 365; // ~1 year.
     const start = new Date(end.valueOf() - spanMs);
-    const prettyRange = `${toYYYYMMDD(start)} - ${toYYYYMMDD(end)}`;
+    const prettyRange = `[${toYYYYMMDD(start)}, ${toYYYYMMDD(end)}]`;
 
     console.log(`Getting transactions for range ${prettyRange}`);
 
@@ -148,6 +154,10 @@ const updateTransactions = async (
       credentials,
       { start, end }
     );
+    const tmpFilePath = `${tmpRunDir}/${toPretty(
+      extractorAccount
+    )}_${toYYYYMMDD(start)}_${toYYYYMMDD(end)}.csv`;
+    fs.writeFileSync(tmpFilePath, transactionData);
 
     const transactions = await parseTransactions(
       transactionData,
@@ -179,9 +189,9 @@ const tearDown = async (browser: Browser, browserContext: BrowserContext) => {
   console.log("Saved and closed browser");
 };
 
-const takeErrorScreenshot = async (browserPage: Page) => {
+const takeErrorScreenshot = async (browserPage: Page, tmpRunDir: string) => {
   return browserPage.screenshot({
-    path: `./tmp/error-${new Date()}.png`,
+    path: `${tmpRunDir}/error_${new Date()}.png`,
     type: "png",
   });
 };

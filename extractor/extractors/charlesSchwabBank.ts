@@ -128,7 +128,7 @@ const enterTwoFactorCode = async (browserPage: Page) => {
   console.log("Two-factor code is needed");
 
   loc = twoFactorFrame.locator("#otp_sms");
-  loc.click();
+  await loc.click();
 
   // Input code.
 
@@ -139,10 +139,13 @@ const enterTwoFactorCode = async (browserPage: Page) => {
   const codeInputFrame = browserPage.frames()[0];
 
   loc = codeInputFrame.locator("#securityCode");
-  loc.fill(code);
+  await loc.fill(code);
+
+  loc = codeInputFrame.locator("#checkbox-remember-device");
+  await loc.check();
 
   loc = codeInputFrame.locator("#continueButton");
-  loc.click();
+  await loc.click();
 };
 
 const scrapeAccountValue = async (
@@ -218,7 +221,7 @@ const scrapeTransactionData = async (
   await popupPage.waitForLoadState("domcontentloaded");
   await popupPage.waitForLoadState("networkidle");
 
-  loc = popupPage.locator(".button-primary");
+  loc = popupPage.locator(".button-primary").first();
   await loc.click();
 
   // Get downloaded file.
