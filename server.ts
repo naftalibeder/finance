@@ -1,13 +1,13 @@
 import express from "express";
 import extractor from "./extractor";
-import views from "./views";
+import { renderHome } from "./client";
 
 const main = async () => {
   const app = express();
   const port = 3000;
 
   app.get("/", (req, res) => {
-    const view = views.home();
+    const view = renderHome();
     res.send(view);
   });
 

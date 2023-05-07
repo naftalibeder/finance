@@ -1,0 +1,39 @@
+<style>
+  td {
+    padding: 2px 8px;
+  }
+</style>
+
+<script>
+  const onClickRefresh = () => {
+    fetch("/extract", { method: "POST" });
+  };
+</script>
+
+<div>
+  <button onclick="onClickRefresh()">Refresh</button>
+
+  <p><%= it.accounts.length %> accounts</p>
+  <table>
+    <% for (const a of it.accounts) { %>
+      <tr>
+        <td><%= a.id %></td>
+        <td><%= a.price.amount %></td>
+        <td><%= a.price.currency %></td>
+      </tr>
+    <% } %>
+  </table>
+
+  <p><%= it.transactions.length %> transactions</p>
+  <table>
+    <% for (const t of it.transactions) { %>
+      <tr>
+        <td><%= t.accountId %></td>
+        <td><%= t.date %></td>
+        <td><%= t.payee %></td>
+        <td><%= t.price.amount %></td>
+        <td><%= t.price.currency %></td>
+      </tr>
+    <% } %>
+  </table>
+</div>
