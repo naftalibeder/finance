@@ -15,6 +15,12 @@ npm install
 npm run start
 ```
 
+## Principles
+
+- Data is stored in a human-readable format
+- Transaction scraping happens automatically
+- All passwords are stored locally
+
 ## Roadmap
 
 - [ ] Find a better name
