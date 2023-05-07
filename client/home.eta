@@ -1,6 +1,28 @@
+<head>
+  <title>Transactions</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=PT+Mono&display=swap" rel="stylesheet">
+</head>
+
 <style>
+  body {
+    padding: 16px;
+    font-family: 'PT Mono', monospace;
+  }
+
+  table {
+    width: 100%;
+  }
+
   td {
-    padding: 2px 8px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+  }
+
+  .currency {
+    text-align: right;
   }
 </style>
 
@@ -13,26 +35,24 @@
 <div>
   <button onclick="onClickRefresh()">Refresh</button>
 
-  <p><%= it.accounts.length %> accounts</p>
+  <p><b><%= it.accounts.length %> accounts</b></p>
   <table>
     <% for (const a of it.accounts) { %>
       <tr>
         <td><%= a.id %></td>
-        <td><%= a.price.amount %></td>
-        <td><%= a.price.currency %></td>
+        <td class="currency"><%= it.formatCurrency(a.price) %></td>
       </tr>
     <% } %>
   </table>
 
-  <p><%= it.transactions.length %> transactions</p>
+  <p><b><%= it.transactions.length %> transactions</b></p>
   <table>
     <% for (const t of it.transactions) { %>
       <tr>
-        <td><%= t.accountId %></td>
         <td><%= t.date %></td>
+        <td><%= t.accountId %></td>
         <td><%= t.payee %></td>
-        <td><%= t.price.amount %></td>
-        <td><%= t.price.currency %></td>
+        <td class="currency"><%= it.formatCurrency(t.price) %></td>
       </tr>
     <% } %>
   </table>
