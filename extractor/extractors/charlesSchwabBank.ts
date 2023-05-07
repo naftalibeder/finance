@@ -66,7 +66,7 @@ const enterCredentials = async (
 
   const dashboardExists = await getDashboardExists(browserPage);
   if (dashboardExists) {
-    console.log("Dashboard found; skipping");
+    console.log("Dashboard found; skipping credentials");
     return;
   }
 
@@ -78,7 +78,7 @@ const enterCredentials = async (
     5000
   );
   if (!loginPageExists) {
-    console.log("Login page not found; skipping");
+    console.log("Login page not found; skipping credentials");
     return;
   }
 
@@ -109,7 +109,7 @@ const enterTwoFactorCode = async (browserPage: Page) => {
 
   const dashboardExists = await getDashboardExists(browserPage);
   if (dashboardExists) {
-    console.log("Dashboard found; skipping");
+    console.log("Dashboard found; skipping two-factor");
     return;
   }
 
@@ -121,7 +121,7 @@ const enterTwoFactorCode = async (browserPage: Page) => {
     5000
   );
   if (!twoFactorPageExists) {
-    console.log("Two-factor page not found; skipping");
+    console.log("Two-factor page not found; skipping two-factor");
     return;
   }
 
@@ -243,7 +243,6 @@ const getDashboardExists = async (browserPage: Page): Promise<boolean> => {
     await loc.waitFor({ state: "attached", timeout: 500 });
     return true;
   } catch (e) {
-    console.log("Two-factor code is needed; continuing");
     return false;
   }
 };
