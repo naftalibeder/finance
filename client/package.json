@@ -1,0 +1,19 @@
+{
+  "name": "client",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "export VITE_SERVER_PORT=\"$SERVER_PORT\" && vite build",
+    "start": "npm run build && npx http-server ./dist --port \"$CLIENT_PORT\""
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "2.0.3",
+    "@tsconfig/svelte": "4.0.1",
+    "http-server": "14.1.1",
+    "svelte": "3.57.0",
+    "svelte-check": "2.10.3",
+    "tslib": "2.5.0",
+    "typescript": "5.0.2",
+    "vite": "4.3.2"
+  }
+}

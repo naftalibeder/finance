@@ -1,3 +1,6 @@
 .DS_Store
+data/
+tmp/
 node_modules/
 dist/
+.env

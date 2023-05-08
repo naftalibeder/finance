@@ -72,4 +72,9 @@ const addTransactions = (newTransactions: Transaction[]): number => {
   return addCt;
 };
 
-export default { getAccounts, updateAccount, getTransactions, addTransactions };
+export default {
+  getAccounts,
+  updateAccount,
+  getTransactions,
+  addTransactions,
+};

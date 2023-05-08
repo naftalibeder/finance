@@ -6,7 +6,7 @@ A private, self-hostable transactions extractor that doesn't require trusting an
 
 ## Instructions
 
-Set up a configuration file at `../data/config.json`. See [Config.ts](./types/Config.ts) for reference.
+Set up a configuration file at `./data/config.json`. See [Config.ts](./server/types/Config.ts) for reference.
 
 Then run:
 
