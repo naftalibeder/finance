@@ -7,8 +7,6 @@ const main = async () => {
 
   const app = express();
 
-  app.use(express.static("../client/dist"));
-
   app.post("/extract", async (req, res) => {
     await extractor.run();
     res.send("Extraction complete.");

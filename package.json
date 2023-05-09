@@ -1,10 +1,10 @@
 {
   "name": "transactions",
   "scripts": {
-    "start": "set -a && source .env && set +a && npx concurrently \"npm:client:start\" \"npm:server:start\"",
+    "preinstall": "(cd client && npm i) && (cd server && npm i)",
+    "start": "npx concurrently \"npm:client:start\" \"npm:server:start\"",
     "client:start": "cd client && npm run start",
-    "server:start": "cd server && npm run start",
-    "preinstall": "(cd client && npm i) && (cd server && npm i)"
+    "server:start": "cd server && npm run start"
   },
   "devDependencies": {
     "concurrently": "8.0.1"

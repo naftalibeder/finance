@@ -1,21 +1,25 @@
 <script lang="ts">
   import { onMount } from "svelte";
 
-  const serverUrl = `http://0.0.0.0:${import.meta.env.VITE_SERVER_PORT}`;
+  const serverUrl = import.meta.env.VITE_SERVER_URL;
 
   let accounts: any[] = [];
   let transactions: any[] = [];
 
   onMount(async () => {
-    const accountsRes = await fetch(`${serverUrl}/accounts`, {
-      method: "POST",
-    });
-    accounts = await accountsRes.json();
+    try {
+      const accountsRes = await fetch(`${serverUrl}/accounts`, {
+        method: "POST",
+      });
+      accounts = await accountsRes.json();
 
-    const transactionsRes = await fetch(`${serverUrl}/transactions`, {
-      method: "POST",
-    });
-    transactions = await transactionsRes.json();
+      const transactionsRes = await fetch(`${serverUrl}/transactions`, {
+        method: "POST",
+      });
+      transactions = await transactionsRes.json();
+    } catch (e) {
+      console.log(e);
+    }
   });
 
   const onClickRefresh = async () => {
@@ -33,7 +37,9 @@
 </script>
 
 <div>
-  <button on:click={() => onClickRefresh()}>Refresh</button>
+  <div class="header">
+    <button on:click={() => onClickRefresh()}>Refresh</button>
+  </div>
 
   <p><b>{accounts.length} accounts</b></p>
   <table>
@@ -67,9 +73,19 @@
     width: 100%;
   }
 
+  tr:hover {
+    color: rgb(165, 165, 165);
+  }
+
   td {
     padding-top: 2px;
     padding-bottom: 2px;
+  }
+
+  .header {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
   }
 
   .currency {
