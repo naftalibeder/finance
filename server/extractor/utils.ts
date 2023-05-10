@@ -1,16 +1,11 @@
 import readline from "readline";
 import { parse } from "csv-parse";
-import {
-  ExtractorAccount,
-  ExtractorTransactionKey,
-  Price,
-  Transaction,
-} from "../types";
+import { ConfigAccount, Price, Transaction } from "shared/types";
 import { Frame, FrameLocator, Page } from "playwright-core";
 
 export const parseTransactions = async (
   transactionData: string,
-  account: ExtractorAccount
+  account: ConfigAccount
 ): Promise<Transaction[]> => {
   console.log("Parsing extracted data");
 
@@ -58,11 +53,11 @@ export const parseTransactions = async (
 
 const buildTransaction = (
   row: string[],
-  account: ExtractorAccount
+  account: ConfigAccount
 ): Transaction | undefined => {
   const { info, columnMap } = account;
 
-  const rowNorm: Record<ExtractorTransactionKey, string> = {
+  const rowNorm: Record<keyof ConfigAccount["columnMap"], string> = {
     date: row[columnMap.date] ?? "",
     accountId: row[columnMap.accountId] ?? "",
     payee: row[columnMap.payee] ?? "",
@@ -133,7 +128,7 @@ export const getUserInput = async (message: string): Promise<string> => {
   return input;
 };
 
-export const toPretty = (o: ExtractorAccount): string => {
+export const toPretty = (o: ConfigAccount): string => {
   return `${o.info.bankId}-${o.info.id}`;
 };
 

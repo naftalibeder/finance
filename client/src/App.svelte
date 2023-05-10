@@ -1,10 +1,13 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { Account, Transaction } from "shared";
 
   const serverUrl = import.meta.env.VITE_SERVER_URL;
 
-  let accounts: any[] = [];
-  let transactions: any[] = [];
+  let accounts: Account[] = [];
+  let transactions: Transaction[] = [];
+
+  let extractStatus: string = "";
 
   onMount(async () => {
     try {
@@ -23,9 +26,21 @@
   });
 
   const onClickRefresh = async () => {
-    await fetch(`${serverUrl}/extract`, {
+    const res = await fetch(`${serverUrl}/extract`, {
       method: "POST",
     });
+    let reader = res.body.getReader();
+
+    let result: ReadableStreamReadResult<Uint8Array>;
+    let decoder = new TextDecoder("utf8");
+
+    while (!result?.done) {
+      result = await reader.read();
+      let chunk = decoder.decode(result.value);
+      extractStatus = chunk;
+    }
+
+    extractStatus = "";
   };
 
   const formatCurrency = (a: any) => {
@@ -36,12 +51,12 @@
   };
 </script>
 
-<div>
-  <div class="header">
-    <button on:click={() => onClickRefresh()}>Refresh</button>
+<div class="container">
+  <div class="row">
+    <p><b>{accounts.length} accounts</b></p>
+    <button class="text" on:click={() => onClickRefresh()}>Refresh all</button>
   </div>
 
-  <p><b>{accounts.length} accounts</b></p>
   <table>
     {#each accounts as a}
       <tr>
@@ -65,10 +80,6 @@
 </div>
 
 <style>
-  p {
-    margin-top: 32px;
-  }
-
   table {
     width: 100%;
   }
@@ -82,10 +93,22 @@
     padding-bottom: 2px;
   }
 
-  .header {
+  button.text {
+    color: white;
+    background-color: transparent;
+    padding: 0px;
+  }
+
+  .container {
+    display: flex;
+    flex-direction: column;
+    row-gap: 16px;
+  }
+
+  .row {
     display: flex;
     flex-direction: row;
-    align-items: stretch;
+    justify-content: space-between;
   }
 
   .currency {

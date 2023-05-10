@@ -8,20 +8,15 @@ import {
 } from "playwright-core";
 import extractors from "./extractors";
 import { parseTransactions, toPretty, toYYYYMMDD } from "./utils";
-import {
-  Account,
-  Config,
-  Extractor,
-  ExtractorAccount,
-  ExtractorCredentials,
-} from "../types";
+import { Account, Config, ConfigAccount, ConfigCredentials } from "shared";
+import { Extractor } from "types";
 import { CONFIG_PATH, TMP_DIR } from "../constants";
 import db from "../db";
 
 const BROWSER_CONTEXT_PATH = `${TMP_DIR}/browser-context.json`;
 const HEADLESS = true;
 
-export const run = async () => {
+export const run = async (onProgress: (msg: string) => void) => {
   const tmpRunDir = `${TMP_DIR}/${new Date()}`;
   fs.mkdirSync(tmpRunDir);
 
@@ -33,11 +28,13 @@ export const run = async () => {
   const accounts = config.accounts.filter((o) => !o.skip);
 
   console.log(`Preparing extraction for ${accounts.length} accounts`);
+  onProgress("Starting...");
 
   const [browser, browserContext] = await setUp();
 
   for (const extractorAccount of config.accounts) {
     console.log(`Starting extraction for ${toPretty(extractorAccount)}`);
+    onProgress(`Extracting ${extractorAccount.info.display}...`);
 
     const extractor = extractors[extractorAccount.info.bankId];
     const credentials = config.credentials[extractorAccount.info.bankId];
@@ -66,6 +63,7 @@ export const run = async () => {
         tmpRunDir
       );
       totalAddCt += addCt;
+      onProgress(`Added ${totalAddCt} transaction(s)...`);
     } catch (e) {
       console.log("Error getting transactions:", e);
       await takeErrorScreenshot(browserPage, tmpRunDir);
@@ -107,8 +105,8 @@ const setUp = async (): Promise<[Browser, BrowserContext]> => {
 const updateAccountValue = async (
   browserPage: Page,
   extractor: Extractor,
-  extractorAccount: ExtractorAccount,
-  credentials: ExtractorCredentials
+  extractorAccount: ConfigAccount,
+  credentials: ConfigCredentials
 ) => {
   console.log("Getting account value");
 
@@ -134,8 +132,8 @@ const updateAccountValue = async (
 const updateTransactions = async (
   browserPage: Page,
   extractor: Extractor,
-  extractorAccount: ExtractorAccount,
-  credentials: ExtractorCredentials,
+  extractorAccount: ConfigAccount,
+  credentials: ConfigCredentials,
   tmpRunDir: string
 ): Promise<number> => {
   let end = new Date();

@@ -1,9 +1,11 @@
 import { Page } from "playwright-core";
-
-export type Config = {
-  accounts: ExtractorAccount[];
-  credentials: Record<BankId, ExtractorCredentials>;
-};
+import {
+  Account,
+  Transaction,
+  ConfigAccount,
+  ConfigCredentials,
+  Price,
+} from "shared";
 
 export type Database = {
   accounts: Account[];
@@ -13,61 +15,19 @@ export type Database = {
 export type Extractor = {
   getAccountValue: (
     browserPage: Page,
-    account: ExtractorAccount,
-    credentials: ExtractorCredentials
+    account: ConfigAccount,
+    credentials: ConfigCredentials
   ) => Promise<Price | undefined>;
 
   getTransactionData: (
     browserPage: Page,
-    account: ExtractorAccount,
-    credentials: ExtractorCredentials,
+    account: ConfigAccount,
+    credentials: ConfigCredentials,
     range: ExtractorDateRange
   ) => Promise<string>;
-};
-
-export type BankId = "charles-schwab-bank";
-
-export type ExtractorAccount = {
-  info: {
-    id: string;
-    bankId: BankId;
-    display: string;
-    number: string;
-  };
-  columnMap: Record<ExtractorTransactionKey, number>;
-  skip: boolean;
 };
 
 export type ExtractorDateRange = {
   start: Date;
   end: Date;
-};
-
-export type ExtractorCredentials = {
-  username: string;
-  password: string;
-};
-
-export type ExtractorTransactionKey =
-  | keyof Transaction
-  | "priceWithdrawal"
-  | "priceDeposit";
-
-export type Account = {
-  id: string;
-  number: string;
-  price: Price;
-};
-
-export type Transaction = {
-  date: string;
-  accountId: string;
-  payee: string;
-  price: Price;
-  description: string;
-};
-
-export type Price = {
-  amount: number;
-  currency: string;
 };

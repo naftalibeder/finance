@@ -8,8 +8,13 @@ const main = async () => {
   const app = express();
 
   app.post("/extract", async (req, res) => {
-    await extractor.run();
-    res.send("Extraction complete.");
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Transfer-Encoding", "chunked");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    await extractor.run((msg) => {
+      res.write(msg);
+    });
+    res.end();
   });
 
   app.post("/accounts", async (req, res) => {
@@ -30,3 +35,5 @@ const main = async () => {
 };
 
 main();
+
+const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));

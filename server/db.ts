@@ -1,6 +1,7 @@
 import fs from "fs";
+import { Account, Transaction } from "shared";
+import { Database } from "types";
 import { DB_PATH } from "./constants";
-import { Account, Database, Transaction } from "./types";
 
 const loadDatabase = (): Database => {
   if (!fs.existsSync(DB_PATH)) {

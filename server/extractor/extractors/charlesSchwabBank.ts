@@ -1,18 +1,13 @@
 import fs from "fs";
 import { Locator, Page } from "playwright-core";
-import {
-  Extractor,
-  ExtractorAccount,
-  ExtractorCredentials,
-  ExtractorDateRange,
-  Price,
-} from "../../types";
+import { Price, ConfigAccount, ConfigCredentials } from "shared";
+import { Extractor, ExtractorDateRange } from "types";
 import { getSelectorExists, getUserInput, toPrice } from "../utils";
 
 const getAccountValue = async (
   browserPage: Page,
-  account: ExtractorAccount,
-  credentials: ExtractorCredentials
+  account: ConfigAccount,
+  credentials: ConfigCredentials
 ): Promise<Price | undefined> => {
   await loadAccountsPage(browserPage);
   await enterCredentials(browserPage, credentials);
@@ -23,8 +18,8 @@ const getAccountValue = async (
 
 const getTransactionData = async (
   browserPage: Page,
-  account: ExtractorAccount,
-  credentials: ExtractorCredentials,
+  account: ConfigAccount,
+  credentials: ConfigCredentials,
   range: ExtractorDateRange
 ): Promise<string> => {
   await loadHistoryPage(browserPage);
@@ -56,7 +51,7 @@ const loadHistoryPage = async (browserPage: Page) => {
 
 const enterCredentials = async (
   browserPage: Page,
-  credentials: ExtractorCredentials
+  credentials: ConfigCredentials
 ) => {
   let loc: Locator;
 
@@ -150,7 +145,7 @@ const enterTwoFactorCode = async (browserPage: Page) => {
 
 const scrapeAccountValue = async (
   browserPage: Page,
-  account: ExtractorAccount
+  account: ConfigAccount
 ): Promise<Price | undefined> => {
   let loc: Locator;
 
@@ -170,7 +165,7 @@ const scrapeAccountValue = async (
 
 const scrapeTransactionData = async (
   browserPage: Page,
-  account: ExtractorAccount,
+  account: ConfigAccount,
   range: ExtractorDateRange
 ): Promise<string> => {
   let loc: Locator;

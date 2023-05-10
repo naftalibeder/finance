@@ -11,3 +11,12 @@
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
 }
+
+button {
+  color: white;
+  background-color: #2a2a2a;
+  border-radius: 0px;
+  outline: rgb(190, 190, 190) solid 2px;
+  border: 0px;
+  padding: 8px;
+}

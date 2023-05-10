@@ -1,7 +1,8 @@
-import { BankId, Extractor } from "../../types";
+import { ConfigBankId } from "shared";
+import { Extractor } from "types";
 import { extractor as charlesSchwabBank } from "./charlesSchwabBank";
 
-const extractors: Record<BankId, Extractor> = {
+const extractors: Record<ConfigBankId, Extractor> = {
   "charles-schwab-bank": charlesSchwabBank,
 };
 
