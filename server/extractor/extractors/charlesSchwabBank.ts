@@ -2,249 +2,242 @@ import fs from "fs";
 import { Locator, Page } from "playwright-core";
 import { Price, ConfigAccount, ConfigCredentials } from "shared";
 import { Extractor, ExtractorDateRange } from "types";
-import { getSelectorExists, getUserInput, toPrice } from "../utils";
-
-const getAccountValue = async (
-  browserPage: Page,
-  account: ConfigAccount,
-  credentials: ConfigCredentials
-): Promise<Price | undefined> => {
-  await loadAccountsPage(browserPage);
-  await enterCredentials(browserPage, credentials);
-  await enterTwoFactorCode(browserPage);
-  const accountValue = await scrapeAccountValue(browserPage, account);
-  return accountValue;
-};
-
-const getTransactionData = async (
-  browserPage: Page,
-  account: ConfigAccount,
-  credentials: ConfigCredentials,
-  range: ExtractorDateRange
-): Promise<string> => {
-  await loadHistoryPage(browserPage);
-  await enterCredentials(browserPage, credentials);
-  await enterTwoFactorCode(browserPage);
-  const transactionData = await scrapeTransactionData(
-    browserPage,
-    account,
-    range
-  );
-  return transactionData;
-};
-
-const loadAccountsPage = async (browserPage: Page) => {
-  console.log("Loading accounts page");
-
-  await browserPage.goto(
-    "https://client.schwab.com/clientapps/accounts/summary"
-  );
-};
-
-const loadHistoryPage = async (browserPage: Page) => {
-  console.log("Loading history page");
-
-  await browserPage.goto(
-    "https://client.schwab.com/app/accounts/transactionhistory"
-  );
-};
-
-const enterCredentials = async (
-  browserPage: Page,
-  credentials: ConfigCredentials
-) => {
-  let loc: Locator;
+import { getSelectorExists, getUserInput } from "../utils";
+import { toPrice } from "../../utils";
 
-  // Check if credentials are needed.
-
-  console.log("Checking if credentials are needed");
-
-  const dashboardExists = await getDashboardExists(browserPage);
-  if (dashboardExists) {
-    console.log("Dashboard found; skipping credentials");
-    return;
-  }
-
-  const loginFrame = browserPage.frameLocator("#lmsSecondaryLogin");
-
-  const loginPageExists = await getSelectorExists(
-    loginFrame,
-    "#loginIdInput",
-    5000
-  );
-  if (!loginPageExists) {
-    console.log("Login page not found; skipping credentials");
-    return;
-  }
-
-  console.log("Login is needed");
-
-  // Input credentials.
-
-  console.log("Entering credentials");
+class CharlesSchwabBankExtractor implements Extractor {
+  loadAccountsPage = async (browserPage: Page) => {
+    console.log("Loading accounts page");
 
-  loc = loginFrame.locator("#loginIdInput");
-  await loc.fill(credentials.username);
-
-  loc = loginFrame.locator("#passwordInput");
-  await loc.fill(credentials.password);
-
-  loc = loginFrame.locator("#btnLogin");
-  await loc.click();
-
-  console.log("Authenticated");
-};
+    await browserPage.goto(
+      "https://client.schwab.com/clientapps/accounts/summary"
+    );
+  };
 
-const enterTwoFactorCode = async (browserPage: Page) => {
-  let loc: Locator;
+  loadHistoryPage = async (browserPage: Page) => {
+    console.log("Loading history page");
 
-  // Check if code is needed.
+    await browserPage.goto(
+      "https://client.schwab.com/app/accounts/transactionhistory"
+    );
+  };
 
-  console.log("Checking if two-factor code is needed");
+  enterCredentials = async (
+    browserPage: Page,
+    credentials: ConfigCredentials
+  ) => {
+    let loc: Locator;
 
-  const dashboardExists = await getDashboardExists(browserPage);
-  if (dashboardExists) {
-    console.log("Dashboard found; skipping two-factor");
-    return;
-  }
+    // Check if credentials are needed.
 
-  const twoFactorFrame = browserPage.frames()[0];
+    console.log("Checking if credentials are needed");
 
-  const twoFactorPageExists = await getSelectorExists(
-    twoFactorFrame,
-    "#otp_sms",
-    5000
-  );
-  if (!twoFactorPageExists) {
-    console.log("Two-factor page not found; skipping two-factor");
-    return;
-  }
+    const dashboardExists = await this.getDashboardExists(browserPage);
+    if (dashboardExists) {
+      console.log("Dashboard found; skipping credentials");
+      return;
+    }
 
-  console.log("Two-factor code is needed");
+    const loginFrame = browserPage.frameLocator("#lmsSecondaryLogin");
 
-  loc = twoFactorFrame.locator("#otp_sms");
-  await loc.click();
+    const loginPageExists = await getSelectorExists(
+      loginFrame,
+      "#loginIdInput",
+      5000
+    );
+    if (!loginPageExists) {
+      console.log("Login page not found; skipping credentials");
+      return;
+    }
 
-  // Input code.
+    console.log("Login is needed");
 
-  console.log("Entering two-factor code");
+    // Input credentials.
 
-  const code = await getUserInput("Enter the code sent to your phone number:");
+    console.log("Entering credentials");
 
-  const codeInputFrame = browserPage.frames()[0];
+    loc = loginFrame.locator("#loginIdInput");
+    await loc.fill(credentials.username);
 
-  loc = codeInputFrame.locator("#securityCode");
-  await loc.fill(code);
+    loc = loginFrame.locator("#passwordInput");
+    await loc.fill(credentials.password);
 
-  loc = codeInputFrame.locator("#checkbox-remember-device");
-  await loc.check();
+    loc = loginFrame.locator("#btnLogin");
+    await loc.click();
 
-  loc = codeInputFrame.locator("#continueButton");
-  await loc.click();
-};
+    console.log("Authenticated");
+  };
 
-const scrapeAccountValue = async (
-  browserPage: Page,
-  account: ConfigAccount
-): Promise<Price | undefined> => {
-  let loc: Locator;
+  enterTwoFactorCode = async (browserPage: Page) => {
+    let loc: Locator;
 
-  console.log("Getting account value");
+    // Check if code is needed.
 
-  const dashboardFrame = browserPage.frames()[0];
+    console.log("Checking if two-factor code is needed");
 
-  loc = dashboardFrame
-    .locator("single-account")
-    .filter({ hasText: account.info.display })
-    .locator("div.balance-container-cs > div > span")
-    .first();
-  let text = await loc.evaluate((o) => o.childNodes[2].textContent ?? "");
-  const price = toPrice(text);
-  return price;
-};
+    const dashboardExists = await this.getDashboardExists(browserPage);
+    if (dashboardExists) {
+      console.log("Dashboard found; skipping two-factor");
+      return;
+    }
 
-const scrapeTransactionData = async (
-  browserPage: Page,
-  account: ConfigAccount,
-  range: ExtractorDateRange
-): Promise<string> => {
-  let loc: Locator;
+    const twoFactorFrame = browserPage.frames()[0];
 
-  // Go to history page.
+    const twoFactorPageExists = await getSelectorExists(
+      twoFactorFrame,
+      "#otp_sms",
+      5000
+    );
+    if (!twoFactorPageExists) {
+      console.log("Two-factor page not found; skipping two-factor");
+      return;
+    }
 
-  console.log("Navigating to export page");
+    console.log("Two-factor code is needed");
 
-  const dashboardFrame = browserPage.frames()[0];
+    loc = twoFactorFrame.locator("#otp_sms");
+    await loc.click();
 
-  loc = dashboardFrame.locator("#meganav-secondary-menu-hist");
-  await loc.click();
+    // Input code.
 
-  loc = dashboardFrame.locator(".sdps-account-selector");
-  await loc.click();
+    console.log("Entering two-factor code");
 
-  loc = dashboardFrame.locator(".sdps-account-selector__list-item", {
-    hasText: account.info.number,
-  });
-  await loc.click();
+    const code = await getUserInput(
+      "Enter the code sent to your phone number:"
+    );
 
-  loc = dashboardFrame.locator(".transactions-history-container");
-  await loc.click();
+    const codeInputFrame = browserPage.frames()[0];
 
-  // Set date range.
+    loc = codeInputFrame.locator("#securityCode");
+    await loc.fill(code);
 
-  loc = dashboardFrame.locator("#statements-daterange1");
-  await loc.selectOption("Custom");
+    loc = codeInputFrame.locator("#checkbox-remember-device");
+    await loc.check();
 
-  loc = dashboardFrame.locator("#calendar-FromDate");
-  await loc.fill(range.start.toLocaleDateString("en-US"));
+    loc = codeInputFrame.locator("#continueButton");
+    await loc.click();
+  };
 
-  loc = dashboardFrame.locator("#calendar-ToDate");
-  await loc.fill(range.end.toLocaleDateString("en-US"));
+  scrapeAccountValue = async (
+    browserPage: Page,
+    account: ConfigAccount
+  ): Promise<Price | undefined> => {
+    let loc: Locator;
 
-  loc = dashboardFrame.locator("#btnSearch");
-  await loc.click();
-  await browserPage.waitForLoadState("networkidle");
+    console.log("Getting account value");
 
-  // Open export popup.
+    const dashboardFrame = browserPage.frames()[0];
 
-  console.log("Launching export popup");
+    loc = dashboardFrame
+      .locator("single-account")
+      .filter({ hasText: account.info.display })
+      .locator("div.balance-container-cs > div > span")
+      .first();
+    let text = await loc.evaluate((o) => o.childNodes[2].textContent ?? "");
 
-  loc = dashboardFrame.locator("#bttnExport button");
-  await loc.click();
+    const price = toPrice(text);
+    return price;
+  };
 
-  const popupPage = await browserPage.waitForEvent("popup");
-  await popupPage.waitForLoadState("domcontentloaded");
-  await popupPage.waitForLoadState("networkidle");
+  scrapeTransactionData = async (
+    browserPage: Page,
+    account: ConfigAccount,
+    range: ExtractorDateRange
+  ): Promise<string> => {
+    let loc: Locator;
 
-  loc = popupPage.locator(".button-primary").first();
-  await loc.click();
+    // Go to history page.
 
-  // Get downloaded file.
+    console.log("Navigating to export page");
 
-  console.log("Waiting for download");
+    const dashboardFrame = browserPage.frames()[0];
 
-  const download = await browserPage.waitForEvent("download");
-  const downloadPath = await download.path();
-  const transactionData = fs.readFileSync(downloadPath!, { encoding: "utf-8" });
+    loc = dashboardFrame.locator("#meganav-secondary-menu-hist");
+    await loc.click();
 
-  console.log("Downloaded data");
+    loc = dashboardFrame.locator(".sdps-account-selector");
+    await loc.click();
 
-  return transactionData;
-};
+    loc = dashboardFrame.locator(".sdps-account-selector__list-item", {
+      hasText: account.info.number,
+    });
+    await loc.click();
 
-const getDashboardExists = async (browserPage: Page): Promise<boolean> => {
-  try {
-    const loc = browserPage.frames()[0].locator("#site-header");
-    await loc.waitFor({ state: "attached", timeout: 500 });
-    return true;
-  } catch (e) {
-    return false;
-  }
-};
+    loc = dashboardFrame.locator(".transactions-history-container");
+    await loc.click();
 
-const extractor: Extractor = {
-  getAccountValue,
-  getTransactionData,
-};
+    // Set date range.
 
-export { extractor };
+    console.log("Setting date range");
+
+    const dateRangeFrame = browserPage.frames()[0];
+
+    loc = dateRangeFrame.locator("#statements-daterange1");
+    await loc.click(); // Forces focus; otherwise selectOption can fail.
+    await loc.press("Enter");
+    await loc.selectOption({ value: "Custom" });
+
+    loc = dateRangeFrame.locator("#calendar-FromDate");
+    await loc.fill(range.start.toLocaleDateString("en-US"));
+
+    loc = dateRangeFrame.locator("#calendar-ToDate");
+    await loc.fill(range.end.toLocaleDateString("en-US"));
+
+    loc = dateRangeFrame.locator("#btnSearch");
+    await loc.click({ force: true });
+
+    await browserPage.waitForLoadState("networkidle");
+
+    let rangeIsValid = true;
+    try {
+      loc = dateRangeFrame.locator("#datepicker-range-error-alert");
+      await loc.waitFor({ state: "attached", timeout: 2000 });
+      rangeIsValid = false;
+    } catch (e) {}
+    if (!rangeIsValid) {
+      throw "Invalid date range";
+    }
+
+    // Open export popup.
+
+    console.log("Launching export popup");
+
+    loc = dashboardFrame.locator("#bttnExport button");
+    await loc.click();
+
+    const popupPage = await browserPage.waitForEvent("popup");
+    await popupPage.waitForLoadState("domcontentloaded");
+    await popupPage.waitForLoadState("networkidle");
+
+    loc = popupPage.locator(".button-primary").first();
+    await loc.click();
+
+    // Get downloaded file.
+
+    console.log("Waiting for download");
+
+    const download = await browserPage.waitForEvent("download");
+    const downloadPath = await download.path();
+    const transactionData = fs.readFileSync(downloadPath!, {
+      encoding: "utf-8",
+    });
+
+    console.log(
+      `Downloaded data (${transactionData.length} chars) to ${downloadPath}`
+    );
+
+    return transactionData;
+  };
+
+  getDashboardExists = async (browserPage: Page): Promise<boolean> => {
+    try {
+      const loc = browserPage.frames()[0].locator("#site-header");
+      await loc.waitFor({ state: "attached", timeout: 500 });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+}
+
+export { CharlesSchwabBankExtractor };

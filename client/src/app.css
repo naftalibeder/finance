@@ -1,10 +1,9 @@
 :root {
-  font-family: "PT Mono", monospace;
+  margin: 0px;
   padding: 16px;
   color-scheme: light dark;
   color: white;
   background-color: #2a2a2a;
-
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -12,11 +11,34 @@
   -webkit-text-size-adjust: 100%;
 }
 
+div,
+p,
+button,
+input,
+textarea {
+  font-family: "PT Mono", monospace;
+  font-size: 14px;
+  margin: 0px;
+  padding: 0px;
+}
+
 button {
+  font-family: "PT Mono", monospace;
   color: white;
-  background-color: #2a2a2a;
   border-radius: 0px;
   outline: rgb(190, 190, 190) solid 2px;
   border: 0px;
   padding: 8px;
+  cursor: pointer;
+}
+
+button.text {
+  background-color: transparent;
+  outline: transparent solid 0px;
+  padding: 0px;
+  text-decoration-style: solid;
+}
+
+.faded {
+  opacity: 0.5;
 }

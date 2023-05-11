@@ -52,9 +52,15 @@
 </script>
 
 <div class="container">
-  <div class="row">
+  <div class="section-row">
     <p><b>{accounts.length} accounts</b></p>
-    <button class="text" on:click={() => onClickRefresh()}>Refresh all</button>
+    {#if extractStatus === ""}
+      <button class="text" on:click={() => onClickRefresh()}>
+        Refresh all
+      </button>
+    {:else}
+      <div class="faded">{extractStatus}</div>
+    {/if}
   </div>
 
   <table>
@@ -66,7 +72,9 @@
     {/each}
   </table>
 
-  <p><b>{transactions.length} transactions</b></p>
+  <div class="section-row">
+    <p><b>{transactions.length} transactions</b></p>
+  </div>
   <table>
     {#each transactions as t}
       <tr>
@@ -93,19 +101,13 @@
     padding-bottom: 2px;
   }
 
-  button.text {
-    color: white;
-    background-color: transparent;
-    padding: 0px;
-  }
-
   .container {
     display: flex;
     flex-direction: column;
-    row-gap: 16px;
+    row-gap: 32px;
   }
 
-  .row {
+  .section-row {
     display: flex;
     flex-direction: row;
     justify-content: space-between;

@@ -1,7 +1,87 @@
 import readline from "readline";
 import { parse } from "csv-parse";
-import { ConfigAccount, Price, Transaction } from "shared/types";
+import {
+  ConfigAccount,
+  ConfigCredentials,
+  Price,
+  Transaction,
+} from "shared/types";
 import { Frame, FrameLocator, Page } from "playwright-core";
+import { Extractor, ExtractorDateRange } from "types";
+import { toDate, toPrice, toYYYYMMDD } from "../utils";
+
+export const runExtractor = async (
+  extractor: Extractor,
+  browserPage: Page,
+  account: ConfigAccount,
+  credentials: ConfigCredentials
+) => {
+  const getAccountValue = async (): Promise<Price | undefined> => {
+    await extractor.loadAccountsPage(browserPage);
+    await extractor.enterCredentials(browserPage, credentials);
+    await extractor.enterTwoFactorCode(browserPage);
+
+    const accountValue = await extractor.scrapeAccountValue(
+      browserPage,
+      account
+    );
+    return accountValue;
+  };
+
+  const getTransactions = async (): Promise<Transaction[]> => {
+    const spanMs = 1000 * 60 * 60 * 24 * 365; // ~1 year.
+
+    let transactions: Transaction[] = [];
+    let end = new Date();
+
+    while (true) {
+      const start = new Date(end.valueOf() - spanMs);
+      const range: ExtractorDateRange = { start, end };
+      const prettyRange = `[${toYYYYMMDD(range.start)}, ${toYYYYMMDD(
+        range.end
+      )}]`;
+
+      console.log(`Getting transactions for range ${prettyRange}`);
+
+      let transactionsChunk: Transaction[] = [];
+      try {
+        await extractor.loadHistoryPage(browserPage);
+        await extractor.enterCredentials(browserPage, credentials);
+        await extractor.enterTwoFactorCode(browserPage);
+
+        const data = await extractor.scrapeTransactionData(
+          browserPage,
+          account,
+          range
+        );
+        transactionsChunk = await parseTransactions(data, account);
+      } catch (e) {
+        console.log("Error getting transaction data:", e);
+        break;
+      }
+
+      if (transactionsChunk.length === 0) {
+        console.log(`No new transactions for range ${prettyRange}; stopping`);
+        break;
+      }
+
+      console.log(`Found ${transactionsChunk.length} transactions`);
+      transactions = [...transactions, ...transactionsChunk];
+
+      end = start;
+    }
+
+    return transactions;
+  };
+
+  const accountValue = await getAccountValue();
+  const transactions = await getTransactions();
+
+  return {
+    accountValue,
+    transactions,
+  };
+};
 
 export const parseTransactions = async (
   transactionData: string,
@@ -126,38 +206,4 @@ export const getUserInput = async (message: string): Promise<string> => {
   });
 
   return input;
-};
-
-export const toPretty = (o: ConfigAccount): string => {
-  return `${o.info.bankId}-${o.info.id}`;
-};
-
-// TODO: Handle "01/18/2022 as of 01/15/2022" etc.
-export const toDate = (s: string): Date | undefined => {
-  const date = new Date(s);
-  if (isNaN(date.getTime())) {
-    return undefined;
-  }
-
-  return date;
-};
-
-// TODO: Handle other currencies. Consider https://github.com/dinerojs/dinero.js.
-export const toPrice = (s: string): Price | undefined => {
-  const valueStr = s.replace("$", "").replace(",", "");
-  const currency = "USD";
-
-  const amount = parseFloat(valueStr);
-  if (isNaN(amount)) {
-    return undefined;
-  }
-
-  return {
-    amount,
-    currency,
-  };
-};
-
-export const toYYYYMMDD = (d: Date): string => {
-  return d.toLocaleDateString("en-CA");
 };
