@@ -52,6 +52,8 @@
 </script>
 
 <div class="container">
+  <h1>Transactions</h1>
+
   <div class="section-row">
     <p><b>{accounts.length} accounts</b></p>
     {#if extractStatus === ""}

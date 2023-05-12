@@ -3,16 +3,18 @@ import {
   Browser,
   BrowserContext,
   BrowserContextOptions,
+  LaunchOptions,
   Page,
   firefox,
 } from "playwright-core";
 import { Config, ConfigBankId } from "shared";
-import { CONFIG_PATH, TMP_DIR } from "../constants";
+import { CONFIG_PATH, EXTRACTIONS_PATH, TMP_DIR } from "../constants";
 import db from "../db";
 import { runExtractor } from "./utils";
 import { toPretty } from "../utils";
 import { Extractor } from "types";
 import { CharlesSchwabBankExtractor } from "./extractors/charlesSchwabBank";
+import { Logger } from "playwright-core";
 
 const BROWSER_CONTEXT_PATH = `${TMP_DIR}/browser-context.json`;
 const HEADLESS = false;
@@ -22,7 +24,7 @@ const extractors: Record<ConfigBankId, Extractor> = {
 };
 
 const run = async (onProgress: (msg: string) => void) => {
-  const tmpRunDir = `${TMP_DIR}/${new Date()}`;
+  const tmpRunDir = `${EXTRACTIONS_PATH}/${new Date()}`;
   fs.mkdirSync(tmpRunDir);
 
   const startTime = Date.now();
@@ -43,7 +45,9 @@ const run = async (onProgress: (msg: string) => void) => {
 
     const extractor = extractors[extractorAccount.info.bankId];
     const credentials = config.credentials[extractorAccount.info.bankId];
+
     const browserPage = await browserContext.newPage();
+    browserPage.setViewportSize({ width: 1948, height: 955 });
 
     const { accountValue, transactions } = await runExtractor(
       extractor,
@@ -69,7 +73,7 @@ const run = async (onProgress: (msg: string) => void) => {
     await browserContext.storageState({ path: BROWSER_CONTEXT_PATH });
     await browserPage.close();
 
-    console.log();
+    console.log("----------------------------------");
   }
 
   await tearDown(browser, browserContext);
@@ -83,18 +87,24 @@ const run = async (onProgress: (msg: string) => void) => {
 };
 
 const setUp = async (): Promise<[Browser, BrowserContext]> => {
-  let options: BrowserContextOptions = {};
+  const launchOptions: LaunchOptions = {
+    headless: HEADLESS,
+    timeout: 0,
+    env: {
+      PWDEBUG: "1",
+    },
+    logger,
+  };
+  const browser = await firefox.launch(launchOptions);
+
+  const contextOptions: BrowserContextOptions = {};
   if (fs.existsSync(BROWSER_CONTEXT_PATH)) {
-    options.storageState = BROWSER_CONTEXT_PATH;
+    contextOptions.storageState = BROWSER_CONTEXT_PATH;
   }
 
-  console.log("Launching browser with options:", options);
+  const browserContext = await browser.newContext(contextOptions);
 
-  const browser = await firefox.launch({ headless: HEADLESS });
-  const browserContext = await browser.newContext(options);
-
-  console.log("Launched browser");
-
+  console.log("Launched browser with options:", contextOptions);
   return [browser, browserContext];
 };
 
@@ -115,3 +125,22 @@ const takeErrorScreenshot = async (browserPage: Page, tmpRunDir: string) => {
 };
 
 export default { run };
+
+const logger: Logger = {
+  isEnabled: function (
+    name: string,
+    severity: "info" | "error" | "verbose" | "warning"
+  ): boolean {
+    return severity === "error";
+  },
+
+  log: function (
+    name: string,
+    severity: "info" | "error" | "verbose" | "warning",
+    message: string | Error,
+    args: Object[],
+    hints: { color?: string | undefined }
+  ): void {
+    console.log("Log | ", severity, message, JSON.stringify(args));
+  },
+};

@@ -33,3 +33,7 @@ export const toPrice = (s: string): Price | undefined => {
 export const toYYYYMMDD = (d: Date): string => {
   return d.toLocaleDateString("en-CA");
 };
+
+export const delay = (ms: number) => {
+  return new Promise((res) => setTimeout(res, ms));
+};

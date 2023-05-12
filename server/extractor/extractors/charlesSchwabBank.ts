@@ -38,7 +38,7 @@ class CharlesSchwabBankExtractor implements Extractor {
       return;
     }
 
-    const loginFrame = browserPage.frameLocator("#lmsSecondaryLogin");
+    const loginFrame = browserPage.frames()[0];
 
     const loginPageExists = await getSelectorExists(
       loginFrame,
@@ -65,7 +65,7 @@ class CharlesSchwabBankExtractor implements Extractor {
     loc = loginFrame.locator("#btnLogin");
     await loc.click();
 
-    console.log("Authenticated");
+    await loginFrame.waitForLoadState("domcontentloaded");
   };
 
   enterTwoFactorCode = async (browserPage: Page) => {
@@ -116,6 +116,8 @@ class CharlesSchwabBankExtractor implements Extractor {
 
     loc = codeInputFrame.locator("#continueButton");
     await loc.click();
+
+    await codeInputFrame.waitForLoadState("domcontentloaded");
   };
 
   scrapeAccountValue = async (
@@ -163,8 +165,8 @@ class CharlesSchwabBankExtractor implements Extractor {
     });
     await loc.click();
 
-    loc = dashboardFrame.locator(".transactions-history-container");
-    await loc.click();
+    await browserPage.waitForLoadState("domcontentloaded");
+    await browserPage.waitForLoadState("networkidle");
 
     // Set date range.
 
@@ -172,9 +174,7 @@ class CharlesSchwabBankExtractor implements Extractor {
 
     const dateRangeFrame = browserPage.frames()[0];
 
-    loc = dateRangeFrame.locator("#statements-daterange1");
-    await loc.click(); // Forces focus; otherwise selectOption can fail.
-    await loc.press("Enter");
+    loc = dateRangeFrame.getByRole("combobox", { name: "Date Range" });
     await loc.selectOption({ value: "Custom" });
 
     loc = dateRangeFrame.locator("#calendar-FromDate");
@@ -183,10 +183,11 @@ class CharlesSchwabBankExtractor implements Extractor {
     loc = dateRangeFrame.locator("#calendar-ToDate");
     await loc.fill(range.end.toLocaleDateString("en-US"));
 
-    loc = dateRangeFrame.locator("#btnSearch");
-    await loc.click({ force: true });
+    loc = dateRangeFrame.getByRole("button", { name: "search" });
+    await loc.click();
 
-    await browserPage.waitForLoadState("networkidle");
+    await dateRangeFrame.waitForLoadState("domcontentloaded");
+    await dateRangeFrame.waitForLoadState("networkidle");
 
     let rangeIsValid = true;
     try {

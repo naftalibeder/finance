@@ -35,5 +35,3 @@ const main = async () => {
 };
 
 main();
-
-const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
