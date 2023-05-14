@@ -1,91 +1,12 @@
 import readline from "readline";
 import { parse } from "csv-parse";
-import {
-  ConfigAccount,
-  ConfigCredentials,
-  Price,
-  Transaction,
-} from "shared/types";
-import { Frame, FrameLocator, Page } from "playwright-core";
-import { Extractor, ExtractorDateRange } from "types";
+import { ConfigAccount, Transaction } from "shared/types";
+import { Frame, FrameLocator } from "playwright-core";
 import { toDate, toPrice, toYYYYMMDD } from "../utils";
-
-export const runExtractor = async (
-  extractor: Extractor,
-  browserPage: Page,
-  account: ConfigAccount,
-  credentials: ConfigCredentials
-) => {
-  const getAccountValue = async (): Promise<Price | undefined> => {
-    await extractor.loadAccountsPage(browserPage);
-    await extractor.enterCredentials(browserPage, credentials);
-    await extractor.enterTwoFactorCode(browserPage);
-
-    const accountValue = await extractor.scrapeAccountValue(
-      browserPage,
-      account
-    );
-    return accountValue;
-  };
-
-  const getTransactions = async (): Promise<Transaction[]> => {
-    const spanMs = 1000 * 60 * 60 * 24 * 365; // ~1 year.
-
-    let transactions: Transaction[] = [];
-    let end = new Date();
-
-    while (true) {
-      const start = new Date(end.valueOf() - spanMs);
-      const range: ExtractorDateRange = { start, end };
-      const prettyRange = `[${toYYYYMMDD(range.start)}, ${toYYYYMMDD(
-        range.end
-      )}]`;
-
-      console.log(`Getting transactions for range ${prettyRange}`);
-
-      let transactionsChunk: Transaction[] = [];
-      try {
-        await extractor.loadHistoryPage(browserPage);
-        await extractor.enterCredentials(browserPage, credentials);
-        await extractor.enterTwoFactorCode(browserPage);
-
-        const data = await extractor.scrapeTransactionData(
-          browserPage,
-          account,
-          range
-        );
-        transactionsChunk = await parseTransactions(data, account);
-      } catch (e) {
-        console.log("Error getting transaction data:", e);
-        break;
-      }
-
-      if (transactionsChunk.length === 0) {
-        console.log(`No new transactions for range ${prettyRange}; stopping`);
-        break;
-      }
-
-      console.log(`Found ${transactionsChunk.length} transactions`);
-      transactions = [...transactions, ...transactionsChunk];
-
-      end = start;
-    }
-
-    return transactions;
-  };
-
-  const accountValue = await getAccountValue();
-  const transactions = await getTransactions();
-
-  return {
-    accountValue,
-    transactions,
-  };
-};
 
 export const parseTransactions = async (
   transactionData: string,
-  account: ConfigAccount
+  configAccount: ConfigAccount
 ): Promise<Transaction[]> => {
   console.log("Parsing extracted data");
 
@@ -102,7 +23,7 @@ export const parseTransactions = async (
       parser.on("readable", () => {
         let row: string[];
         while ((row = parser.read()) !== null) {
-          const t = buildTransaction(row, account);
+          const t = buildTransaction(row, configAccount);
           if (!t) {
             skipCt += 1;
             continue;
@@ -133,9 +54,9 @@ export const parseTransactions = async (
 
 const buildTransaction = (
   row: string[],
-  account: ConfigAccount
+  configAccount: ConfigAccount
 ): Transaction | undefined => {
-  const { info, columnMap } = account;
+  const { info, columnMap } = configAccount;
 
   const rowNorm: Record<keyof ConfigAccount["columnMap"], string> = {
     date: row[columnMap.date] ?? "",

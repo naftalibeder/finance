@@ -1,4 +1,5 @@
 import express from "express";
+import { BufferChunk } from "shared";
 import extractor from "./extractor";
 import db from "./db";
 
@@ -11,8 +12,10 @@ const main = async () => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.setHeader("Transfer-Encoding", "chunked");
     res.setHeader("Access-Control-Allow-Origin", "*");
-    await extractor.run((msg: string) => {
-      res.write(msg);
+
+    await extractor.runAllExtractors((chunk: BufferChunk) => {
+      const chunkStr = JSON.stringify(chunk);
+      res.write(chunkStr);
     });
     res.end();
   });

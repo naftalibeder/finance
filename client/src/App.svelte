@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { Account, Transaction } from "shared";
+  // TODO: Fix this error if possible.
+  // @ts-ignore
+  import { Account, BufferChunk, Transaction } from "shared";
 
   const serverUrl = import.meta.env.VITE_SERVER_URL;
 
@@ -36,8 +38,14 @@
 
     while (!result?.done) {
       result = await reader.read();
-      let chunk = decoder.decode(result.value);
-      extractStatus = chunk;
+      const chunkStr = decoder.decode(result.value);
+      const chunk: BufferChunk = JSON.parse(chunkStr);
+      console.log("Received chunk:", chunk);
+
+      extractStatus = chunk.message;
+      if (chunk.needsInput) {
+        alert("Need input!");
+      }
     }
 
     extractStatus = "";

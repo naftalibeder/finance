@@ -17,7 +17,7 @@ type Price = {
   currency: string;
 };
 
-type ConfigBankId = "charles-schwab-bank";
+type ConfigBankId = "charles-schwab-bank" | "chase-bank";
 
 type Config = {
   accounts: ConfigAccount[];
@@ -43,6 +43,11 @@ type ConfigCredentials = {
   password: string;
 };
 
+type BufferChunk = {
+  message: string;
+  needsInput?: boolean;
+};
+
 export {
   Account,
   Transaction,
@@ -51,4 +56,5 @@ export {
   Config,
   ConfigAccount,
   ConfigCredentials,
+  BufferChunk,
 };

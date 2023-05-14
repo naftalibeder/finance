@@ -1,44 +1,34 @@
 import fs from "fs";
-import { Locator, Page } from "playwright-core";
-import { Price, ConfigAccount, ConfigCredentials } from "shared";
-import { Extractor, ExtractorDateRange } from "types";
+import { Locator } from "playwright-core";
+import { Price } from "shared";
+import { Extractor, ExtractorFuncArgs, ExtractorRangeFuncArgs } from "types";
 import { getSelectorExists, getUserInput } from "../utils";
 import { toPrice } from "../../utils";
 
 class CharlesSchwabBankExtractor implements Extractor {
-  loadAccountsPage = async (browserPage: Page) => {
-    console.log("Loading accounts page");
-
-    await browserPage.goto(
-      "https://client.schwab.com/clientapps/accounts/summary"
-    );
+  loadAccountsPage = async (args: ExtractorFuncArgs) => {
+    const { extractor, configAccount, configCredentials, page } = args;
+    await page.goto("https://client.schwab.com/clientapps/accounts/summary");
   };
 
-  loadHistoryPage = async (browserPage: Page) => {
-    console.log("Loading history page");
-
-    await browserPage.goto(
+  loadHistoryPage = async (args: ExtractorFuncArgs) => {
+    const { extractor, configAccount, configCredentials, page } = args;
+    await page.goto(
       "https://client.schwab.com/app/accounts/transactionhistory"
     );
   };
 
-  enterCredentials = async (
-    browserPage: Page,
-    credentials: ConfigCredentials
-  ) => {
+  enterCredentials = async (args: ExtractorFuncArgs) => {
+    const { extractor, configAccount, configCredentials, page } = args;
+
     let loc: Locator;
 
-    // Check if credentials are needed.
-
-    console.log("Checking if credentials are needed");
-
-    const dashboardExists = await this.getDashboardExists(browserPage);
+    const dashboardExists = await this.getDashboardExists(args);
     if (dashboardExists) {
-      console.log("Dashboard found; skipping credentials");
       return;
     }
 
-    const loginFrame = browserPage.frames()[0];
+    const loginFrame = page.frames()[0];
 
     const loginPageExists = await getSelectorExists(
       loginFrame,
@@ -46,21 +36,14 @@ class CharlesSchwabBankExtractor implements Extractor {
       5000
     );
     if (!loginPageExists) {
-      console.log("Login page not found; skipping credentials");
       return;
     }
 
-    console.log("Login is needed");
-
-    // Input credentials.
-
-    console.log("Entering credentials");
-
     loc = loginFrame.locator("#loginIdInput");
-    await loc.fill(credentials.username);
+    await loc.fill(configCredentials.username);
 
     loc = loginFrame.locator("#passwordInput");
-    await loc.fill(credentials.password);
+    await loc.fill(configCredentials.password);
 
     loc = loginFrame.locator("#btnLogin");
     await loc.click();
@@ -68,20 +51,17 @@ class CharlesSchwabBankExtractor implements Extractor {
     await loginFrame.waitForLoadState("domcontentloaded");
   };
 
-  enterTwoFactorCode = async (browserPage: Page) => {
+  enterTwoFactorCode = async (args: ExtractorFuncArgs) => {
+    const { extractor, configAccount, configCredentials, page } = args;
+
     let loc: Locator;
 
-    // Check if code is needed.
-
-    console.log("Checking if two-factor code is needed");
-
-    const dashboardExists = await this.getDashboardExists(browserPage);
+    const dashboardExists = await this.getDashboardExists(args);
     if (dashboardExists) {
-      console.log("Dashboard found; skipping two-factor");
       return;
     }
 
-    const twoFactorFrame = browserPage.frames()[0];
+    const twoFactorFrame = page.frames()[0];
 
     const twoFactorPageExists = await getSelectorExists(
       twoFactorFrame,
@@ -89,24 +69,19 @@ class CharlesSchwabBankExtractor implements Extractor {
       5000
     );
     if (!twoFactorPageExists) {
-      console.log("Two-factor page not found; skipping two-factor");
       return;
     }
-
-    console.log("Two-factor code is needed");
 
     loc = twoFactorFrame.locator("#otp_sms");
     await loc.click();
 
     // Input code.
 
-    console.log("Entering two-factor code");
-
     const code = await getUserInput(
       "Enter the code sent to your phone number:"
     );
 
-    const codeInputFrame = browserPage.frames()[0];
+    const codeInputFrame = page.frames()[0];
 
     loc = codeInputFrame.locator("#securityCode");
     await loc.fill(code);
@@ -120,19 +95,16 @@ class CharlesSchwabBankExtractor implements Extractor {
     await codeInputFrame.waitForLoadState("domcontentloaded");
   };
 
-  scrapeAccountValue = async (
-    browserPage: Page,
-    account: ConfigAccount
-  ): Promise<Price | undefined> => {
+  scrapeAccountValue = async (args: ExtractorFuncArgs): Promise<Price> => {
+    const { extractor, configAccount, configCredentials, page } = args;
+
     let loc: Locator;
 
-    console.log("Getting account value");
-
-    const dashboardFrame = browserPage.frames()[0];
+    const dashboardFrame = page.frames()[0];
 
     loc = dashboardFrame
       .locator("single-account")
-      .filter({ hasText: account.info.display })
+      .filter({ hasText: configAccount.info.display })
       .locator("div.balance-container-cs > div > span")
       .first();
     let text = await loc.evaluate((o) => o.childNodes[2].textContent ?? "");
@@ -142,17 +114,15 @@ class CharlesSchwabBankExtractor implements Extractor {
   };
 
   scrapeTransactionData = async (
-    browserPage: Page,
-    account: ConfigAccount,
-    range: ExtractorDateRange
+    args: ExtractorRangeFuncArgs
   ): Promise<string> => {
+    const { extractor, configAccount, configCredentials, range, page } = args;
+
     let loc: Locator;
 
     // Go to history page.
 
-    console.log("Navigating to export page");
-
-    const dashboardFrame = browserPage.frames()[0];
+    const dashboardFrame = page.frames()[0];
 
     loc = dashboardFrame.locator("#meganav-secondary-menu-hist");
     await loc.click();
@@ -161,18 +131,16 @@ class CharlesSchwabBankExtractor implements Extractor {
     await loc.click();
 
     loc = dashboardFrame.locator(".sdps-account-selector__list-item", {
-      hasText: account.info.number,
+      hasText: configAccount.info.number,
     });
     await loc.click();
 
-    await browserPage.waitForLoadState("domcontentloaded");
-    await browserPage.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
+    await page.waitForLoadState("networkidle");
 
     // Set date range.
 
-    console.log("Setting date range");
-
-    const dateRangeFrame = browserPage.frames()[0];
+    const dateRangeFrame = page.frames()[0];
 
     loc = dateRangeFrame.getByRole("combobox", { name: "Date Range" });
     await loc.selectOption({ value: "Custom" });
@@ -201,12 +169,10 @@ class CharlesSchwabBankExtractor implements Extractor {
 
     // Open export popup.
 
-    console.log("Launching export popup");
-
     loc = dashboardFrame.locator("#bttnExport button");
     await loc.click();
 
-    const popupPage = await browserPage.waitForEvent("popup");
+    const popupPage = await page.waitForEvent("popup");
     await popupPage.waitForLoadState("domcontentloaded");
     await popupPage.waitForLoadState("networkidle");
 
@@ -215,24 +181,19 @@ class CharlesSchwabBankExtractor implements Extractor {
 
     // Get downloaded file.
 
-    console.log("Waiting for download");
-
-    const download = await browserPage.waitForEvent("download");
+    const download = await page.waitForEvent("download");
     const downloadPath = await download.path();
     const transactionData = fs.readFileSync(downloadPath!, {
       encoding: "utf-8",
     });
-
-    console.log(
-      `Downloaded data (${transactionData.length} chars) to ${downloadPath}`
-    );
-
     return transactionData;
   };
 
-  getDashboardExists = async (browserPage: Page): Promise<boolean> => {
+  getDashboardExists = async (args: ExtractorFuncArgs): Promise<boolean> => {
+    const { extractor, configAccount, configCredentials, page } = args;
+
     try {
-      const loc = browserPage.frames()[0].locator("#site-header");
+      const loc = page.frames()[0].locator("#site-header");
       await loc.waitFor({ state: "attached", timeout: 500 });
       return true;
     } catch (e) {

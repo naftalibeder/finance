@@ -15,13 +15,13 @@ export const toDate = (s: string): Date | undefined => {
 };
 
 // TODO: Handle other currencies. Consider https://github.com/dinerojs/dinero.js.
-export const toPrice = (s: string): Price | undefined => {
+export const toPrice = (s: string): Price => {
   const valueStr = s.replace("$", "").replace(",", "");
   const currency = "USD";
 
   const amount = parseFloat(valueStr);
   if (isNaN(amount)) {
-    return undefined;
+    throw `${s} cannot be parsed to a valid number`;
   }
 
   return {

@@ -12,24 +12,25 @@ export type Database = {
   transactions: Transaction[];
 };
 
+export interface ExtractorFuncArgs {
+  extractor: Extractor;
+  configAccount: ConfigAccount;
+  configCredentials: ConfigCredentials;
+  page: Page;
+}
+
+export interface ExtractorRangeFuncArgs extends ExtractorFuncArgs {
+  range: ExtractorDateRange;
+}
+
 export interface Extractor {
-  loadAccountsPage: (browserPage: Page) => Promise<void>;
-  loadHistoryPage: (browserPage: Page) => Promise<void>;
-  enterCredentials: (
-    browserPage: Page,
-    credentials: ConfigCredentials
-  ) => Promise<void>;
-  enterTwoFactorCode: (browserPage: Page) => Promise<void>;
-  scrapeAccountValue: (
-    browserPage: Page,
-    account: ConfigAccount
-  ) => Promise<Price | undefined>;
-  scrapeTransactionData: (
-    browserPage: Page,
-    account: ConfigAccount,
-    range: ExtractorDateRange
-  ) => Promise<string>;
-  getDashboardExists: (browserPage: Page) => Promise<boolean>;
+  loadAccountsPage: (args: ExtractorFuncArgs) => Promise<void>;
+  loadHistoryPage: (args: ExtractorFuncArgs) => Promise<void>;
+  enterCredentials: (args: ExtractorFuncArgs) => Promise<void>;
+  enterTwoFactorCode: (args: ExtractorFuncArgs) => Promise<void>;
+  scrapeAccountValue: (args: ExtractorFuncArgs) => Promise<Price>;
+  scrapeTransactionData: (args: ExtractorRangeFuncArgs) => Promise<string>;
+  getDashboardExists: (args: ExtractorFuncArgs) => Promise<boolean>;
 }
 
 export type ExtractorDateRange = {

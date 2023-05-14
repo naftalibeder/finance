@@ -7,83 +7,21 @@ import {
   Page,
   firefox,
 } from "playwright-core";
-import { Config, ConfigBankId } from "shared";
+import { BufferChunk, Config, ConfigBankId, Price, Transaction } from "shared";
 import { CONFIG_PATH, EXTRACTIONS_PATH, TMP_DIR } from "../constants";
 import db from "../db";
-import { runExtractor } from "./utils";
-import { toPretty } from "../utils";
-import { Extractor } from "types";
-import { CharlesSchwabBankExtractor } from "./extractors/charlesSchwabBank";
-import { Logger } from "playwright-core";
+import { toPretty, toYYYYMMDD } from "../utils";
+import { Extractor, ExtractorDateRange, ExtractorFuncArgs } from "types";
+import { CharlesSchwabBankExtractor, ChaseBankExtractor } from "./extractors";
+import { logger } from "./log";
+import { parseTransactions } from "./utils";
 
 const BROWSER_CONTEXT_PATH = `${TMP_DIR}/browser-context.json`;
 const HEADLESS = false;
 
 const extractors: Record<ConfigBankId, Extractor> = {
   "charles-schwab-bank": new CharlesSchwabBankExtractor(),
-};
-
-const run = async (onProgress: (msg: string) => void) => {
-  const tmpRunDir = `${EXTRACTIONS_PATH}/${new Date()}`;
-  fs.mkdirSync(tmpRunDir);
-
-  const startTime = Date.now();
-  let totalAddCt = 0;
-
-  const configStr = fs.readFileSync(CONFIG_PATH, { encoding: "utf-8" });
-  const config = JSON.parse(configStr) as Config;
-  const accounts = config.accounts.filter((o) => !o.skip);
-
-  console.log(`Preparing extraction for ${accounts.length} accounts`);
-  onProgress("Starting...");
-
-  const [browser, browserContext] = await setUp();
-
-  for (const extractorAccount of config.accounts) {
-    console.log(`Starting extraction for ${toPretty(extractorAccount)}`);
-    onProgress(`Extracting ${extractorAccount.info.display}...`);
-
-    const extractor = extractors[extractorAccount.info.bankId];
-    const credentials = config.credentials[extractorAccount.info.bankId];
-
-    const browserPage = await browserContext.newPage();
-    browserPage.setViewportSize({ width: 1948, height: 955 });
-
-    const { accountValue, transactions } = await runExtractor(
-      extractor,
-      browserPage,
-      extractorAccount,
-      credentials
-    );
-
-    if (accountValue !== undefined) {
-      db.updateAccount({
-        id: extractorAccount.info.id,
-        number: extractorAccount.info.number,
-        price: accountValue,
-      });
-      console.log(`Updated account value in database: ${accountValue.amount}`);
-    }
-
-    if (transactions.length > 0) {
-      const addCt = db.addTransactions(transactions);
-      console.log(`Added ${addCt} transactions in database`);
-    }
-
-    await browserContext.storageState({ path: BROWSER_CONTEXT_PATH });
-    await browserPage.close();
-
-    console.log("----------------------------------");
-  }
-
-  await tearDown(browser, browserContext);
-
-  console.log(
-    `Added ${totalAddCt} transactions across ${config.accounts.length} accounts`
-  );
-
-  const deltaTime = (Date.now() - startTime) / 1000;
-  console.log(`Extraction completed in ${deltaTime}s`);
+  "chase-bank": new ChaseBankExtractor(),
 };
 
 const setUp = async (): Promise<[Browser, BrowserContext]> => {
@@ -108,6 +46,145 @@ const setUp = async (): Promise<[Browser, BrowserContext]> => {
   return [browser, browserContext];
 };
 
+const runAllExtractors = async (onProgress: (chunk: BufferChunk) => void) => {
+  const tmpRunDir = `${EXTRACTIONS_PATH}/${new Date()}`;
+  fs.mkdirSync(tmpRunDir);
+
+  const startTime = Date.now();
+  let totalAddCt = 0;
+
+  const configStr = fs.readFileSync(CONFIG_PATH, { encoding: "utf-8" });
+  const config = JSON.parse(configStr) as Config;
+  const configAccounts = config.accounts.filter((o) => !o.skip);
+
+  console.log(`Preparing extraction for ${configAccounts.length} accounts`);
+  onProgress({ message: "Starting..." });
+
+  const [browser, browserContext] = await setUp();
+
+  for (const configAccount of configAccounts) {
+    console.log(`Starting extraction for ${toPretty(configAccount)}`);
+    onProgress({
+      message: `Extracting ${configAccount.info.display}...`,
+    });
+
+    const extractor = extractors[configAccount.info.bankId];
+    const configCredentials = config.credentials[configAccount.info.bankId];
+
+    const page = await browserContext.newPage();
+    page.setViewportSize({ width: 1948, height: 955 });
+
+    const args: ExtractorFuncArgs = {
+      extractor,
+      configAccount,
+      configCredentials,
+      page,
+    };
+
+    try {
+      const { accountValue, transactions } = await runExtractor(args);
+
+      db.updateAccount({
+        id: configAccount.info.id,
+        number: configAccount.info.number,
+        price: accountValue,
+      });
+      console.log(`Updated account value in database: ${accountValue.amount}`);
+
+      const addCt = db.addTransactions(transactions);
+      console.log(`Added ${addCt} transactions in database`);
+    } catch (e) {
+      console.log(`Error running extractor: ${e}`);
+    }
+
+    await browserContext.storageState({ path: BROWSER_CONTEXT_PATH });
+    await page.close();
+
+    console.log("----------------------------------");
+  }
+
+  await tearDown(browser, browserContext);
+
+  console.log(
+    `Added ${totalAddCt} transactions across ${configAccounts.length} accounts`
+  );
+
+  const deltaTime = (Date.now() - startTime) / 1000;
+  console.log(`Extraction completed in ${deltaTime}s`);
+};
+
+export const runExtractor = async (
+  args: ExtractorFuncArgs
+): Promise<{
+  accountValue: Price;
+  transactions: Transaction[];
+}> => {
+  const { extractor, configAccount, configCredentials, page } = args;
+
+  const getAccountValue = async (): Promise<Price> => {
+    console.log("Loading accounts page");
+    await extractor.loadAccountsPage(args);
+
+    console.log("Checking if credentials are needed");
+    await extractor.enterCredentials(args);
+    await extractor.enterTwoFactorCode(args);
+
+    const accountValue = await extractor.scrapeAccountValue(args);
+    return accountValue;
+  };
+
+  const getTransactions = async (): Promise<Transaction[]> => {
+    const spanMs = 1000 * 60 * 60 * 24 * 365; // ~1 year.
+
+    let transactions: Transaction[] = [];
+    let end = new Date();
+
+    while (true) {
+      const start = new Date(end.valueOf() - spanMs);
+      const range: ExtractorDateRange = { start, end };
+      const prettyRange = `[${toYYYYMMDD(range.start)}, ${toYYYYMMDD(
+        range.end
+      )}]`;
+
+      console.log(`Getting transactions for range ${prettyRange}`);
+
+      let transactionsChunk: Transaction[] = [];
+      try {
+        console.log("Loading history page");
+        await extractor.loadHistoryPage(args);
+        await extractor.enterCredentials(args);
+        await extractor.enterTwoFactorCode(args);
+
+        const data = await extractor.scrapeTransactionData({ ...args, range });
+        transactionsChunk = await parseTransactions(data, configAccount);
+      } catch (e) {
+        console.log("Error getting transaction data:", e);
+        break;
+      }
+
+      if (transactionsChunk.length === 0) {
+        console.log(`No new transactions for range ${prettyRange}; stopping`);
+        break;
+      }
+
+      console.log(`Found ${transactionsChunk.length} transactions`);
+      transactions = [...transactions, ...transactionsChunk];
+
+      end = start;
+    }
+
+    return transactions;
+  };
+
+  const accountValue = await getAccountValue();
+  const transactions = await getTransactions();
+
+  return {
+    accountValue,
+    transactions,
+  };
+};
+
 const tearDown = async (browser: Browser, browserContext: BrowserContext) => {
   console.log("Saving and closing browser");
 
@@ -124,23 +201,4 @@ const takeErrorScreenshot = async (browserPage: Page, tmpRunDir: string) => {
   });
 };
 
-export default { run };
-
-const logger: Logger = {
-  isEnabled: function (
-    name: string,
-    severity: "info" | "error" | "verbose" | "warning"
-  ): boolean {
-    return severity === "error";
-  },
-
-  log: function (
-    name: string,
-    severity: "info" | "error" | "verbose" | "warning",
-    message: string | Error,
-    args: Object[],
-    hints: { color?: string | undefined }
-  ): void {
-    console.log("Log | ", severity, message, JSON.stringify(args));
-  },
-};
+export default { runAllExtractors };
