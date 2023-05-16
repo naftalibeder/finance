@@ -1,5 +1,5 @@
 import fs from "fs";
-import { Account, Transaction } from "shared";
+import { Account, ConfigBankId, MfaInfo, Transaction } from "shared";
 import { Database } from "types";
 import { DB_PATH } from "./constants";
 
@@ -8,6 +8,7 @@ const loadDatabase = (): Database => {
     return {
       accounts: [],
       transactions: [],
+      mfaInfos: [],
     };
   }
 
@@ -26,13 +27,20 @@ const getAccounts = (): Account[] => {
   return db.accounts;
 };
 
-const updateAccount = (account: Account) => {
+const getAccount = (id: string): Account | undefined => {
   const db = loadDatabase();
-  const index = db.accounts.findIndex((o) => o.id === account.id);
+  const account = db.accounts.find((o) => o.id === id);
+  return account;
+};
+
+const updateAccount = (id: string, update: Account) => {
+  const db = loadDatabase();
+  const index = db.accounts.findIndex((o) => o.id === id);
   if (index > -1) {
-    db.accounts[index] = account;
+    const existing = db.accounts[index];
+    db.accounts[index] = { ...existing, ...update };
   } else {
-    db.accounts.push(account);
+    db.accounts.push(update);
   }
   writeDatabase(db);
 };
@@ -69,13 +77,48 @@ const addTransactions = (newTransactions: Transaction[]): number => {
   );
 
   writeDatabase(db);
-
   return addCt;
+};
+
+const getMfaInfos = (): MfaInfo[] => {
+  const db = loadDatabase();
+  const infos = db.mfaInfos ?? [];
+  return infos;
+};
+
+const setMfaInfo = (bankId: ConfigBankId, info: MfaInfo) => {
+  const db = loadDatabase();
+  const infos = getMfaInfos();
+  const index = infos.findIndex((o) => o.bankId === bankId);
+  if (index > -1) {
+    infos[index] = info;
+  } else {
+    infos.push(info);
+  }
+
+  db.mfaInfos = infos;
+  writeDatabase(db);
+};
+
+const deleteMfaInfo = (bankId: ConfigBankId) => {
+  const db = loadDatabase();
+  const infos = getMfaInfos();
+  const index = infos.findIndex((o) => o.bankId === bankId);
+  if (index === -1) {
+    return;
+  }
+
+  delete db.mfaInfos[index];
+  writeDatabase(db);
 };
 
 export default {
   getAccounts,
+  getAccount,
   updateAccount,
   getTransactions,
   addTransactions,
+  getMfaInfos,
+  setMfaInfo,
+  deleteMfaInfo,
 };

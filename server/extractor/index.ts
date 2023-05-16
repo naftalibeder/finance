@@ -10,7 +10,7 @@ import {
 import { BufferChunk, Config, ConfigBankId, Price, Transaction } from "shared";
 import { CONFIG_PATH, EXTRACTIONS_PATH, TMP_DIR } from "../constants";
 import db from "../db";
-import { toPretty, toYYYYMMDD } from "../utils";
+import { delay, toPretty, toYYYYMMDD } from "../utils";
 import { Extractor, ExtractorDateRange, ExtractorFuncArgs } from "types";
 import { CharlesSchwabBankExtractor, ChaseBankExtractor } from "./extractors";
 import { logger } from "./log";
@@ -79,12 +79,19 @@ const runAllExtractors = async (onProgress: (chunk: BufferChunk) => void) => {
       configAccount,
       configCredentials,
       page,
+      getMfaCode: async () => {
+        const code = await waitForMfaCode(
+          configAccount.info.bankId,
+          onProgress
+        );
+        return code;
+      },
     };
 
     try {
       const { accountValue, transactions } = await runExtractor(args);
 
-      db.updateAccount({
+      db.updateAccount(configAccount.info.id, {
         id: configAccount.info.id,
         number: configAccount.info.number,
         price: accountValue,
@@ -127,7 +134,7 @@ export const runExtractor = async (
 
     console.log("Checking if credentials are needed");
     await extractor.enterCredentials(args);
-    await extractor.enterTwoFactorCode(args);
+    await extractor.enterMfaCode(args);
 
     const accountValue = await extractor.scrapeAccountValue(args);
     return accountValue;
@@ -153,7 +160,7 @@ export const runExtractor = async (
         console.log("Loading history page");
         await extractor.loadHistoryPage(args);
         await extractor.enterCredentials(args);
-        await extractor.enterTwoFactorCode(args);
+        await extractor.enterMfaCode(args);
 
         const data = await extractor.scrapeTransactionData({ ...args, range });
         transactionsChunk = await parseTransactions(data, configAccount);
@@ -183,6 +190,31 @@ export const runExtractor = async (
     accountValue,
     transactions,
   };
+};
+
+const waitForMfaCode = async (
+  bankId: ConfigBankId,
+  onProgress: (chunk: BufferChunk) => void
+): Promise<string> => {
+  db.setMfaInfo(bankId, { bankId: bankId, requestedAt: new Date() });
+  onProgress({ needsCheck: true });
+
+  let maxSec = 60 * 2;
+
+  for (let i = 0; i < maxSec; i++) {
+    const infos = db.getMfaInfos();
+    const info = infos.find((o) => o.bankId === bankId);
+    if (info?.code) {
+      db.deleteMfaInfo(bankId);
+      return info.code;
+    }
+
+    console.log(`No code found yet (${i}/${maxSec}s)...`);
+    await delay(1000);
+  }
+
+  db.deleteMfaInfo(bankId);
+  throw `No code found in ${maxSec}s`;
 };
 
 const tearDown = async (browser: Browser, browserContext: BrowserContext) => {

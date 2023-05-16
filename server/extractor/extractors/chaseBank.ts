@@ -32,29 +32,25 @@ class ChaseBankExtractor implements Extractor {
     await page.waitForLoadState("domcontentloaded");
   };
 
-  enterTwoFactorCode = async (args: ExtractorFuncArgs) => {
+  enterMfaCode = async (args: ExtractorFuncArgs) => {
     const { extractor, configAccount, configCredentials, page } = args;
 
     let loc: Locator;
 
-    const twoFactorFrame = page.frames()[0];
+    const mfaFrame = page.frames()[0];
 
-    loc = twoFactorFrame.locator(
-      "#header-simplerAuth-dropdownoptions-styledselect"
-    );
+    loc = mfaFrame.locator("#header-simplerAuth-dropdownoptions-styledselect");
     await loc.click();
 
-    loc = twoFactorFrame.locator(
+    loc = mfaFrame.locator(
       "#container-1-simplerAuth-dropdownoptions-styledselect"
     );
     await loc.click();
 
-    loc = twoFactorFrame.locator("button[type=submit]").first();
+    loc = mfaFrame.locator("button[type=submit]").first();
     await loc.click();
 
-    const code = await getUserInput(
-      "Enter the code sent to your phone number:"
-    );
+    const code = await args.getMfaCode();
 
     const codeInputFrame = page.frames()[0];
 

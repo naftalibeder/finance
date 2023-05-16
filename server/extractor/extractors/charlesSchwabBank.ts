@@ -51,7 +51,7 @@ class CharlesSchwabBankExtractor implements Extractor {
     await loginFrame.waitForLoadState("domcontentloaded");
   };
 
-  enterTwoFactorCode = async (args: ExtractorFuncArgs) => {
+  enterMfaCode = async (args: ExtractorFuncArgs) => {
     const { extractor, configAccount, configCredentials, page } = args;
 
     let loc: Locator;
@@ -61,25 +61,19 @@ class CharlesSchwabBankExtractor implements Extractor {
       return;
     }
 
-    const twoFactorFrame = page.frames()[0];
+    const mfaFrame = page.frames()[0];
 
-    const twoFactorPageExists = await getSelectorExists(
-      twoFactorFrame,
-      "#otp_sms",
-      5000
-    );
-    if (!twoFactorPageExists) {
+    const mfaPageExists = await getSelectorExists(mfaFrame, "#otp_sms", 5000);
+    if (!mfaPageExists) {
       return;
     }
 
-    loc = twoFactorFrame.locator("#otp_sms");
+    loc = mfaFrame.locator("#otp_sms");
     await loc.click();
 
     // Input code.
 
-    const code = await getUserInput(
-      "Enter the code sent to your phone number:"
-    );
+    const code = await args.getMfaCode();
 
     const codeInputFrame = page.frames()[0];
 

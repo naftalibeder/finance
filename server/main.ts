@@ -32,6 +32,12 @@ const main = async () => {
     res.send(transactions);
   });
 
+  app.post("/mfa", async (req, res) => {
+    const infos = db.getMfaInfos();
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.send(infos);
+  });
+
   app.listen(port, () => {
     console.log(`Server started on port ${port}`);
   });
