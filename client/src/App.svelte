@@ -16,7 +16,30 @@
   let transactions: Transaction[] = [];
   let mfaInfos: MfaInfo[] = [];
 
-  let extractStatus: string = "";
+  let progress: ProgressUpdate = {
+    status: "idle",
+  };
+
+  let statusDisplay: string | undefined;
+  $: {
+    switch (progress.status) {
+      case "idle":
+        statusDisplay = undefined;
+        break;
+      case "set-up":
+        statusDisplay = "Setting up";
+        break;
+      case "run-extractor":
+        statusDisplay = "Running extractor";
+        break;
+      case "wait-for-mfa":
+        statusDisplay = "Waiting for code";
+        break;
+      case "tear-down":
+        statusDisplay = "Closing down";
+        break;
+    }
+  }
 
   onMount(async () => {
     await fetchAll();
@@ -44,30 +67,29 @@
   };
 
   const onClickExtract = async () => {
-    try {
-      const res = await fetch(`${serverUrl}/extract`, {
-        method: "POST",
-      });
-      let reader = res.body.getReader();
+    const res = await fetch(`${serverUrl}/extract`, {
+      method: "POST",
+    });
+    let reader = res.body.getReader();
 
-      let result: ReadableStreamReadResult<Uint8Array>;
-      let decoder = new TextDecoder("utf8");
+    let result: ReadableStreamReadResult<Uint8Array>;
+    let decoder = new TextDecoder("utf8");
 
-      while (!result?.done) {
-        result = await reader.read();
-        const chunkStr = decoder.decode(result.value);
-        console.log(`Received chunk: ${chunkStr}`);
+    while (!result?.done) {
+      result = await reader.read();
+      const chunkStr = decoder.decode(result.value);
+      console.log(`Received chunk: ${chunkStr}`);
 
+      try {
         const chunk: ProgressUpdate = JSON.parse(chunkStr);
-        extractStatus = chunk.status;
-        if (chunk.status === "wait-for-mfa") {
-          await fetchAll();
-        }
+        progress = { ...progress, ...chunk };
+      } catch (e) {
+        progress = { status: "idle" };
       }
 
-      extractStatus = "";
-    } catch (e) {
-      console.log(`Extraction error: ${e}`);
+      if (progress.status === "wait-for-mfa") {
+        await fetchAll();
+      }
     }
   };
 
@@ -122,12 +144,12 @@
   <div class="section">
     <div class="row">
       <p><b>{accounts.length} accounts</b></p>
-      {#if extractStatus === ""}
+      {#if !statusDisplay}
         <button class="text" on:click={() => onClickExtract()}>
           Refresh all
         </button>
       {:else}
-        <div class="faded">{extractStatus}</div>
+        <div class="faded">{statusDisplay}</div>
       {/if}
     </div>
     <table>

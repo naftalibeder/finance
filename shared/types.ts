@@ -50,7 +50,7 @@ type ConfigCredentials = {
 };
 
 type ProgressUpdate = {
-  status?: "set-up" | "run-extractor" | "wait-for-mfa" | "tear-down";
+  status?: "idle" | "set-up" | "run-extractor" | "wait-for-mfa" | "tear-down";
 };
 
 export {
