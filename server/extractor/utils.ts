@@ -1,4 +1,3 @@
-import readline from "readline";
 import { parse } from "csv-parse";
 import { ConfigAccount, Transaction } from "shared/types";
 import { Frame, FrameLocator } from "playwright-core";
@@ -112,19 +111,4 @@ export const getSelectorExists = async (
   } catch (e) {
     return false;
   }
-};
-
-export const getUserInput = async (message: string): Promise<string> => {
-  const input = await new Promise<string>((res) => {
-    const r = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
-    r.question(`${message}\n`, (c) => {
-      r.close();
-      res(c);
-    });
-  });
-
-  return input;
 };

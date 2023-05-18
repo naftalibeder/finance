@@ -1,7 +1,6 @@
 import { Locator } from "playwright-core";
 import { Price } from "shared";
 import { Extractor, ExtractorFuncArgs, ExtractorRangeFuncArgs } from "types";
-import { getUserInput } from "../utils";
 
 class ChaseBankExtractor implements Extractor {
   loadAccountsPage = async (args: ExtractorFuncArgs) => {
@@ -19,6 +18,12 @@ class ChaseBankExtractor implements Extractor {
     let loc: Locator;
 
     const loginFrame = page.frames()[1];
+
+    try {
+      await loginFrame.waitForSelector(".siginbox-button", { timeout: 6000 });
+      loc = loginFrame.locator(".siginbox-button").first();
+      await loc.click();
+    } catch (e) {}
 
     loc = loginFrame.locator("#userId-text-input-field");
     await loc.fill(configCredentials.username);
@@ -62,8 +67,6 @@ class ChaseBankExtractor implements Extractor {
 
     loc = codeInputFrame.locator("button[type=submit]").first();
     await loc.click();
-
-    await page.pause();
   };
 
   scrapeAccountValue = async (args: ExtractorFuncArgs): Promise<Price> => {

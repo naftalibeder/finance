@@ -1,8 +1,14 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  // TODO: Fix this error if possible.
-  // @ts-ignore
-  import { Account, BufferChunk, MfaInfo, Transaction } from "shared";
+  import {
+    Account,
+    ProgressUpdate,
+    ConfigBankId,
+    MfaInfo,
+    Transaction,
+    // TODO: Fix this error if possible.
+    // @ts-ignore
+  } from "shared";
 
   const serverUrl = import.meta.env.VITE_SERVER_URL;
 
@@ -29,7 +35,7 @@
       transactions = await transactionsRes.json();
 
       const mfaInfosRes = await fetch(`${serverUrl}/mfa`, {
-        method: "POST",
+        method: "GET",
       });
       mfaInfos = await mfaInfosRes.json();
     } catch (e) {
@@ -38,26 +44,45 @@
   };
 
   const onClickExtract = async () => {
-    const res = await fetch(`${serverUrl}/extract`, {
-      method: "POST",
-    });
-    let reader = res.body.getReader();
+    try {
+      const res = await fetch(`${serverUrl}/extract`, {
+        method: "POST",
+      });
+      let reader = res.body.getReader();
 
-    let result: ReadableStreamReadResult<Uint8Array>;
-    let decoder = new TextDecoder("utf8");
+      let result: ReadableStreamReadResult<Uint8Array>;
+      let decoder = new TextDecoder("utf8");
 
-    while (!result?.done) {
-      result = await reader.read();
-      const chunkStr = decoder.decode(result.value);
-      const chunk: BufferChunk = JSON.parse(chunkStr);
+      while (!result?.done) {
+        result = await reader.read();
+        const chunkStr = decoder.decode(result.value);
+        console.log(`Received chunk: ${chunkStr}`);
 
-      extractStatus = chunk.message;
-      if (chunk.needsCheck) {
-        await fetchAll();
+        const chunk: ProgressUpdate = JSON.parse(chunkStr);
+        extractStatus = chunk.status;
+        if (chunk.status === "wait-for-mfa") {
+          await fetchAll();
+        }
       }
-    }
 
-    extractStatus = "";
+      extractStatus = "";
+    } catch (e) {
+      console.log(`Extraction error: ${e}`);
+    }
+  };
+
+  const onClickSendCode = async (bankId: ConfigBankId, code: string) => {
+    const data = {
+      bankId,
+      code,
+    };
+    const res = await fetch(`${serverUrl}/mfa`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams(data).toString(),
+    });
   };
 
   const formatCurrency = (a: any) => {
@@ -73,18 +98,29 @@
 
   {#if mfaInfos.length > 0}
     <div class="section">
-      <div class="section-row">
+      <div class="row">
         <p><b>Code needed</b></p>
       </div>
       {#each mfaInfos as mfaInfo}
-        <label for={mfaInfo.bankId}>{mfaInfo.bankId}</label>
-        <input id={mfaInfo.bankId} placeholder="Enter code" />
+        <div class="row">
+          <label for={mfaInfo.bankId}>{mfaInfo.bankId}</label>
+          <input id={mfaInfo.bankId} placeholder="Enter code" />
+          <button
+            on:click={(evt) => {
+              // @ts-ignore
+              const code = document.getElementById(mfaInfo.bankId).value;
+              onClickSendCode(mfaInfo.bankId, code);
+            }}
+          >
+            Send code
+          </button>
+        </div>
       {/each}
     </div>
   {/if}
 
   <div class="section">
-    <div class="section-row">
+    <div class="row">
       <p><b>{accounts.length} accounts</b></p>
       {#if extractStatus === ""}
         <button class="text" on:click={() => onClickExtract()}>
@@ -105,7 +141,7 @@
   </div>
 
   <div class="section">
-    <div class="section-row">
+    <div class="row">
       <p><b>{transactions.length} transactions</b></p>
     </div>
     <table>
@@ -147,10 +183,11 @@
     row-gap: 32px;
   }
 
-  .section-row {
+  .row {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
+    align-items: center;
   }
 
   .currency {

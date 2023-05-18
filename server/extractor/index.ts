@@ -7,7 +7,13 @@ import {
   Page,
   firefox,
 } from "playwright-core";
-import { BufferChunk, Config, ConfigBankId, Price, Transaction } from "shared";
+import {
+  ProgressUpdate,
+  Config,
+  ConfigBankId,
+  Price,
+  Transaction,
+} from "shared";
 import { CONFIG_PATH, EXTRACTIONS_PATH, TMP_DIR } from "../constants";
 import db from "../db";
 import { delay, toPretty, toYYYYMMDD } from "../utils";
@@ -46,27 +52,25 @@ const setUp = async (): Promise<[Browser, BrowserContext]> => {
   return [browser, browserContext];
 };
 
-const runAllExtractors = async (onProgress: (chunk: BufferChunk) => void) => {
+const runAllExtractors = async (
+  onProgress: (chunk: ProgressUpdate) => void
+) => {
   const tmpRunDir = `${EXTRACTIONS_PATH}/${new Date()}`;
   fs.mkdirSync(tmpRunDir);
 
-  const startTime = Date.now();
   let totalAddCt = 0;
+  let startTime = new Date();
+  onProgress({ status: "set-up" });
 
   const configStr = fs.readFileSync(CONFIG_PATH, { encoding: "utf-8" });
   const config = JSON.parse(configStr) as Config;
   const configAccounts = config.accounts.filter((o) => !o.skip);
-
   console.log(`Preparing extraction for ${configAccounts.length} accounts`);
-  onProgress({ message: "Starting..." });
 
   const [browser, browserContext] = await setUp();
 
   for (const configAccount of configAccounts) {
     console.log(`Starting extraction for ${toPretty(configAccount)}`);
-    onProgress({
-      message: `Extracting ${configAccount.info.display}...`,
-    });
 
     const extractor = extractors[configAccount.info.bankId];
     const configCredentials = config.credentials[configAccount.info.bankId];
@@ -74,21 +78,23 @@ const runAllExtractors = async (onProgress: (chunk: BufferChunk) => void) => {
     const page = await browserContext.newPage();
     page.setViewportSize({ width: 1948, height: 955 });
 
+    const getMfaCode = async (): Promise<string> => {
+      const code = await waitForMfaCode(configAccount.info.bankId, () => {
+        onProgress({ status: "wait-for-mfa" });
+      });
+      return code;
+    };
+
     const args: ExtractorFuncArgs = {
       extractor,
       configAccount,
       configCredentials,
       page,
-      getMfaCode: async () => {
-        const code = await waitForMfaCode(
-          configAccount.info.bankId,
-          onProgress
-        );
-        return code;
-      },
+      getMfaCode,
     };
 
     try {
+      onProgress({ status: "run-extractor" });
       const { accountValue, transactions } = await runExtractor(args);
 
       db.updateAccount(configAccount.info.id, {
@@ -102,6 +108,8 @@ const runAllExtractors = async (onProgress: (chunk: BufferChunk) => void) => {
       console.log(`Added ${addCt} transactions in database`);
     } catch (e) {
       console.log(`Error running extractor: ${e}`);
+      db.deleteMfaInfo(configAccount.info.bankId);
+      onProgress({ status: "wait-for-mfa" });
     }
 
     await browserContext.storageState({ path: BROWSER_CONTEXT_PATH });
@@ -110,13 +118,14 @@ const runAllExtractors = async (onProgress: (chunk: BufferChunk) => void) => {
     console.log("----------------------------------");
   }
 
+  onProgress({ status: "tear-down" });
   await tearDown(browser, browserContext);
 
   console.log(
     `Added ${totalAddCt} transactions across ${configAccounts.length} accounts`
   );
 
-  const deltaTime = (Date.now() - startTime) / 1000;
+  const deltaTime = (Date.now() - startTime.valueOf()) / 1000;
   console.log(`Extraction completed in ${deltaTime}s`);
 };
 
@@ -132,11 +141,15 @@ export const runExtractor = async (
     console.log("Loading accounts page");
     await extractor.loadAccountsPage(args);
 
-    console.log("Checking if credentials are needed");
+    console.log("Entering credentials if needed");
     await extractor.enterCredentials(args);
+
+    console.log("Entering two-factor code if needed");
     await extractor.enterMfaCode(args);
 
     const accountValue = await extractor.scrapeAccountValue(args);
+    console.log("Scraping account value");
+
     return accountValue;
   };
 
@@ -159,10 +172,17 @@ export const runExtractor = async (
       try {
         console.log("Loading history page");
         await extractor.loadHistoryPage(args);
+
+        console.log("Entering credentials if needed");
         await extractor.enterCredentials(args);
+
+        console.log("Entering two-factor code if needed");
         await extractor.enterMfaCode(args);
 
+        console.log("Scraping transaction data");
         const data = await extractor.scrapeTransactionData({ ...args, range });
+
+        console.log("Parsing transactions");
         transactionsChunk = await parseTransactions(data, configAccount);
       } catch (e) {
         console.log("Error getting transaction data:", e);
@@ -194,18 +214,19 @@ export const runExtractor = async (
 
 const waitForMfaCode = async (
   bankId: ConfigBankId,
-  onProgress: (chunk: BufferChunk) => void
+  onChange: () => void
 ): Promise<string> => {
-  db.setMfaInfo(bankId, { bankId: bankId, requestedAt: new Date() });
-  onProgress({ needsCheck: true });
-
+  db.setMfaInfo(bankId);
   let maxSec = 60 * 2;
 
   for (let i = 0; i < maxSec; i++) {
     const infos = db.getMfaInfos();
     const info = infos.find((o) => o.bankId === bankId);
+
     if (info?.code) {
+      console.log(`Deleting info for ${bankId}`);
       db.deleteMfaInfo(bankId);
+      onChange();
       return info.code;
     }
 
@@ -213,7 +234,10 @@ const waitForMfaCode = async (
     await delay(1000);
   }
 
+  console.log(`No code found in ${maxSec}s`);
   db.deleteMfaInfo(bankId);
+  onChange();
+
   throw `No code found in ${maxSec}s`;
 };
 

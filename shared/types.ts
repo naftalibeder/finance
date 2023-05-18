@@ -49,9 +49,8 @@ type ConfigCredentials = {
   password: string;
 };
 
-type BufferChunk = {
-  message?: string;
-  needsCheck?: boolean;
+type ProgressUpdate = {
+  status?: "set-up" | "run-extractor" | "wait-for-mfa" | "tear-down";
 };
 
 export {
@@ -63,5 +62,5 @@ export {
   Config,
   ConfigAccount,
   ConfigCredentials,
-  BufferChunk,
+  ProgressUpdate,
 };

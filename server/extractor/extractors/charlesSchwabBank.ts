@@ -2,7 +2,7 @@ import fs from "fs";
 import { Locator } from "playwright-core";
 import { Price } from "shared";
 import { Extractor, ExtractorFuncArgs, ExtractorRangeFuncArgs } from "types";
-import { getSelectorExists, getUserInput } from "../utils";
+import { getSelectorExists } from "../utils";
 import { toPrice } from "../../utils";
 
 class CharlesSchwabBankExtractor implements Extractor {
@@ -28,7 +28,7 @@ class CharlesSchwabBankExtractor implements Extractor {
       return;
     }
 
-    const loginFrame = page.frames()[0];
+    const loginFrame = page.frameLocator("#lmsSecondaryLogin");
 
     const loginPageExists = await getSelectorExists(
       loginFrame,
@@ -47,8 +47,6 @@ class CharlesSchwabBankExtractor implements Extractor {
 
     loc = loginFrame.locator("#btnLogin");
     await loc.click();
-
-    await loginFrame.waitForLoadState("domcontentloaded");
   };
 
   enterMfaCode = async (args: ExtractorFuncArgs) => {
@@ -67,7 +65,6 @@ class CharlesSchwabBankExtractor implements Extractor {
     if (!mfaPageExists) {
       return;
     }
-
     loc = mfaFrame.locator("#otp_sms");
     await loc.click();
 
@@ -85,8 +82,6 @@ class CharlesSchwabBankExtractor implements Extractor {
 
     loc = codeInputFrame.locator("#continueButton");
     await loc.click();
-
-    await codeInputFrame.waitForLoadState("domcontentloaded");
   };
 
   scrapeAccountValue = async (args: ExtractorFuncArgs): Promise<Price> => {
@@ -129,14 +124,13 @@ class CharlesSchwabBankExtractor implements Extractor {
     });
     await loc.click();
 
-    await page.waitForLoadState("domcontentloaded");
-    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(3000);
 
     // Set date range.
 
     const dateRangeFrame = page.frames()[0];
 
-    loc = dateRangeFrame.getByRole("combobox", { name: "Date Range" });
+    loc = dateRangeFrame.locator("#statements-daterange1");
     await loc.selectOption({ value: "Custom" });
 
     loc = dateRangeFrame.locator("#calendar-FromDate");
@@ -147,9 +141,6 @@ class CharlesSchwabBankExtractor implements Extractor {
 
     loc = dateRangeFrame.getByRole("button", { name: "search" });
     await loc.click();
-
-    await dateRangeFrame.waitForLoadState("domcontentloaded");
-    await dateRangeFrame.waitForLoadState("networkidle");
 
     let rangeIsValid = true;
     try {
@@ -167,9 +158,8 @@ class CharlesSchwabBankExtractor implements Extractor {
     await loc.click();
 
     const popupPage = await page.waitForEvent("popup");
-    await popupPage.waitForLoadState("domcontentloaded");
-    await popupPage.waitForLoadState("networkidle");
 
+    await popupPage.waitForSelector(".button-primary", { state: "attached" });
     loc = popupPage.locator(".button-primary").first();
     await loc.click();
 

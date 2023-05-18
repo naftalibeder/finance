@@ -36,12 +36,14 @@ const getAccount = (id: string): Account | undefined => {
 const updateAccount = (id: string, update: Account) => {
   const db = loadDatabase();
   const index = db.accounts.findIndex((o) => o.id === id);
+
   if (index > -1) {
     const existing = db.accounts[index];
     db.accounts[index] = { ...existing, ...update };
   } else {
     db.accounts.push(update);
   }
+
   writeDatabase(db);
 };
 
@@ -86,14 +88,16 @@ const getMfaInfos = (): MfaInfo[] => {
   return infos;
 };
 
-const setMfaInfo = (bankId: ConfigBankId, info: MfaInfo) => {
+const setMfaInfo = (bankId: ConfigBankId, code?: string) => {
   const db = loadDatabase();
   const infos = getMfaInfos();
   const index = infos.findIndex((o) => o.bankId === bankId);
+
   if (index > -1) {
-    infos[index] = info;
+    const existing = infos[index];
+    infos[index] = { ...existing, code };
   } else {
-    infos.push(info);
+    infos.push({ bankId, code, requestedAt: new Date() });
   }
 
   db.mfaInfos = infos;
@@ -108,7 +112,7 @@ const deleteMfaInfo = (bankId: ConfigBankId) => {
     return;
   }
 
-  delete db.mfaInfos[index];
+  db.mfaInfos.splice(index, 1);
   writeDatabase(db);
 };
 
