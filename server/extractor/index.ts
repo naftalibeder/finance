@@ -85,17 +85,15 @@ const runAllExtractors = async (
       return code;
     };
 
-    const args: ExtractorFuncArgs = {
-      extractor,
-      configAccount,
-      configCredentials,
-      page,
-      getMfaCode,
-    };
-
     try {
       onProgress({ status: "run-extractor" });
-      const { accountValue, transactions } = await runExtractor(args);
+      const { accountValue, transactions } = await runExtractor({
+        extractor,
+        configAccount,
+        configCredentials,
+        page,
+        getMfaCode,
+      });
 
       db.updateAccount(configAccount.info.id, {
         id: configAccount.info.id,
