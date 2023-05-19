@@ -9,6 +9,7 @@
     // TODO: Fix this error if possible.
     // @ts-ignore
   } from "shared";
+  import { prettyDate } from "../utils";
 
   const serverUrl = import.meta.env.VITE_SERVER_URL;
 
@@ -142,8 +143,8 @@
   {/if}
 
   <div class="section">
-    <div class="row">
-      <p><b>{accounts.length} accounts</b></p>
+    <div class="grid section">
+      <p>{accounts.length} accounts</p>
       {#if !statusDisplay}
         <button class="text" on:click={() => onClickExtract()}>
           Refresh all
@@ -152,47 +153,37 @@
         <div class="faded">{statusDisplay}</div>
       {/if}
     </div>
-    <table>
+    <div class="grid account">
       {#each accounts as a}
-        <tr>
-          <td>{a.id}</td>
-          <td class="currency">{formatCurrency(a.price)}</td>
-        </tr>
+        <div class="grid row">
+          <div class="cell">{a.id}</div>
+          <div class="cell timestamp">
+            {a.updatedAt ? prettyDate(a.updatedAt) : "Never updated"}
+          </div>
+          <div class="cell currency">{formatCurrency(a.price)}</div>
+        </div>
       {/each}
-    </table>
+    </div>
   </div>
 
   <div class="section">
-    <div class="row">
-      <p><b>{transactions.length} transactions</b></p>
+    <div class="grid section">
+      <p>{transactions.length} transactions</p>
     </div>
-    <table>
+    <div class="grid transaction">
       {#each transactions as t}
-        <tr>
-          <td>{t.date}</td>
-          <td>{t.accountId}</td>
-          <td>{t.payee}</td>
-          <td class="currency">{formatCurrency(t.price)}</td>
-        </tr>
+        <div class="grid row">
+          <div class="cell">{t.date}</div>
+          <div class="cell">{t.accountId}</div>
+          <div class="cell">{t.payee}</div>
+          <div class="cell currency">{formatCurrency(t.price)}</div>
+        </div>
       {/each}
-    </table>
+    </div>
   </div>
 </div>
 
 <style>
-  table {
-    width: 100%;
-  }
-
-  tr:hover {
-    opacity: 0.6;
-  }
-
-  td {
-    padding-top: 2px;
-    padding-bottom: 2px;
-  }
-
   .container {
     display: flex;
     flex-direction: column;
@@ -205,14 +196,38 @@
     row-gap: 32px;
   }
 
-  .row {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
+  .grid {
+    display: grid;
+    grid-template-rows: auto;
+    grid-gap: 8px;
+    column-gap: 16px;
   }
 
-  .currency {
+  .grid.section {
+    grid-template-columns: 1fr auto;
+  }
+
+  .grid.account {
+    grid-template-columns: auto 1fr auto;
+  }
+
+  .grid.transaction {
+    grid-template-columns: auto auto 1fr auto;
+  }
+
+  .grid.row {
+    display: contents;
+  }
+
+  .grid.row:hover .cell {
+    opacity: 0.6;
+  }
+
+  .cell.currency {
     text-align: right;
+  }
+
+  .cell.timestamp {
+    opacity: 0.6;
   }
 </style>

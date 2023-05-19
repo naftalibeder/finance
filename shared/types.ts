@@ -2,6 +2,8 @@ type Account = {
   id: string;
   number: string;
   price: Price;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type Transaction = {
@@ -10,6 +12,8 @@ type Transaction = {
   payee: string;
   price: Price;
   description: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type Price = {
@@ -20,7 +24,7 @@ type Price = {
 type MfaInfo = {
   bankId: ConfigBankId;
   code?: string;
-  requestedAt: Date;
+  requestedAt: string;
 };
 
 type ConfigBankId = "charles-schwab-bank" | "chase-bank";
@@ -38,7 +42,9 @@ type ConfigAccount = {
     number: string;
   };
   columnMap: Record<
-    keyof Transaction | "priceWithdrawal" | "priceDeposit",
+    | keyof Omit<Transaction, "createdAt" | "updatedAt">
+    | "priceWithdrawal"
+    | "priceDeposit",
     number
   >;
   skip: boolean;

@@ -39,9 +39,17 @@ const updateAccount = (id: string, update: Account) => {
 
   if (index > -1) {
     const existing = db.accounts[index];
-    db.accounts[index] = { ...existing, ...update };
+    db.accounts[index] = {
+      ...existing,
+      ...update,
+      updatedAt: new Date().toISOString(),
+    };
   } else {
-    db.accounts.push(update);
+    db.accounts.push({
+      ...update,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
   }
 
   writeDatabase(db);
@@ -71,7 +79,11 @@ const addTransactions = (newTransactions: Transaction[]): number => {
       return;
     }
 
-    updatedTransactions.push(n);
+    updatedTransactions.push({
+      ...n,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
     addCt += 1;
   });
   db.transactions = updatedTransactions.sort(
@@ -95,9 +107,16 @@ const setMfaInfo = (bankId: ConfigBankId, code?: string) => {
 
   if (index > -1) {
     const existing = infos[index];
-    infos[index] = { ...existing, code };
+    infos[index] = {
+      ...existing,
+      code,
+    };
   } else {
-    infos.push({ bankId, code, requestedAt: new Date() });
+    infos.push({
+      bankId,
+      code,
+      requestedAt: new Date().toISOString(),
+    });
   }
 
   db.mfaInfos = infos;
