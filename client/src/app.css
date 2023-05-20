@@ -46,6 +46,12 @@ button {
 button.text {
   outline: transparent solid 0px;
   padding: 0px;
+  text-decoration-style: none;
+}
+
+button.text:hover {
+  text-decoration-line: underline;
+  text-underline-offset: 6px;
   text-decoration-style: solid;
 }
 

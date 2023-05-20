@@ -16,7 +16,7 @@ import {
 } from "shared";
 import { CONFIG_PATH, EXTRACTIONS_PATH, TMP_DIR } from "../constants";
 import db from "../db";
-import { delay, toPretty, toYYYYMMDD } from "../utils";
+import { delay, toPretty } from "../utils";
 import { Extractor, ExtractorDateRange, ExtractorFuncArgs } from "types";
 import { CharlesSchwabBankExtractor, ChaseBankExtractor } from "./extractors";
 import { logger } from "./log";
@@ -160,9 +160,7 @@ export const runExtractor = async (
     while (true) {
       const start = new Date(end.valueOf() - spanMs);
       const range: ExtractorDateRange = { start, end };
-      const prettyRange = `[${toYYYYMMDD(range.start)}, ${toYYYYMMDD(
-        range.end
-      )}]`;
+      const prettyRange = `[${range.start}, ${range.end}]`;
 
       console.log(`Getting transactions for range ${prettyRange}`);
 

@@ -1,7 +1,7 @@
 import { parse } from "csv-parse";
 import { ConfigAccount, Transaction } from "shared/types";
 import { Frame, FrameLocator } from "playwright-core";
-import { toDate, toPrice, toYYYYMMDD } from "../utils";
+import { toDate, toPrice } from "../utils";
 
 export const parseTransactions = async (
   transactionData: string,
@@ -71,7 +71,6 @@ const buildTransaction = (
   if (!date) {
     return undefined;
   }
-  const dateStr = toYYYYMMDD(date);
 
   let priceStr = "";
   let multiplier = 1;
@@ -90,7 +89,7 @@ const buildTransaction = (
   price.amount = price.amount * multiplier;
 
   const transaction: Transaction = {
-    date: dateStr,
+    date: date.toISOString(),
     accountId: info.id,
     payee: rowNorm.payee,
     price,

@@ -1,12 +1,36 @@
-export const prettyDate = (s?: string): string | undefined => {
-  const d = new Date(s);
+export const prettyDate = (
+  s: string,
+  opts: { includeTime: boolean }
+): string | undefined => {
+  let d: Date;
+  try {
+    d = new Date(s);
+  } catch (e) {
+    return undefined;
+  }
 
+  const year = d.getFullYear();
+  const monthNum = d.getMonth() + 1;
+  const month = monthNum < 10 ? `0${monthNum}` : monthNum;
+  const dateNum = d.getDate();
+  const date = dateNum < 10 ? `0${dateNum}` : dateNum;
+  const hours = d.getHours();
+  const hours12 = hours % 12;
+  const period = hours < 12 ? "a" : "p";
+
+  if (opts.includeTime) {
+    return `${year}.${month}.${date} ${hours12}${period}`;
+  } else {
+    return `${year}.${month}.${date}`;
+  }
+};
+
+export const secAgo = (s: string): number | undefined => {
+  const d = new Date(s);
   if (!d) {
     return undefined;
   }
 
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(d);
+  const msAgo = new Date().valueOf() - new Date(d).valueOf();
+  return msAgo / 1000;
 };
