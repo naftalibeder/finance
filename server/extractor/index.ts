@@ -17,7 +17,7 @@ import { logger } from "./log";
 import { parseTransactions } from "./utils";
 
 const BROWSER_CONTEXT_PATH = `${TMP_DIR}/browser-context.json`;
-const HEADLESS = true;
+const HEADLESS = false;
 
 const extractors: Record<ConfigBankId, Extractor> = {
   "charles-schwab-bank": new CharlesSchwabBankExtractor(),
