@@ -25,6 +25,7 @@
 
   let progress: ProgressUpdate = {
     status: "idle",
+    accountId: undefined,
   };
 
   let statusDisplay: string | undefined;
@@ -37,7 +38,7 @@
         statusDisplay = "Setting up";
         break;
       case "run-extractor":
-        statusDisplay = "Running extractor";
+        statusDisplay = `Extracting ${progress.accountId}`;
         break;
       case "wait-for-mfa":
         statusDisplay = "Waiting for code";
@@ -256,12 +257,12 @@
 
   .grid.accounts {
     grid-template-areas: "toggle name price";
-    grid-template-columns: 1fr 6fr 2fr;
+    grid-template-columns: auto 6fr 2fr;
   }
 
   .grid.transactions {
     grid-template-areas: "date account payee price";
-    grid-template-columns: 1fr 2fr 5fr 1fr;
+    grid-template-columns: auto 2fr 5fr 1fr;
   }
 
   .grid.row {

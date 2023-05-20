@@ -57,6 +57,7 @@ type ConfigCredentials = {
 
 type ProgressUpdate = {
   status?: "idle" | "set-up" | "run-extractor" | "wait-for-mfa" | "tear-down";
+  accountId?: string;
 };
 
 export {

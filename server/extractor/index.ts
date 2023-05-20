@@ -86,7 +86,7 @@ const runAllExtractors = async (
     };
 
     try {
-      onProgress({ status: "run-extractor" });
+      onProgress({ status: "run-extractor", accountId: configAccount.info.id });
       const { accountValue, transactions } = await runExtractor({
         extractor,
         configAccount,
