@@ -7,13 +7,7 @@ import {
   Page,
   firefox,
 } from "playwright-core";
-import {
-  ProgressUpdate,
-  Config,
-  ConfigBankId,
-  Price,
-  Transaction,
-} from "shared";
+import { Config, ConfigBankId, Price, Transaction } from "shared";
 import { CONFIG_PATH, EXTRACTIONS_PATH, TMP_DIR } from "../constants";
 import db from "../db";
 import { delay, toPretty } from "../utils";
@@ -23,7 +17,7 @@ import { logger } from "./log";
 import { parseTransactions } from "./utils";
 
 const BROWSER_CONTEXT_PATH = `${TMP_DIR}/browser-context.json`;
-const HEADLESS = false;
+const HEADLESS = true;
 
 const extractors: Record<ConfigBankId, Extractor> = {
   "charles-schwab-bank": new CharlesSchwabBankExtractor(),
@@ -52,15 +46,21 @@ const setUp = async (): Promise<[Browser, BrowserContext]> => {
   return [browser, browserContext];
 };
 
-const runAllExtractors = async (
-  onProgress: (chunk: ProgressUpdate) => void
-) => {
+const run = async () => {
+  try {
+    await runAllExtractors();
+  } catch (e) {
+    console.log("Error running extractors:", e);
+  }
+};
+
+const runAllExtractors = async () => {
   const tmpRunDir = `${EXTRACTIONS_PATH}/${new Date()}`;
   fs.mkdirSync(tmpRunDir);
 
   let totalAddCt = 0;
   let startTime = new Date();
-  onProgress({ status: "set-up" });
+  db.setExtractionStatus({ status: "set-up" });
 
   const configStr = fs.readFileSync(CONFIG_PATH, { encoding: "utf-8" });
   const config = JSON.parse(configStr) as Config;
@@ -80,13 +80,16 @@ const runAllExtractors = async (
 
     const getMfaCode = async (): Promise<string> => {
       const code = await waitForMfaCode(configAccount.info.bankId, () => {
-        onProgress({ status: "wait-for-mfa" });
+        db.setExtractionStatus({ status: "wait-for-mfa" });
       });
       return code;
     };
 
     try {
-      onProgress({ status: "run-extractor", accountId: configAccount.info.id });
+      db.setExtractionStatus({
+        status: "run-extractor",
+        accountId: configAccount.info.id,
+      });
       const { accountValue, transactions } = await runExtractor({
         extractor,
         configAccount,
@@ -107,7 +110,7 @@ const runAllExtractors = async (
     } catch (e) {
       console.log(`Error running extractor: ${e}`);
       db.deleteMfaInfo(configAccount.info.bankId);
-      onProgress({ status: "wait-for-mfa" });
+      db.setExtractionStatus({ status: "wait-for-mfa" });
     }
 
     await browserContext.storageState({ path: BROWSER_CONTEXT_PATH });
@@ -116,15 +119,14 @@ const runAllExtractors = async (
     console.log("----------------------------------");
   }
 
-  onProgress({ status: "tear-down" });
+  db.setExtractionStatus({ status: "tear-down" });
   await tearDown(browser, browserContext);
 
-  console.log(
-    `Added ${totalAddCt} transactions across ${configAccounts.length} accounts`
-  );
-
   const deltaTime = (Date.now() - startTime.valueOf()) / 1000;
-  console.log(`Extraction completed in ${deltaTime}s`);
+  console.log(
+    `Added ${totalAddCt} transactions across ${configAccounts.length} accounts; completed in ${deltaTime}s`
+  );
+  db.setExtractionStatus({ status: "idle" });
 };
 
 export const runExtractor = async (
@@ -216,8 +218,8 @@ const waitForMfaCode = async (
   let maxSec = 60 * 2;
 
   for (let i = 0; i < maxSec; i++) {
-    const infos = db.getMfaInfos();
-    const info = infos.find((o) => o.bankId === bankId);
+    const status = db.getExtractionStatus();
+    const info = status.mfaInfos.find((o) => o.bankId === bankId);
 
     if (info?.code) {
       console.log(`Deleting info for ${bankId}`);
@@ -253,4 +255,4 @@ const takeErrorScreenshot = async (browserPage: Page, tmpRunDir: string) => {
   });
 };
 
-export default { runAllExtractors };
+export default { run };

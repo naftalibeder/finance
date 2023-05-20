@@ -21,12 +21,6 @@ type Price = {
   currency: string;
 };
 
-type MfaInfo = {
-  bankId: ConfigBankId;
-  code?: string;
-  requestedAt: string;
-};
-
 type ConfigBankId = "charles-schwab-bank" | "chase-bank";
 
 type Config = {
@@ -55,19 +49,26 @@ type ConfigCredentials = {
   password: string;
 };
 
-type ProgressUpdate = {
-  status?: "idle" | "set-up" | "run-extractor" | "wait-for-mfa" | "tear-down";
+type MfaInfo = {
+  bankId: ConfigBankId;
+  code?: string;
+  requestedAt: string;
+};
+
+type ExtractionStatus = {
+  status: "idle" | "set-up" | "run-extractor" | "wait-for-mfa" | "tear-down";
   accountId?: string;
+  mfaInfos: MfaInfo[];
 };
 
 export {
   Account,
   Transaction,
   Price,
-  MfaInfo,
   ConfigBankId,
   Config,
   ConfigAccount,
   ConfigCredentials,
-  ProgressUpdate,
+  MfaInfo,
+  ExtractionStatus,
 };

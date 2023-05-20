@@ -2,10 +2,9 @@
   import { onMount } from "svelte";
   import {
     Account,
-    ProgressUpdate,
-    ConfigBankId,
-    MfaInfo,
     Transaction,
+    ConfigBankId,
+    ExtractionStatus,
     // TODO: Fix this error if possible.
     // @ts-ignore
   } from "shared";
@@ -21,16 +20,15 @@
       (o) => visibleAccounts[o.accountId] === true
     );
   }
-  let mfaInfos: MfaInfo[] = [];
-
-  let progress: ProgressUpdate = {
+  let extractionStatus: ExtractionStatus = {
     status: "idle",
     accountId: undefined,
+    mfaInfos: [],
   };
 
   let statusDisplay: string | undefined;
   $: {
-    switch (progress.status) {
+    switch (extractionStatus.status) {
       case "idle":
         statusDisplay = undefined;
         break;
@@ -38,7 +36,7 @@
         statusDisplay = "Setting up";
         break;
       case "run-extractor":
-        statusDisplay = `Extracting ${progress.accountId}`;
+        statusDisplay = `Extracting ${extractionStatus.accountId}`;
         break;
       case "wait-for-mfa":
         statusDisplay = "Waiting for code";
@@ -51,62 +49,75 @@
 
   var visibleAccounts: Record<string, boolean> = {};
 
+  let interval: NodeJS.Timer | undefined;
+
   onMount(async () => {
     await fetchAll();
   });
 
   const fetchAll = async () => {
+    await fetchAccounts();
+    await fetchTransactions();
+    await fetchExtractionStatus();
+
+    if (extractionStatus.status !== "idle") {
+      pollExtractionStatus();
+    }
+  };
+
+  const fetchAccounts = async () => {
     try {
       const accountsRes = await fetch(`${serverUrl}/accounts`, {
         method: "POST",
       });
       accounts = await accountsRes.json();
-
       accounts.forEach((o) => {
         if (visibleAccounts[o.id] === undefined) {
           visibleAccounts[o.id] = true;
         }
       });
+    } catch (e) {
+      console.log("Error fetching accounts:", e);
+    }
+  };
 
+  const fetchTransactions = async () => {
+    try {
       const transactionsRes = await fetch(`${serverUrl}/transactions`, {
         method: "POST",
       });
       transactions = await transactionsRes.json();
-
-      const mfaInfosRes = await fetch(`${serverUrl}/mfa`, {
-        method: "GET",
-      });
-      mfaInfos = await mfaInfosRes.json();
     } catch (e) {
-      console.log(e);
+      console.log("Error fetching transactions:", e);
     }
   };
 
+  const fetchExtractionStatus = async () => {
+    try {
+      const extractionStatusRes = await fetch(`${serverUrl}/status`, {
+        method: "POST",
+      });
+      extractionStatus = await extractionStatusRes.json();
+    } catch (e) {
+      console.log("Error fetching extraction status:", e);
+    }
+  };
+
+  const pollExtractionStatus = () => {
+    interval = setInterval(async () => {
+      await fetchExtractionStatus();
+      console.log("Extraction status:", extractionStatus);
+      if (extractionStatus.status === "idle") {
+        clearInterval(interval);
+      }
+    }, 1000);
+  };
+
   const onClickExtract = async () => {
-    const res = await fetch(`${serverUrl}/extract`, {
+    pollExtractionStatus();
+    await fetch(`${serverUrl}/extract`, {
       method: "POST",
     });
-    let reader = res.body.getReader();
-
-    let result: ReadableStreamReadResult<Uint8Array>;
-    let decoder = new TextDecoder("utf8");
-
-    while (!result?.done) {
-      result = await reader.read();
-      const chunkStr = decoder.decode(result.value);
-      console.log(`Received chunk: ${chunkStr}`);
-
-      try {
-        const chunk: ProgressUpdate = JSON.parse(chunkStr);
-        progress = { ...progress, ...chunk };
-      } catch (e) {
-        progress = { status: "idle" };
-      }
-
-      if (progress.status === "wait-for-mfa") {
-        await fetchAll();
-      }
-    }
   };
 
   const onClickSendCode = async (bankId: ConfigBankId, code: string) => {
@@ -135,12 +146,12 @@
   <div class="content">
     <h1>Transactions</h1>
 
-    {#if mfaInfos.length > 0}
+    {#if extractionStatus.mfaInfos.length > 0}
       <div class="section">
         <div class="row">
           <p><b>Code needed</b></p>
         </div>
-        {#each mfaInfos as mfaInfo}
+        {#each extractionStatus.mfaInfos as mfaInfo}
           <div class="row">
             <label for={mfaInfo.bankId}>{mfaInfo.bankId}</label>
             <input id={mfaInfo.bankId} placeholder="Enter code" />

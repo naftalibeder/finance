@@ -1,20 +1,32 @@
 import fs from "fs";
-import { Account, ConfigBankId, MfaInfo, Transaction } from "shared";
+import {
+  Account,
+  ConfigBankId,
+  ExtractionStatus,
+  MfaInfo,
+  Transaction,
+} from "shared";
 import { Database } from "types";
 import { DB_PATH } from "./constants";
 
+const initial: Database = {
+  accounts: [],
+  transactions: [],
+  extractionStatus: {
+    status: "idle",
+    accountId: undefined,
+    mfaInfos: [],
+  },
+};
+
 const loadDatabase = (): Database => {
   if (!fs.existsSync(DB_PATH)) {
-    return {
-      accounts: [],
-      transactions: [],
-      mfaInfos: [],
-    };
+    return initial;
   }
 
   const data = fs.readFileSync(DB_PATH, { encoding: "utf-8" });
   const db = JSON.parse(data) as Database;
-  return db;
+  return { ...initial, ...db };
 };
 
 const writeDatabase = (db: Database) => {
@@ -94,15 +106,21 @@ const addTransactions = (newTransactions: Transaction[]): number => {
   return addCt;
 };
 
-const getMfaInfos = (): MfaInfo[] => {
+const getExtractionStatus = (): ExtractionStatus => {
   const db = loadDatabase();
-  const infos = db.mfaInfos ?? [];
-  return infos;
+  const status = db.extractionStatus;
+  return status;
+};
+
+const setExtractionStatus = (status: Partial<ExtractionStatus>) => {
+  const db = loadDatabase();
+  db.extractionStatus = { ...db.extractionStatus, ...status };
+  writeDatabase(db);
 };
 
 const setMfaInfo = (bankId: ConfigBankId, code?: string) => {
   const db = loadDatabase();
-  const infos = getMfaInfos();
+  const infos = db.extractionStatus.mfaInfos;
   const index = infos.findIndex((o) => o.bankId === bankId);
 
   if (index > -1) {
@@ -119,19 +137,25 @@ const setMfaInfo = (bankId: ConfigBankId, code?: string) => {
     });
   }
 
-  db.mfaInfos = infos;
+  db.extractionStatus.mfaInfos = infos;
   writeDatabase(db);
 };
 
 const deleteMfaInfo = (bankId: ConfigBankId) => {
   const db = loadDatabase();
-  const infos = getMfaInfos();
+  const infos = db.extractionStatus.mfaInfos;
   const index = infos.findIndex((o) => o.bankId === bankId);
   if (index === -1) {
     return;
   }
 
-  db.mfaInfos.splice(index, 1);
+  db.extractionStatus.mfaInfos.splice(index, 1);
+  writeDatabase(db);
+};
+
+const clearExtractionStatus = () => {
+  const db = loadDatabase();
+  db.extractionStatus = initial.extractionStatus;
   writeDatabase(db);
 };
 
@@ -141,7 +165,9 @@ export default {
   updateAccount,
   getTransactions,
   addTransactions,
-  getMfaInfos,
+  getExtractionStatus,
+  setExtractionStatus,
   setMfaInfo,
   deleteMfaInfo,
+  clearExtractionStatus,
 };

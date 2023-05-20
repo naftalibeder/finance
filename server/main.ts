@@ -1,5 +1,4 @@
 import express from "express";
-import { ProgressUpdate } from "shared";
 import extractor from "./extractor";
 import db from "./db";
 
@@ -10,15 +9,9 @@ const main = async () => {
   app.use(express.urlencoded({ extended: true }));
 
   app.post("/extract", async (req, res) => {
-    res.setHeader("Content-Type", "text/html; charset=utf-8");
-    res.setHeader("Transfer-Encoding", "chunked");
+    await extractor.run();
     res.setHeader("Access-Control-Allow-Origin", "*");
-
-    await extractor.runAllExtractors((chunk: ProgressUpdate) => {
-      const chunkStr = JSON.stringify(chunk);
-      res.write(chunkStr);
-    });
-    res.end();
+    res.send("ok");
   });
 
   app.post("/accounts", async (req, res) => {
@@ -33,10 +26,10 @@ const main = async () => {
     res.send(transactions);
   });
 
-  app.get("/mfa", async (req, res) => {
-    const infos = db.getMfaInfos();
+  app.post("/status", async (req, res) => {
+    const status = db.getExtractionStatus();
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.send(infos);
+    res.send(status);
   });
 
   app.post("/mfa", async (req, res) => {
@@ -47,7 +40,12 @@ const main = async () => {
     res.send("ok");
   });
 
-  app.listen(port, () => {
+  process.on("SIGINT", () => {
+    db.clearExtractionStatus();
+    server.close();
+  });
+
+  const server = app.listen(port, () => {
     console.log(`Server started on port ${port}`);
   });
 };

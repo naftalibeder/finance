@@ -5,13 +5,13 @@ import {
   ConfigAccount,
   ConfigCredentials,
   Price,
-  MfaInfo,
+  ExtractionStatus,
 } from "shared";
 
 export type Database = {
   accounts: Account[];
   transactions: Transaction[];
-  mfaInfos: MfaInfo[];
+  extractionStatus: ExtractionStatus;
 };
 
 export interface ExtractorFuncArgs {
