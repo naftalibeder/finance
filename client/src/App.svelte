@@ -115,6 +115,7 @@
 
   const onClickExtract = async () => {
     pollExtractionStatus();
+    extractionStatus.status = "set-up";
     await fetch(`${serverUrl}/extract`, {
       method: "POST",
     });
