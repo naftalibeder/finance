@@ -147,8 +147,11 @@ export const runExtractor = async (
     console.log("Entering two-factor code if needed");
     await extractor.enterMfaCode(args);
 
-    const accountValue = await extractor.scrapeAccountValue(args);
     console.log("Scraping account value");
+    const accountValue = await extractor.scrapeAccountValue(args);
+    console.log(
+      `Found account value: ${accountValue.amount} ${accountValue.currency}`
+    );
 
     return accountValue;
   };
@@ -222,7 +225,7 @@ const waitForMfaCode = async (
     const info = status.mfaInfos.find((o) => o.bankId === bankId);
 
     if (info?.code) {
-      console.log(`Deleting info for ${bankId}`);
+      console.log(`Clearing two-factor info for ${bankId}`);
       db.deleteMfaInfo(bankId);
       onChange();
       return info.code;
