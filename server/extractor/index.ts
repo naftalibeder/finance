@@ -95,12 +95,16 @@ const runAllExtractors = async () => {
       return code;
     };
 
+    db.setExtractionStatus({
+      status: "run-extractor",
+      accountId: configAccount.info.id,
+    });
+
+    let accountValue: Price | undefined;
+    let transactions: Transaction[] = [];
+
     try {
-      db.setExtractionStatus({
-        status: "run-extractor",
-        accountId: configAccount.info.id,
-      });
-      const { accountValue, transactions } = await runExtractor({
+      const resp = await runExtractor({
         extractor,
         configAccount,
         configBank,
@@ -108,24 +112,26 @@ const runAllExtractors = async () => {
         page,
         getMfaCode,
       });
-
-      db.updateAccount(configAccount.info.id, {
-        id: configAccount.info.id,
-        number: configAccount.info.number,
-        price: accountValue,
-      });
-      console.log(`Updated account value: ${accountValue.amount}`);
-
-      const foundCt = transactions.length;
-      totalFoundCt += foundCt;
-      const addCt = db.addTransactions(transactions);
-      totalAddCt += addCt;
-      console.log(`Added ${addCt} of ${foundCt} found transactions`);
+      accountValue = resp.accountValue;
+      transactions = resp.transactions;
     } catch (e) {
       console.log(`Error running extractor: ${e}`);
       db.deleteMfaInfo(configAccount.info.bankId);
-      db.setExtractionStatus({ status: "wait-for-mfa" });
+      continue;
     }
+
+    db.updateAccount(configAccount.info.id, {
+      id: configAccount.info.id,
+      number: configAccount.info.number,
+      price: accountValue,
+    });
+    console.log(`Updated account value: ${accountValue.amount}`);
+
+    const foundCt = transactions.length;
+    totalFoundCt += foundCt;
+    const addCt = db.addTransactions(transactions);
+    totalAddCt += addCt;
+    console.log(`Added ${addCt} of ${foundCt} found transactions`);
 
     await browserContext.storageState({ path: BROWSER_CONTEXT_PATH });
     await page.close();
@@ -152,7 +158,7 @@ export const runExtractor = async (
   const { extractor, configAccount, configCredentials, page } = args;
 
   const getAccountValue = async (): Promise<Price> => {
-    console.log("Loading accounts page");
+    console.log("Loading accounts start page");
     await extractor.loadAccountsStartPage(args);
     await page.waitForTimeout(3000);
 
@@ -191,7 +197,7 @@ export const runExtractor = async (
       try {
         await page.goto("about:blank");
 
-        console.log("Loading history page");
+        console.log("Loading transactions start page");
         await extractor.loadTransactionsStartPage(args);
         await page.waitForTimeout(3000);
 
