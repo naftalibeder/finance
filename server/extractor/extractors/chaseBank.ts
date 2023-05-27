@@ -8,7 +8,7 @@ import { getSelectorExists } from "../utils";
 class ChaseBankExtractor implements Extractor {
   loadStartPage = async (args: ExtractorFuncArgs) => {
     const { extractor, configAccount, configCredentials, page } = args;
-    await page.goto("https://chase.com");
+    await page.goto("https://chase.com", { timeout: 6000 });
   };
 
   enterCredentials = async (args: ExtractorFuncArgs) => {

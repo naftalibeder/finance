@@ -7,10 +7,9 @@ export const parseTransactions = async (
   transactionData: string,
   configAccount: ConfigAccount
 ): Promise<{ transactions: Transaction[]; skipCt: number }> => {
-  let transactions: Transaction[] = [];
   let skipCt = 0;
 
-  transactions = await new Promise<Transaction[]>((res, rej) => {
+  const transactions = await new Promise<Transaction[]>((res, rej) => {
     const ts: Transaction[] = [];
     const parser = parse({
       delimiter: ",",
@@ -46,20 +45,33 @@ const buildTransaction = (
 ): Transaction | undefined => {
   const { info, columnMap } = configAccount;
 
-  const rowNorm: Record<keyof ConfigAccount["columnMap"], string> = {
-    date: row[columnMap.date] ?? "",
-    accountId: row[columnMap.accountId] ?? "",
-    payee: row[columnMap.payee] ?? "",
-    price: row[columnMap.price] ?? "",
-    priceWithdrawal: row[columnMap.priceWithdrawal] ?? "",
-    priceDeposit: row[columnMap.priceDeposit] ?? "",
-    description: row[columnMap.description] ?? "",
+  const val = (i: number) => row[i] ?? "";
+
+  const rowNorm: Record<
+    keyof Omit<ConfigAccount["columnMap"], "accountId">,
+    string
+  > = {
+    date: val(columnMap.date),
+    postDate: val(columnMap.postDate),
+    payee: val(columnMap.payee),
+    price: val(columnMap.price),
+    priceWithdrawal: val(columnMap.priceWithdrawal),
+    priceDeposit: val(columnMap.priceDeposit),
+    type: val(columnMap.type),
+    description: val(columnMap.description),
   };
 
   const date = toDate(rowNorm.date);
   if (!date) {
     return undefined;
   }
+  const dateStr = date.toISOString();
+
+  let postDate = toDate(rowNorm.postDate);
+  if (!postDate) {
+    postDate = date;
+  }
+  const postDateStr = date.toISOString();
 
   let priceStr = "";
   let multiplier = 1;
@@ -78,10 +90,12 @@ const buildTransaction = (
   price.amount = price.amount * multiplier;
 
   const transaction: Transaction = {
-    date: date.toISOString(),
+    date: dateStr,
+    postDate: postDateStr,
     accountId: info.id,
     payee: rowNorm.payee,
     price,
+    type: rowNorm.type,
     description: rowNorm.description,
   };
   return transaction;

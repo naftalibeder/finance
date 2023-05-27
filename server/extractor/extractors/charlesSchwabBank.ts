@@ -8,7 +8,9 @@ import { toPrice } from "../../utils";
 class CharlesSchwabBankExtractor implements Extractor {
   loadStartPage = async (args: ExtractorFuncArgs) => {
     const { extractor, configAccount, configCredentials, page } = args;
-    await page.goto("https://client.schwab.com/clientapps/accounts/summary");
+    await page.goto("https://client.schwab.com/clientapps/accounts/summary", {
+      timeout: 6000,
+    });
   };
 
   enterCredentials = async (args: ExtractorFuncArgs) => {
