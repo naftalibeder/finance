@@ -10,7 +10,12 @@ import {
 import { Config, ConfigBankId, Price, Transaction } from "shared";
 import { CONFIG_PATH, EXTRACTIONS_PATH, TMP_DIR } from "../constants";
 import db from "../db";
-import { delay, prettyConfigAccount, prettyDate } from "../utils";
+import {
+  delay,
+  prettyConfigAccount,
+  prettyDate,
+  prettyDuration,
+} from "../utils";
 import { Extractor, ExtractorFuncArgs } from "types";
 import { CharlesSchwabBankExtractor, ChaseBankExtractor } from "./extractors";
 import { logger } from "./log";
@@ -29,7 +34,7 @@ const setUp = async (): Promise<[Browser, BrowserContext]> => {
     headless: HEADLESS,
     timeout: 0,
     env: {
-      PWDEBUG: "1",
+      PWDEBUG: "0",
     },
     logger,
   };
@@ -47,16 +52,8 @@ const setUp = async (): Promise<[Browser, BrowserContext]> => {
 };
 
 const run = async () => {
-  try {
-    await runAllExtractors();
-  } catch (e) {
-    console.log("Error running extractors:", e);
-  }
-};
-
-const runAllExtractors = async () => {
   const tmpRunDir = `${EXTRACTIONS_PATH}/${new Date()}`;
-  fs.mkdirSync(tmpRunDir);
+  fs.mkdirSync(tmpRunDir, { recursive: true });
 
   let totalFoundCt = 0;
   let totalAddCt = 0;
@@ -72,9 +69,14 @@ const runAllExtractors = async () => {
   const [browser, browserContext] = await setUp();
 
   for (const configAccount of configAccounts) {
-    console.log(
-      `Starting extraction for ${prettyConfigAccount(configAccount)}`
-    );
+    const log: ExtractorFuncArgs["log"] = (message?: any, ...params: any[]) => {
+      console.log(
+        `${configAccount.info.bankId} | ${configAccount.info.id} | ${message}`,
+        ...params
+      );
+    };
+
+    log(`Starting extraction`);
 
     const extractor = extractors[configAccount.info.bankId];
     const configBank = config.banks[configAccount.info.bankId];
@@ -89,13 +91,6 @@ const runAllExtractors = async () => {
     // page.on("framedetached", (e) => console.log("framedetached"));
     // page.on("framenavigated", (e) => console.log("framenavigated"));
     // page.on("load", (e) => console.log("load"));
-
-    const getMfaCode = async (): Promise<string> => {
-      const code = await waitForMfaCode(configAccount.info.bankId, () => {
-        db.setExtractionStatus({ status: "wait-for-mfa" });
-      });
-      return code;
-    };
 
     db.setExtractionStatus({
       status: "run-extractor",
@@ -112,13 +107,22 @@ const runAllExtractors = async () => {
         configBank,
         configCredentials,
         page,
-        getMfaCode,
+        tmpRunDir,
+        getMfaCode: async (): Promise<string> => {
+          return await waitForMfaCode(
+            configAccount.info.bankId,
+            () => db.setExtractionStatus({ status: "wait-for-mfa" }),
+            log
+          );
+        },
+        log,
       });
       accountValue = resp.accountValue;
       transactions = resp.transactions;
     } catch (e) {
-      console.log(`Error running extractor: ${e}`);
+      log(`Error running extractor: ${e}`);
       db.deleteMfaInfo(configAccount.info.bankId);
+      await takeErrorScreenshot(page, tmpRunDir);
       continue;
     }
 
@@ -127,27 +131,25 @@ const runAllExtractors = async () => {
       number: configAccount.info.number,
       price: accountValue,
     });
-    console.log(`Updated account value: ${accountValue.amount}`);
+    log(`Updated account value: ${accountValue.amount}`);
 
     const foundCt = transactions.length;
     totalFoundCt += foundCt;
     const addCt = db.addTransactions(transactions);
     totalAddCt += addCt;
-    console.log(`Added ${addCt} of ${foundCt} found transactions`);
+    log(`Added ${addCt} new of ${foundCt} found transactions`);
 
     await browserContext.storageState({ path: BROWSER_CONTEXT_PATH });
     await page.close();
-
-    console.log("----------------------------------");
   }
 
   db.setExtractionStatus({ status: "tear-down" });
   await tearDown(browser, browserContext);
 
-  const deltaTime = (Date.now() - startTime.valueOf()) / 1000;
-  console.log(
-    `Added ${totalAddCt} of ${totalFoundCt} found transactions across ${configAccounts.length} accounts; completed in ${deltaTime}s`
-  );
+  const deltaTime = Date.now() - startTime.valueOf();
+  console.log(`Completed extraction across ${configAccounts.length} accounts`);
+  console.log(`Added ${totalAddCt} new of ${totalFoundCt} found transactions`);
+  console.log(`Finished in ${prettyDuration(deltaTime)}s`);
   db.setExtractionStatus({ status: "idle" });
 };
 
@@ -157,18 +159,19 @@ export const runExtractor = async (
   accountValue: Price;
   transactions: Transaction[];
 }> => {
-  const { extractor, configAccount, configCredentials, page } = args;
+  const { extractor, configAccount, configCredentials, page, tmpRunDir, log } =
+    args;
 
   const getAccountValue = async (): Promise<Price> => {
-    console.log("Loading accounts start page");
-    await extractor.loadAccountsStartPage(args);
+    log("Loading start page");
+    await extractor.loadStartPage(args);
     await page.waitForTimeout(3000);
 
-    console.log("Checking authentication status");
+    log("Checking authentication status");
     await authenticate();
     await page.waitForTimeout(3000);
 
-    console.log("Scraping account value");
+    log("Scraping account value");
     let accountValue = await extractor.scrapeAccountValue(args);
 
     const accountType = args.configAccount.info.type;
@@ -176,9 +179,7 @@ export const runExtractor = async (
       accountValue.amount *= -1;
     }
 
-    console.log(
-      `Found account value: ${accountValue.amount} ${accountValue.currency}`
-    );
+    log(`Found account value: ${accountValue.amount} ${accountValue.currency}`);
     return accountValue;
   };
 
@@ -192,65 +193,74 @@ export const runExtractor = async (
       const start = new Date(end.valueOf() - spanMs);
       const prettyRange = `[${prettyDate(start)}, ${prettyDate(end)}]`;
 
-      console.log(`Getting transactions for range ${prettyRange}`);
+      log(`Getting transactions for range ${prettyRange}`);
 
       let transactionsChunk: Transaction[] = [];
+      let skipCt = 0;
       try {
-        await page.goto("about:blank");
-
-        console.log("Loading transactions start page");
-        await extractor.loadTransactionsStartPage(args);
+        log("Loading start page");
+        await extractor.loadStartPage(args);
         await page.waitForTimeout(3000);
 
-        console.log("Checking authentication status");
+        log("Checking authentication status");
         await authenticate();
         await page.waitForTimeout(3000);
 
-        console.log("Scraping transaction data");
+        log("Scraping transaction data");
         const data = await extractor.scrapeTransactionData({
           ...args,
           range: { start, end },
         });
+        fs.writeFileSync(
+          `${tmpRunDir}/${prettyConfigAccount(configAccount)}.csv`,
+          data,
+          { encoding: "utf-8" }
+        );
 
-        console.log("Parsing transactions");
-        transactionsChunk = await parseTransactions(data, configAccount);
+        log("Parsing transactions");
+        const res = await parseTransactions(data, configAccount);
+        transactionsChunk = res.transactions;
+        skipCt = res.skipCt;
       } catch (e) {
-        console.log("Error getting transaction data:", e);
+        log(`Error getting transaction data for range ${prettyRange}:`, e);
         break;
       }
 
       if (transactionsChunk.length === 0) {
-        console.log(`No new transactions for range ${prettyRange}; stopping`);
+        log(`No new transactions for range ${prettyRange}; stopping`);
         break;
       }
 
-      console.log(`Found ${transactionsChunk.length} transactions`);
+      log(
+        `Found ${transactionsChunk.length} transactions for range ${prettyRange}; skipped ${skipCt} non-transaction rows`
+      );
       transactions = [...transactions, ...transactionsChunk];
 
       end = start;
     }
 
+    log(`Found ${transactions.length} total transactions`);
     return transactions;
   };
 
   const authenticate = async (): Promise<void> => {
     let dashboardExists = await extractor.getDashboardExists(args);
     if (dashboardExists) {
-      console.log("Already authenticated");
+      log("Already authenticated");
       return;
     }
 
-    console.log("Entering credentials if needed");
+    log("Entering credentials if needed");
     await extractor.enterCredentials(args);
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(3000);
 
     dashboardExists = await extractor.getDashboardExists(args);
     if (dashboardExists) {
-      console.log("Already authenticated");
+      log("Already authenticated");
       return;
     }
 
-    console.log("Entering two-factor code if needed");
+    log("Entering two-factor code if needed");
     await extractor.enterMfaCode(args);
     await page.waitForTimeout(1000);
   };
@@ -266,7 +276,8 @@ export const runExtractor = async (
 
 const waitForMfaCode = async (
   bankId: ConfigBankId,
-  onChange: () => void
+  onChange: () => void,
+  log: ExtractorFuncArgs["log"]
 ): Promise<string> => {
   db.setMfaInfo(bankId);
   let maxSec = 60 * 2;
@@ -276,17 +287,17 @@ const waitForMfaCode = async (
     const info = status.mfaInfos.find((o) => o.bankId === bankId);
 
     if (info?.code) {
-      console.log(`Clearing two-factor info for ${bankId}`);
+      log(`Clearing two-factor info for ${bankId}`);
       db.deleteMfaInfo(bankId);
       onChange();
       return info.code;
     }
 
-    console.log(`No code found yet (${i}/${maxSec}s)...`);
+    log(`No code found yet (${i}/${maxSec}s)...`);
     await delay(1000);
   }
 
-  console.log(`No code found in ${maxSec}s`);
+  log(`No code found in ${maxSec}s`);
   db.deleteMfaInfo(bankId);
   onChange();
 

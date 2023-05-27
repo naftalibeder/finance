@@ -45,6 +45,18 @@ export const prettyDate = (
   }
 };
 
+export const prettyDuration = (ms: number): string | undefined => {
+  const sec = Math.round(ms / 1000);
+  const min = sec / 60;
+  const hr = min / 60;
+
+  if (sec < 60) {
+    return `${sec}s`;
+  } else if (min < 60) {
+    return `${Math.floor(min)}m${sec % 60}s`;
+  }
+};
+
 // TODO: Handle other currencies. Consider https://github.com/dinerojs/dinero.js.
 export const toPrice = (s: string): Price => {
   const valueStr = s.replace("$", "").replace(",", "");

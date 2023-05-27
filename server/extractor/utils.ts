@@ -6,49 +6,38 @@ import { toDate, toPrice } from "../utils";
 export const parseTransactions = async (
   transactionData: string,
   configAccount: ConfigAccount
-): Promise<Transaction[]> => {
-  console.log("Parsing extracted data");
-
+): Promise<{ transactions: Transaction[]; skipCt: number }> => {
   let transactions: Transaction[] = [];
   let skipCt = 0;
 
-  try {
-    transactions = await new Promise<Transaction[]>((res, rej) => {
-      const ts: Transaction[] = [];
-      const parser = parse({
-        delimiter: ",",
-        relaxColumnCount: true,
-      });
-      parser.on("readable", () => {
-        let row: string[];
-        while ((row = parser.read()) !== null) {
-          const t = buildTransaction(row, configAccount);
-          if (!t) {
-            skipCt += 1;
-            continue;
-          }
-          ts.push(t);
-        }
-      });
-      parser.on("error", (e) => {
-        rej(e);
-      });
-      parser.on("end", () => {
-        res(ts);
-      });
-      parser.write(transactionData);
-      parser.end();
+  transactions = await new Promise<Transaction[]>((res, rej) => {
+    const ts: Transaction[] = [];
+    const parser = parse({
+      delimiter: ",",
+      relaxColumnCount: true,
     });
-  } catch (e) {
-    console.error("Parser error:", e);
-    return [];
-  }
+    parser.on("readable", () => {
+      let row: string[];
+      while ((row = parser.read()) !== null) {
+        const t = buildTransaction(row, configAccount);
+        if (!t) {
+          skipCt += 1;
+          continue;
+        }
+        ts.push(t);
+      }
+    });
+    parser.on("error", (e) => {
+      rej(e);
+    });
+    parser.on("end", () => {
+      res(ts);
+    });
+    parser.write(transactionData);
+    parser.end();
+  });
 
-  console.log(
-    `Found ${transactions.length} valid transactions; skipped ${skipCt} invalid rows`
-  );
-
-  return transactions;
+  return { transactions, skipCt };
 };
 
 const buildTransaction = (

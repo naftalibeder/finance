@@ -6,32 +6,28 @@ import { getSelectorExists } from "../utils";
 import { toPrice } from "../../utils";
 
 class CharlesSchwabBankExtractor implements Extractor {
-  loadAccountsStartPage = async (args: ExtractorFuncArgs) => {
+  loadStartPage = async (args: ExtractorFuncArgs) => {
     const { extractor, configAccount, configCredentials, page } = args;
     await page.goto("https://client.schwab.com/clientapps/accounts/summary");
   };
 
-  loadTransactionsStartPage = async (args: ExtractorFuncArgs) => {
-    const { extractor, configAccount, configCredentials, page } = args;
-    await page.goto(
-      "https://client.schwab.com/app/accounts/transactionhistory"
-    );
-  };
-
   enterCredentials = async (args: ExtractorFuncArgs) => {
-    const { extractor, configAccount, configCredentials, page } = args;
+    const { extractor, configAccount, configCredentials, page, log } = args;
 
     let loc: Locator;
 
     const loginFrame = page.frameLocator("#lmsSecondaryLogin");
 
-    const loginPageExists = await getSelectorExists(
-      loginFrame,
-      "#loginIdInput",
-      5000
-    );
-    if (!loginPageExists) {
-      return;
+    while (true) {
+      log("Waiting for login page");
+      try {
+        loc = loginFrame.locator("#loginIdInput");
+        await loc.waitFor({ state: "attached", timeout: 6000 });
+      } catch (e) {
+        page.reload();
+        continue;
+      }
+      break;
     }
 
     loc = loginFrame.locator("#loginIdInput");

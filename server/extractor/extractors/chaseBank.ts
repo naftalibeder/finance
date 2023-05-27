@@ -6,36 +6,34 @@ import { toPrice } from "../../utils";
 import { getSelectorExists } from "../utils";
 
 class ChaseBankExtractor implements Extractor {
-  loadAccountsStartPage = async (args: ExtractorFuncArgs) => {
-    const { extractor, configAccount, configCredentials, page } = args;
-    await page.goto("https://chase.com");
-  };
-
-  loadTransactionsStartPage = async (args: ExtractorFuncArgs) => {
+  loadStartPage = async (args: ExtractorFuncArgs) => {
     const { extractor, configAccount, configCredentials, page } = args;
     await page.goto("https://chase.com");
   };
 
   enterCredentials = async (args: ExtractorFuncArgs) => {
-    const { extractor, configAccount, configCredentials, page } = args;
+    const { extractor, configAccount, configCredentials, page, log } = args;
 
     let loc: Locator;
 
     const loginFrame = page.frameLocator("#logonbox");
 
-    try {
-      loc = page.locator(".siginbox-button");
-      await loc.click({ timeout: 6000 });
-    } catch (e) {}
-
-    const loginPageExists = await getSelectorExists(
-      loginFrame,
-      "#userId-text-input-field",
-      6000
-    );
-    if (!loginPageExists) {
-      return;
+    // Sometimes instead of a login form, the page loads a button leading to the
+    // login form. This button is inaccessible (?) programmatically, but reloading
+    // the page a few times usually prompts the login form to appear.
+    while (true) {
+      log("Waiting for login page");
+      try {
+        loc = loginFrame.locator("#userId-text-input-field");
+        await loc.waitFor({ state: "attached", timeout: 6000 });
+      } catch (e) {
+        log("Could not load login page; reloading");
+        page.reload();
+        continue;
+      }
+      break;
     }
+
     loc = loginFrame.locator("#userId-text-input-field");
     await loc.fill(configCredentials.username);
 
@@ -149,6 +147,8 @@ class ChaseBankExtractor implements Extractor {
     await loc.fill(range.end.toLocaleDateString("en-US"));
     await loc.blur();
 
+    await page.waitForTimeout(1000);
+
     // Export data.
 
     const downloadPromise = page.waitForEvent("download", { timeout: 6000 });
@@ -156,13 +156,19 @@ class ChaseBankExtractor implements Extractor {
     loc = dashboardFrame.locator("#download");
     await loc.click();
 
-    // Get downloaded file.
+    // Get data from downloaded file.
 
-    const download = await downloadPromise;
-    const downloadPath = await download.path();
-    const transactionData = fs.readFileSync(downloadPath!, {
-      encoding: "utf-8",
-    });
+    let transactionData: string;
+    try {
+      const download = await downloadPromise;
+      const downloadPath = await download.path();
+      transactionData = fs.readFileSync(downloadPath!, {
+        encoding: "utf-8",
+      });
+    } catch (e) {
+      throw "Invalid date range";
+    }
+
     return transactionData;
   };
 

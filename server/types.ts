@@ -21,7 +21,9 @@ export interface ExtractorFuncArgs {
   configBank: ConfigBank;
   configCredentials: ConfigCredentials;
   page: Page;
+  tmpRunDir: string;
   getMfaCode: () => Promise<string>;
+  log: (message?: any, ...params: any[]) => void;
 }
 
 export interface ExtractorRangeFuncArgs extends ExtractorFuncArgs {
@@ -29,8 +31,7 @@ export interface ExtractorRangeFuncArgs extends ExtractorFuncArgs {
 }
 
 export interface Extractor {
-  loadAccountsStartPage: (args: ExtractorFuncArgs) => Promise<void>;
-  loadTransactionsStartPage: (args: ExtractorFuncArgs) => Promise<void>;
+  loadStartPage: (args: ExtractorFuncArgs) => Promise<void>;
   enterCredentials: (args: ExtractorFuncArgs) => Promise<void>;
   enterMfaCode: (args: ExtractorFuncArgs) => Promise<void>;
   scrapeAccountValue: (args: ExtractorFuncArgs) => Promise<Price>;
