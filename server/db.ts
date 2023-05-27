@@ -54,13 +54,18 @@ const updateAccount = (id: string, update: Account) => {
     db.accounts[index] = {
       ...existing,
       ...update,
-      updatedAt: new Date().toISOString(),
+      meta: {
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
     };
   } else {
     db.accounts.push({
       ...update,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      meta: {
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
     });
   }
 
@@ -93,8 +98,10 @@ const addTransactions = (newTransactions: Transaction[]): number => {
 
     updatedTransactions.push({
       ...n,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      meta: {
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
     });
     addCt += 1;
   });
