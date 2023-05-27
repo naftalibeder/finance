@@ -1,3 +1,4 @@
+import fs from "fs";
 import { Locator } from "playwright-core";
 import { Price } from "shared";
 import { Extractor, ExtractorFuncArgs, ExtractorRangeFuncArgs } from "types";
@@ -5,13 +6,14 @@ import { toPrice } from "../../utils";
 import { getSelectorExists } from "../utils";
 
 class ChaseBankExtractor implements Extractor {
-  loadAccountsPage = async (args: ExtractorFuncArgs) => {
+  loadAccountsStartPage = async (args: ExtractorFuncArgs) => {
     const { extractor, configAccount, configCredentials, page } = args;
-    await page.goto("https://www.chase.com", { waitUntil: "domcontentloaded" });
+    await page.goto("https://chase.com");
   };
 
-  loadHistoryPage = async (args: ExtractorFuncArgs) => {
+  loadTransactionsStartPage = async (args: ExtractorFuncArgs) => {
     const { extractor, configAccount, configCredentials, page } = args;
+    await page.goto("https://chase.com");
   };
 
   enterCredentials = async (args: ExtractorFuncArgs) => {
@@ -19,15 +21,21 @@ class ChaseBankExtractor implements Extractor {
 
     let loc: Locator;
 
-    const splashFrame = page.frameLocator("#logonbox");
+    const loginFrame = page.frameLocator("#logonbox");
 
     try {
-      loc = splashFrame.locator(".siginbox-button");
+      loc = page.locator(".siginbox-button");
       await loc.click({ timeout: 6000 });
     } catch (e) {}
 
-    const loginFrame = page.frameLocator("#logonbox");
-
+    const loginPageExists = await getSelectorExists(
+      loginFrame,
+      "#userId-text-input-field",
+      6000
+    );
+    if (!loginPageExists) {
+      return;
+    }
     loc = loginFrame.locator("#userId-text-input-field");
     await loc.fill(configCredentials.username);
 
@@ -39,8 +47,6 @@ class ChaseBankExtractor implements Extractor {
 
     loc = loginFrame.locator("#signin-button");
     await loc.click();
-
-    await page.waitForLoadState("domcontentloaded");
   };
 
   enterMfaCode = async (args: ExtractorFuncArgs) => {
@@ -53,7 +59,7 @@ class ChaseBankExtractor implements Extractor {
     const mfaPageExists = await getSelectorExists(
       mfaFrame,
       "#header-simplerAuth-dropdownoptions-styledselect",
-      10000
+      6000
     );
     if (!mfaPageExists) {
       return;
@@ -107,11 +113,69 @@ class ChaseBankExtractor implements Extractor {
   scrapeTransactionData = async (
     args: ExtractorRangeFuncArgs
   ): Promise<string> => {
-    throw "";
+    const { extractor, configAccount, configCredentials, range, page } = args;
+
+    let loc: Locator;
+
+    // Go to history page.
+
+    const dashboardFrame = page.frames()[0];
+
+    loc = dashboardFrame.locator(
+      `[text*="${configAccount.info.number.slice(-4)}"]`
+    );
+    await loc.click();
+    await page.waitForTimeout(3000);
+
+    loc = dashboardFrame.locator("#downloadActivityIcon");
+    await loc.click();
+    await page.waitForTimeout(3000);
+
+    // Set date range.
+
+    loc = dashboardFrame.locator("#select-downloadActivityOptionId");
+    await loc.click();
+    await page.waitForTimeout(1000);
+
+    loc = dashboardFrame.locator(`[value="DATE_RANGE"]`);
+    await loc.click();
+    await page.waitForTimeout(1000);
+
+    loc = dashboardFrame.locator("#accountActivityFromDate-input-input");
+    await loc.fill(range.start.toLocaleDateString("en-US"));
+    await loc.blur();
+
+    loc = dashboardFrame.locator("#accountActivityToDate-input-input");
+    await loc.fill(range.end.toLocaleDateString("en-US"));
+    await loc.blur();
+
+    // Export data.
+
+    const downloadPromise = page.waitForEvent("download", { timeout: 6000 });
+
+    loc = dashboardFrame.locator("#download");
+    await loc.click();
+
+    // Get downloaded file.
+
+    const download = await downloadPromise;
+    const downloadPath = await download.path();
+    const transactionData = fs.readFileSync(downloadPath!, {
+      encoding: "utf-8",
+    });
+    return transactionData;
   };
 
   getDashboardExists = async (args: ExtractorFuncArgs): Promise<boolean> => {
-    return false;
+    const { extractor, configAccount, configCredentials, page } = args;
+
+    try {
+      const loc = page.frames()[0].locator(".global-nav-position-container");
+      await loc.waitFor({ state: "attached", timeout: 500 });
+      return true;
+    } catch (e) {
+      return false;
+    }
   };
 }
 

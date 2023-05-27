@@ -25,6 +25,7 @@ type ConfigBankId = "charles-schwab-bank" | "chase-bank";
 
 type Config = {
   accounts: ConfigAccount[];
+  banks: Record<ConfigBankId, ConfigBank>;
   credentials: Record<ConfigBankId, ConfigCredentials>;
 };
 
@@ -34,6 +35,7 @@ type ConfigAccount = {
     bankId: ConfigBankId;
     display: string;
     number: string;
+    type: "assets" | "liabilities" | "equity" | "revenue" | "expenses";
   };
   columnMap: Record<
     | keyof Omit<Transaction, "createdAt" | "updatedAt">
@@ -42,6 +44,10 @@ type ConfigAccount = {
     number
   >;
   skip: boolean;
+};
+
+type ConfigBank = {
+  exportRangeMonths: number;
 };
 
 type ConfigCredentials = {
@@ -68,6 +74,7 @@ export {
   ConfigBankId,
   Config,
   ConfigAccount,
+  ConfigBank,
   ConfigCredentials,
   MfaInfo,
   ExtractionStatus,

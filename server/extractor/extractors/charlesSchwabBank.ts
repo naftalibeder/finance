@@ -6,12 +6,12 @@ import { getSelectorExists } from "../utils";
 import { toPrice } from "../../utils";
 
 class CharlesSchwabBankExtractor implements Extractor {
-  loadAccountsPage = async (args: ExtractorFuncArgs) => {
+  loadAccountsStartPage = async (args: ExtractorFuncArgs) => {
     const { extractor, configAccount, configCredentials, page } = args;
     await page.goto("https://client.schwab.com/clientapps/accounts/summary");
   };
 
-  loadHistoryPage = async (args: ExtractorFuncArgs) => {
+  loadTransactionsStartPage = async (args: ExtractorFuncArgs) => {
     const { extractor, configAccount, configCredentials, page } = args;
     await page.goto(
       "https://client.schwab.com/app/accounts/transactionhistory"
@@ -22,11 +22,6 @@ class CharlesSchwabBankExtractor implements Extractor {
     const { extractor, configAccount, configCredentials, page } = args;
 
     let loc: Locator;
-
-    const dashboardExists = await this.getDashboardExists(args);
-    if (dashboardExists) {
-      return;
-    }
 
     const loginFrame = page.frameLocator("#lmsSecondaryLogin");
 
@@ -54,21 +49,15 @@ class CharlesSchwabBankExtractor implements Extractor {
 
     let loc: Locator;
 
-    const dashboardExists = await this.getDashboardExists(args);
-    if (dashboardExists) {
-      return;
-    }
-
     const mfaFrame = page.frames()[0];
 
     const mfaPageExists = await getSelectorExists(mfaFrame, "#otp_sms", 5000);
     if (!mfaPageExists) {
       return;
     }
+
     loc = mfaFrame.locator("#otp_sms");
     await loc.click();
-
-    // Input code.
 
     const code = await args.getMfaCode();
 
@@ -115,15 +104,16 @@ class CharlesSchwabBankExtractor implements Extractor {
 
     loc = dashboardFrame.locator("#meganav-secondary-menu-hist");
     await loc.click();
+    await page.waitForTimeout(3000);
 
     loc = dashboardFrame.locator(".sdps-account-selector");
     await loc.click();
+    await page.waitForTimeout(3000);
 
     loc = dashboardFrame.locator(".sdps-account-selector__list-item", {
       hasText: configAccount.info.number,
     });
     await loc.click();
-
     await page.waitForTimeout(3000);
 
     // Set date range.
@@ -132,20 +122,24 @@ class CharlesSchwabBankExtractor implements Extractor {
 
     loc = dateRangeFrame.locator("#statements-daterange1");
     await loc.selectOption({ value: "Custom" });
+    await page.waitForTimeout(1000);
 
     loc = dateRangeFrame.locator("#calendar-FromDate");
     await loc.fill(range.start.toLocaleDateString("en-US"));
+    await loc.blur();
 
     loc = dateRangeFrame.locator("#calendar-ToDate");
     await loc.fill(range.end.toLocaleDateString("en-US"));
+    await loc.blur();
 
     loc = dateRangeFrame.getByRole("button", { name: "search" });
     await loc.click();
+    await page.waitForTimeout(3000);
 
     let rangeIsValid = true;
     try {
       loc = dateRangeFrame.locator("#datepicker-range-error-alert");
-      await loc.waitFor({ state: "attached", timeout: 2000 });
+      await loc.waitFor({ state: "attached", timeout: 3000 });
       rangeIsValid = false;
     } catch (e) {}
     if (!rangeIsValid) {
@@ -154,14 +148,20 @@ class CharlesSchwabBankExtractor implements Extractor {
 
     // Open export popup.
 
+    const popupPromise = page.waitForEvent("popup");
+
     loc = dashboardFrame.locator("#bttnExport button");
     await loc.click();
 
-    const popupPage = await page.waitForEvent("popup");
+    const popupPage = await popupPromise;
+    await popupPage.waitForLoadState("domcontentloaded");
 
-    await popupPage.waitForSelector(".button-primary", { state: "attached" });
-    loc = popupPage.locator(".button-primary").first();
-    await loc.click();
+    loc = popupPage.locator(".button-primary");
+    try {
+      await loc.click();
+    } catch (e) {
+      // Silence 'target closed' error.
+    }
 
     // Get downloaded file.
 

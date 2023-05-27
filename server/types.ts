@@ -3,6 +3,7 @@ import {
   Account,
   Transaction,
   ConfigAccount,
+  ConfigBank,
   ConfigCredentials,
   Price,
   ExtractionStatus,
@@ -17,6 +18,7 @@ export type Database = {
 export interface ExtractorFuncArgs {
   extractor: Extractor;
   configAccount: ConfigAccount;
+  configBank: ConfigBank;
   configCredentials: ConfigCredentials;
   page: Page;
   getMfaCode: () => Promise<string>;
@@ -27,8 +29,8 @@ export interface ExtractorRangeFuncArgs extends ExtractorFuncArgs {
 }
 
 export interface Extractor {
-  loadAccountsPage: (args: ExtractorFuncArgs) => Promise<void>;
-  loadHistoryPage: (args: ExtractorFuncArgs) => Promise<void>;
+  loadAccountsStartPage: (args: ExtractorFuncArgs) => Promise<void>;
+  loadTransactionsStartPage: (args: ExtractorFuncArgs) => Promise<void>;
   enterCredentials: (args: ExtractorFuncArgs) => Promise<void>;
   enterMfaCode: (args: ExtractorFuncArgs) => Promise<void>;
   scrapeAccountValue: (args: ExtractorFuncArgs) => Promise<Price>;
