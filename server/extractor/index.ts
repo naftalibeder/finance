@@ -10,8 +10,8 @@ import {
 import { Config, ConfigBankId, Price, Transaction } from "shared";
 import { CONFIG_PATH, EXTRACTIONS_PATH, TMP_DIR } from "../constants";
 import db from "../db";
-import { delay, toPretty } from "../utils";
-import { Extractor, ExtractorDateRange, ExtractorFuncArgs } from "types";
+import { delay, prettyConfigAccount, prettyDate } from "../utils";
+import { Extractor, ExtractorFuncArgs } from "types";
 import { CharlesSchwabBankExtractor, ChaseBankExtractor } from "./extractors";
 import { logger } from "./log";
 import { parseTransactions } from "./utils";
@@ -72,7 +72,9 @@ const runAllExtractors = async () => {
   const [browser, browserContext] = await setUp();
 
   for (const configAccount of configAccounts) {
-    console.log(`Starting extraction for ${toPretty(configAccount)}`);
+    console.log(
+      `Starting extraction for ${prettyConfigAccount(configAccount)}`
+    );
 
     const extractor = extractors[configAccount.info.bankId];
     const configBank = config.banks[configAccount.info.bankId];
@@ -188,8 +190,7 @@ export const runExtractor = async (
 
     while (true) {
       const start = new Date(end.valueOf() - spanMs);
-      const range: ExtractorDateRange = { start, end };
-      const prettyRange = `[${range.start}, ${range.end}]`;
+      const prettyRange = `[${prettyDate(start)}, ${prettyDate(end)}]`;
 
       console.log(`Getting transactions for range ${prettyRange}`);
 
@@ -206,7 +207,10 @@ export const runExtractor = async (
         await page.waitForTimeout(3000);
 
         console.log("Scraping transaction data");
-        const data = await extractor.scrapeTransactionData({ ...args, range });
+        const data = await extractor.scrapeTransactionData({
+          ...args,
+          range: { start, end },
+        });
 
         console.log("Parsing transactions");
         transactionsChunk = await parseTransactions(data, configAccount);

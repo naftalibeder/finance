@@ -1,12 +1,16 @@
 export const prettyDate = (
-  s: string,
-  opts: { includeTime: boolean }
+  o: Date | string,
+  opts?: { includeTime?: boolean }
 ): string | undefined => {
   let d: Date;
-  try {
-    d = new Date(s);
-  } catch (e) {
-    return undefined;
+  if (typeof o === "string") {
+    try {
+      d = new Date(o);
+    } catch (e) {
+      return undefined;
+    }
+  } else {
+    d = o;
   }
 
   const year = d.getFullYear();
@@ -18,7 +22,7 @@ export const prettyDate = (
   const hours12 = hours % 12;
   const period = hours < 12 ? "a" : "p";
 
-  if (opts.includeTime) {
+  if (opts?.includeTime) {
     return `${year}.${month}.${date} ${hours12}${period}`;
   } else {
     return `${year}.${month}.${date}`;
