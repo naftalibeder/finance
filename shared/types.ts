@@ -2,18 +2,24 @@ type Account = {
   id: string;
   number: string;
   price: Price;
-  createdAt?: string;
-  updatedAt?: string;
+  meta?: {
+    createdAt: string;
+    updatedAt: string;
+  };
 };
 
 type Transaction = {
   date: string;
+  postDate: string;
   accountId: string;
   payee: string;
   price: Price;
+  type: string;
   description: string;
-  createdAt?: string;
-  updatedAt?: string;
+  meta?: {
+    createdAt: string;
+    updatedAt: string;
+  };
 };
 
 type Price = {
@@ -38,9 +44,7 @@ type ConfigAccount = {
     type: "assets" | "liabilities" | "equity" | "revenue" | "expenses";
   };
   columnMap: Record<
-    | keyof Omit<Transaction, "createdAt" | "updatedAt">
-    | "priceWithdrawal"
-    | "priceDeposit",
+    keyof Omit<Transaction, "meta"> | "priceWithdrawal" | "priceDeposit",
     number
   >;
   skip: boolean;

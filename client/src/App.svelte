@@ -228,7 +228,9 @@
       <div class="grid transactions">
         {#each transactionsFiltered as t}
           <div
-            class={`grid row ${secAgo(t.createdAt) < 60 * 5 ? "recent" : ""}`}
+            class={`grid row ${
+              secAgo(t.meta?.createdAt) < 60 * 5 ? "recent" : ""
+            }`}
           >
             <div class="cell transaction date">
               {prettyDate(t.date, { includeTime: false })}
