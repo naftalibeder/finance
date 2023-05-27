@@ -49,7 +49,8 @@
 
   var visibleAccounts: Record<string, boolean> = {};
 
-  let interval: NodeJS.Timer | undefined;
+  let mfaPollInterval: NodeJS.Timer | undefined;
+  let isSendingMfaCode = false;
 
   onMount(async () => {
     await fetchAll();
@@ -104,11 +105,11 @@
   };
 
   const pollExtractionStatus = () => {
-    interval = setInterval(async () => {
+    mfaPollInterval = setInterval(async () => {
       await fetchExtractionStatus();
       console.log("Extraction status:", extractionStatus);
       if (extractionStatus.status === "idle") {
-        clearInterval(interval);
+        clearInterval(mfaPollInterval);
       }
     }, 1000);
   };
@@ -121,18 +122,23 @@
     });
   };
 
-  const onClickSendCode = async (bankId: ConfigBankId, code: string) => {
-    const data = {
-      bankId,
-      code,
-    };
-    const res = await fetch(`${serverUrl}/mfa`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams(data).toString(),
-    });
+  const onClickSendMfaCode = async (bankId: ConfigBankId, code: string) => {
+    isSendingMfaCode = true;
+
+    try {
+      const data = { bankId, code };
+      const res = await fetch(`${serverUrl}/mfa`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams(data).toString(),
+      });
+    } catch (e) {
+      console.log("Error sending mfa code:", e);
+    }
+
+    isSendingMfaCode = false;
   };
 
   const formatCurrency = (a: any) => {
@@ -155,13 +161,18 @@
         {#each extractionStatus.mfaInfos as mfaInfo}
           <div class="row">
             <label for={mfaInfo.bankId}>{mfaInfo.bankId}</label>
-            <input id={mfaInfo.bankId} placeholder="Enter code" />
+            <input
+              id={mfaInfo.bankId}
+              placeholder="Enter code"
+              disabled={isSendingMfaCode}
+            />
             <button
               on:click={(evt) => {
                 // @ts-ignore
                 const code = document.getElementById(mfaInfo.bankId).value;
-                onClickSendCode(mfaInfo.bankId, code);
+                onClickSendMfaCode(mfaInfo.bankId, code);
               }}
+              disabled={isSendingMfaCode}
             >
               Send code
             </button>
