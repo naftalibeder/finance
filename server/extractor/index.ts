@@ -79,7 +79,6 @@ const run = async () => {
     log(`Starting extraction`);
 
     const extractor = extractors[configAccount.info.bankId];
-    const configBank = config.banks[configAccount.info.bankId];
     const configCredentials = config.credentials[configAccount.info.bankId];
 
     const page = await browserContext.newPage();
@@ -104,16 +103,20 @@ const run = async () => {
       const resp = await runExtractor({
         extractor,
         configAccount,
-        configBank,
         configCredentials,
         page,
         tmpRunDir,
         getMfaCode: async (): Promise<string> => {
-          return await waitForMfaCode(
+          const code = await waitForMfaCode(
             configAccount.info.bankId,
             () => db.setExtractionStatus({ status: "wait-for-mfa" }),
             log
           );
+          db.setExtractionStatus({
+            status: "run-extractor",
+            accountId: configAccount.info.id,
+          });
+          return code;
         },
         log,
       });
@@ -129,6 +132,8 @@ const run = async () => {
     db.updateAccount(configAccount.info.id, {
       id: configAccount.info.id,
       number: configAccount.info.number,
+      kind: configAccount.info.kind,
+      type: configAccount.info.type,
       price: accountValue,
     });
     log(`Updated account value: ${accountValue.amount}`);
@@ -184,7 +189,8 @@ export const runExtractor = async (
   };
 
   const getTransactions = async (): Promise<Transaction[]> => {
-    const spanMs = args.configBank.exportRangeMonths * 30 * 24 * 60 * 60 * 1000;
+    const spanMonths = extractor.getMaxDateRangeMonths(configAccount.info.kind);
+    const spanMs = spanMonths * 30 * 24 * 60 * 60 * 1000;
 
     let transactions: Transaction[] = [];
     let end = new Date();
@@ -218,7 +224,7 @@ export const runExtractor = async (
         );
 
         log("Parsing transactions");
-        const res = await parseTransactions(data, configAccount);
+        const res = await parseTransactions(data, configAccount, extractor);
         transactionsChunk = res.transactions;
         skipCt = res.skipCt;
       } catch (e) {

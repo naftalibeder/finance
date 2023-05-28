@@ -1,12 +1,18 @@
 type Account = {
   id: string;
   number: string;
+  kind: AccountKind;
+  type: AccountType;
   price: Price;
   meta?: {
     createdAt: string;
     updatedAt: string;
   };
 };
+
+type AccountKind = "checking" | "savings" | "brokerage" | "credit" | "debit";
+
+type AccountType = "assets" | "liabilities" | "equity" | "revenue" | "expenses";
 
 type Transaction = {
   date: string;
@@ -27,11 +33,8 @@ type Price = {
   currency: string;
 };
 
-type ConfigBankId = "charles-schwab-bank" | "chase-bank";
-
 type Config = {
   accounts: ConfigAccount[];
-  banks: Record<ConfigBankId, ConfigBank>;
   credentials: Record<ConfigBankId, ConfigCredentials>;
 };
 
@@ -41,18 +44,13 @@ type ConfigAccount = {
     bankId: ConfigBankId;
     display: string;
     number: string;
-    type: "assets" | "liabilities" | "equity" | "revenue" | "expenses";
+    kind: AccountKind;
+    type: AccountType;
   };
-  columnMap: Record<
-    keyof Omit<Transaction, "meta"> | "priceWithdrawal" | "priceDeposit",
-    number
-  >;
   skip: boolean;
 };
 
-type ConfigBank = {
-  exportRangeMonths: number;
-};
+type ConfigBankId = "charles-schwab-bank" | "chase-bank";
 
 type ConfigCredentials = {
   username: string;
@@ -73,12 +71,13 @@ type ExtractionStatus = {
 
 export {
   Account,
+  AccountKind,
+  AccountType,
   Transaction,
   Price,
-  ConfigBankId,
   Config,
   ConfigAccount,
-  ConfigBank,
+  ConfigBankId,
   ConfigCredentials,
   MfaInfo,
   ExtractionStatus,

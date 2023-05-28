@@ -1,7 +1,12 @@
 import fs from "fs";
 import { Locator } from "playwright-core";
-import { Price } from "shared";
-import { Extractor, ExtractorFuncArgs, ExtractorRangeFuncArgs } from "types";
+import { AccountKind, Price } from "shared";
+import {
+  Extractor,
+  ExtractorColumnMap,
+  ExtractorFuncArgs,
+  ExtractorRangeFuncArgs,
+} from "types";
 import { toPrice } from "../../utils";
 import { getSelectorExists } from "../utils";
 
@@ -182,6 +187,25 @@ class ChaseBankExtractor implements Extractor {
     } catch (e) {
       return false;
     }
+  };
+
+  getColumnMap = (accountKind: AccountKind): ExtractorColumnMap | undefined => {
+    if (accountKind === "credit") {
+      return {
+        date: 0,
+        postDate: 1,
+        payee: 2,
+        price: undefined,
+        priceWithdrawal: undefined,
+        priceDeposit: 5,
+        type: 4,
+        description: undefined,
+      };
+    }
+  };
+
+  getMaxDateRangeMonths = (accountKind: AccountKind): number => {
+    return 6;
   };
 }
 

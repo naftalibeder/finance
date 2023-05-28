@@ -1,14 +1,19 @@
 import fs from "fs";
 import { Locator } from "playwright-core";
-import { Price } from "shared";
-import { Extractor, ExtractorFuncArgs, ExtractorRangeFuncArgs } from "types";
+import { AccountKind, Price } from "shared";
+import {
+  Extractor,
+  ExtractorFuncArgs,
+  ExtractorRangeFuncArgs,
+  ExtractorColumnMap,
+} from "types";
 import { getSelectorExists } from "../utils";
 import { toPrice } from "../../utils";
 
 class CharlesSchwabBankExtractor implements Extractor {
   loadStartPage = async (args: ExtractorFuncArgs) => {
     const { extractor, configAccount, configCredentials, page } = args;
-    await page.goto("https://client.schwab.com", { timeout: 6000 });
+    await page.goto("https://schwab.com", { timeout: 6000 });
   };
 
   enterCredentials = async (args: ExtractorFuncArgs) => {
@@ -16,7 +21,7 @@ class CharlesSchwabBankExtractor implements Extractor {
 
     let loc: Locator;
 
-    const loginFrame = page.frameLocator("#lmsSecondaryLogin");
+    const loginFrame = page.frameLocator("#schwablmslogin");
 
     while (true) {
       log("Waiting for login page");
@@ -179,6 +184,36 @@ class CharlesSchwabBankExtractor implements Extractor {
     } catch (e) {
       return false;
     }
+  };
+
+  getColumnMap = (accountKind: AccountKind): ExtractorColumnMap | undefined => {
+    if (accountKind === "checking") {
+      return {
+        date: 0,
+        postDate: undefined,
+        payee: 3,
+        price: undefined,
+        priceWithdrawal: 4,
+        priceDeposit: 5,
+        type: 1,
+        description: undefined,
+      };
+    } else if (accountKind === "brokerage") {
+      return {
+        date: 0,
+        postDate: undefined,
+        payee: 2,
+        price: 7,
+        priceWithdrawal: undefined,
+        priceDeposit: undefined,
+        type: 1,
+        description: 3,
+      };
+    }
+  };
+
+  getMaxDateRangeMonths = (accountKind: AccountKind): number => {
+    return 12;
   };
 }
 

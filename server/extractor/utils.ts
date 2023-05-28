@@ -2,12 +2,19 @@ import { parse } from "csv-parse";
 import { ConfigAccount, Transaction } from "shared/types";
 import { Frame, FrameLocator } from "playwright-core";
 import { toDate, toPrice } from "../utils";
+import { Extractor, ExtractorColumnMap, ExtractorColumnMapKey } from "types";
 
 export const parseTransactions = async (
   transactionData: string,
-  configAccount: ConfigAccount
+  configAccount: ConfigAccount,
+  extractor: Extractor
 ): Promise<{ transactions: Transaction[]; skipCt: number }> => {
   let skipCt = 0;
+
+  const columnMap = extractor.getColumnMap(configAccount.info.kind);
+  if (!columnMap) {
+    throw "Column map not provided";
+  }
 
   const transactions = await new Promise<Transaction[]>((res, rej) => {
     const ts: Transaction[] = [];
@@ -18,7 +25,7 @@ export const parseTransactions = async (
     parser.on("readable", () => {
       let row: string[];
       while ((row = parser.read()) !== null) {
-        const t = buildTransaction(row, configAccount);
+        const t = buildTransaction(row, configAccount, columnMap);
         if (!t) {
           skipCt += 1;
           continue;
@@ -41,16 +48,14 @@ export const parseTransactions = async (
 
 const buildTransaction = (
   row: string[],
-  configAccount: ConfigAccount
+  configAccount: ConfigAccount,
+  columnMap: ExtractorColumnMap
 ): Transaction | undefined => {
-  const { info, columnMap } = configAccount;
+  const { info } = configAccount;
 
-  const val = (i: number) => row[i] ?? "";
+  const val = (i?: number) => (i !== undefined ? row[i] ?? "" : "");
 
-  const rowNorm: Record<
-    keyof Omit<ConfigAccount["columnMap"], "accountId">,
-    string
-  > = {
+  const rowNorm: Record<ExtractorColumnMapKey, string> = {
     date: val(columnMap.date),
     postDate: val(columnMap.postDate),
     payee: val(columnMap.payee),
