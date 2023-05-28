@@ -7,7 +7,7 @@ import {
   Page,
   firefox,
 } from "playwright-core";
-import { Config, ConfigBankId, Price, Transaction } from "shared";
+import { Config, Price, Transaction } from "shared";
 import { CONFIG_PATH, EXTRACTIONS_PATH, TMP_DIR } from "../constants";
 import db from "../db";
 import {
@@ -24,7 +24,7 @@ import { parseTransactions } from "./utils";
 const BROWSER_CONTEXT_PATH = `${TMP_DIR}/browser-context.json`;
 const HEADLESS = false;
 
-const extractors: Record<ConfigBankId, Extractor> = {
+const extractors: Record<string, Extractor> = {
   "charles-schwab-bank": new CharlesSchwabBankExtractor(),
   "chase-bank": new ChaseBankExtractor(),
 };
@@ -71,15 +71,15 @@ const run = async () => {
   for (const configAccount of configAccounts) {
     const log: ExtractorFuncArgs["log"] = (message?: any, ...params: any[]) => {
       console.log(
-        `${configAccount.info.bankId} | ${configAccount.info.id} | ${message}`,
+        `${configAccount.bankId} | ${configAccount.id} | ${message}`,
         ...params
       );
     };
 
     log(`Starting extraction`);
 
-    const extractor = extractors[configAccount.info.bankId];
-    const configCredentials = config.credentials[configAccount.info.bankId];
+    const extractor = extractors[configAccount.bankId];
+    const configCredentials = config.credentials[configAccount.bankId];
 
     const page = await browserContext.newPage();
     page.setViewportSize({ width: 1948, height: 955 });
@@ -93,7 +93,7 @@ const run = async () => {
 
     db.setExtractionStatus({
       status: "run-extractor",
-      accountId: configAccount.info.id,
+      accountId: configAccount.id,
     });
 
     let accountValue: Price | undefined;
@@ -108,13 +108,13 @@ const run = async () => {
         tmpRunDir,
         getMfaCode: async (): Promise<string> => {
           const code = await waitForMfaCode(
-            configAccount.info.bankId,
+            configAccount.bankId,
             () => db.setExtractionStatus({ status: "wait-for-mfa" }),
             log
           );
           db.setExtractionStatus({
             status: "run-extractor",
-            accountId: configAccount.info.id,
+            accountId: configAccount.id,
           });
           return code;
         },
@@ -124,16 +124,16 @@ const run = async () => {
       transactions = resp.transactions;
     } catch (e) {
       log(`Error running extractor: ${e}`);
-      db.deleteMfaInfo(configAccount.info.bankId);
+      db.deleteMfaInfo(configAccount.bankId);
       await takeErrorScreenshot(page, tmpRunDir);
+      await page.close();
       continue;
     }
 
-    db.updateAccount(configAccount.info.id, {
-      id: configAccount.info.id,
-      number: configAccount.info.number,
-      kind: configAccount.info.kind,
-      type: configAccount.info.type,
+    db.updateAccount(configAccount.id, {
+      id: configAccount.id,
+      number: configAccount.number,
+      type: configAccount.type,
       price: accountValue,
     });
     log(`Updated account value: ${accountValue.amount}`);
@@ -154,7 +154,7 @@ const run = async () => {
   const deltaTime = Date.now() - startTime.valueOf();
   console.log(`Completed extraction across ${configAccounts.length} accounts`);
   console.log(`Added ${totalAddCt} new of ${totalFoundCt} found transactions`);
-  console.log(`Finished in ${prettyDuration(deltaTime)}s`);
+  console.log(`Finished in ${prettyDuration(deltaTime)}`);
   db.setExtractionStatus({ status: "idle" });
 };
 
@@ -164,8 +164,7 @@ export const runExtractor = async (
   accountValue: Price;
   transactions: Transaction[];
 }> => {
-  const { extractor, configAccount, configCredentials, page, tmpRunDir, log } =
-    args;
+  const { extractor, configAccount, page, tmpRunDir, log } = args;
 
   const getAccountValue = async (): Promise<Price> => {
     log("Loading start page");
@@ -179,7 +178,7 @@ export const runExtractor = async (
     log("Scraping account value");
     let accountValue = await extractor.scrapeAccountValue(args);
 
-    const accountType = args.configAccount.info.type;
+    const accountType = args.configAccount.type;
     if (accountType === "liabilities" || accountType === "expenses") {
       accountValue.amount *= -1;
     }
@@ -189,7 +188,7 @@ export const runExtractor = async (
   };
 
   const getTransactions = async (): Promise<Transaction[]> => {
-    const spanMonths = extractor.getMaxDateRangeMonths(configAccount.info.kind);
+    const spanMonths = extractor.getMaxDateRangeMonths(configAccount.kind);
     const spanMs = spanMonths * 30 * 24 * 60 * 60 * 1000;
 
     let transactions: Transaction[] = [];
@@ -281,7 +280,7 @@ export const runExtractor = async (
 };
 
 const waitForMfaCode = async (
-  bankId: ConfigBankId,
+  bankId: string,
   onChange: () => void,
   log: ExtractorFuncArgs["log"]
 ): Promise<string> => {

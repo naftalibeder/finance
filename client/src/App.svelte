@@ -3,7 +3,6 @@
   import {
     Account,
     Transaction,
-    ConfigBankId,
     ExtractionStatus,
     // TODO: Fix this error if possible.
     // @ts-ignore
@@ -122,7 +121,7 @@
     });
   };
 
-  const onClickSendMfaCode = async (bankId: ConfigBankId, code: string) => {
+  const onClickSendMfaCode = async (bankId: string, code: string) => {
     isSendingMfaCode = true;
 
     try {

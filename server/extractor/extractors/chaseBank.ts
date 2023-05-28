@@ -1,6 +1,6 @@
 import fs from "fs";
 import { Locator } from "playwright-core";
-import { AccountKind, Price } from "shared";
+import { ConfigAccountKind, Price } from "shared";
 import {
   Extractor,
   ExtractorColumnMap,
@@ -103,7 +103,7 @@ class ChaseBankExtractor implements Extractor {
       .locator(".accounts-blade")
       .filter({
         has: dashboardFrame.locator(
-          `[text*="${configAccount.info.number.slice(-4)}"]`
+          `[text*="${configAccount.number.slice(-4)}"]`
         ),
       })
       .locator(".primary-value");
@@ -124,9 +124,7 @@ class ChaseBankExtractor implements Extractor {
 
     const dashboardFrame = page.frames()[0];
 
-    loc = dashboardFrame.locator(
-      `[text*="${configAccount.info.number.slice(-4)}"]`
-    );
+    loc = dashboardFrame.locator(`[text*="${configAccount.number.slice(-4)}"]`);
     await loc.click();
     await page.waitForTimeout(3000);
 
@@ -189,7 +187,9 @@ class ChaseBankExtractor implements Extractor {
     }
   };
 
-  getColumnMap = (accountKind: AccountKind): ExtractorColumnMap | undefined => {
+  getColumnMap = (
+    accountKind: ConfigAccountKind
+  ): ExtractorColumnMap | undefined => {
     if (accountKind === "credit") {
       return {
         date: 0,
@@ -204,7 +204,7 @@ class ChaseBankExtractor implements Extractor {
     }
   };
 
-  getMaxDateRangeMonths = (accountKind: AccountKind): number => {
+  getMaxDateRangeMonths = (accountKind: ConfigAccountKind): number => {
     return 6;
   };
 }

@@ -1,7 +1,7 @@
 import { ConfigAccount, Price } from "shared";
 
 export const prettyConfigAccount = (o: ConfigAccount): string => {
-  return `${o.info.bankId}-${o.info.id}`;
+  return `${o.bankId}-${o.id}`;
 };
 
 // TODO: Handle "01/18/2022 as of 01/15/2022" etc.

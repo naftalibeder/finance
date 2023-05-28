@@ -1,11 +1,5 @@
 import fs from "fs";
-import {
-  Account,
-  ConfigBankId,
-  ExtractionStatus,
-  MfaInfo,
-  Transaction,
-} from "shared";
+import { Account, ExtractionStatus, Transaction } from "shared";
 import { Database } from "types";
 import { DB_PATH } from "./constants";
 
@@ -125,7 +119,7 @@ const setExtractionStatus = (status: Partial<ExtractionStatus>) => {
   writeDatabase(db);
 };
 
-const setMfaInfo = (bankId: ConfigBankId, code?: string) => {
+const setMfaInfo = (bankId: string, code?: string) => {
   const db = loadDatabase();
   const infos = db.extractionStatus.mfaInfos;
   const index = infos.findIndex((o) => o.bankId === bankId);
@@ -148,7 +142,7 @@ const setMfaInfo = (bankId: ConfigBankId, code?: string) => {
   writeDatabase(db);
 };
 
-const deleteMfaInfo = (bankId: ConfigBankId) => {
+const deleteMfaInfo = (bankId: string) => {
   const db = loadDatabase();
   const infos = db.extractionStatus.mfaInfos;
   const index = infos.findIndex((o) => o.bankId === bankId);

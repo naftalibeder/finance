@@ -1,7 +1,7 @@
+/** A specific account at a bank. */
 type Account = {
   id: string;
   number: string;
-  kind: AccountKind;
   type: AccountType;
   price: Price;
   meta?: {
@@ -10,10 +10,10 @@ type Account = {
   };
 };
 
-type AccountKind = "checking" | "savings" | "brokerage" | "credit" | "debit";
-
+/** The type of resource stored in the account. */
 type AccountType = "assets" | "liabilities" | "equity" | "revenue" | "expenses";
 
+/** A unique transaction. */
 type Transaction = {
   date: string;
   postDate: string;
@@ -28,29 +28,40 @@ type Transaction = {
   };
 };
 
+/** An amount of money in a specific currency. */
 type Price = {
   amount: number;
   currency: string;
 };
 
+/** User information loaded from `config.json`. */
 type Config = {
   accounts: ConfigAccount[];
-  credentials: Record<ConfigBankId, ConfigCredentials>;
+  credentials: Record<string, ConfigCredentials>;
 };
 
+/** Information about an account for loading and running an extractor. */
 type ConfigAccount = {
-  info: {
-    id: string;
-    bankId: ConfigBankId;
-    display: string;
-    number: string;
-    kind: AccountKind;
-    type: AccountType;
-  };
+  /** A globally unique id representing the account internally. */
+  id: string;
+  /** A unique id that matches one of the available extractors. */
+  bankId: string;
+  /** The display name or nickname of the account. */
+  display: string;
+  /** The account number. */
+  number: string;
+  kind: ConfigAccountKind;
+  type: AccountType;
+  /** Whether the extractor for this account should be skipped. */
   skip: boolean;
 };
 
-type ConfigBankId = "charles-schwab-bank" | "chase-bank";
+type ConfigAccountKind =
+  | "checking"
+  | "savings"
+  | "brokerage"
+  | "credit"
+  | "debit";
 
 type ConfigCredentials = {
   username: string;
@@ -58,7 +69,7 @@ type ConfigCredentials = {
 };
 
 type MfaInfo = {
-  bankId: ConfigBankId;
+  bankId: string;
   code?: string;
   requestedAt: string;
 };
@@ -71,13 +82,12 @@ type ExtractionStatus = {
 
 export {
   Account,
-  AccountKind,
   AccountType,
   Transaction,
   Price,
   Config,
   ConfigAccount,
-  ConfigBankId,
+  ConfigAccountKind,
   ConfigCredentials,
   MfaInfo,
   ExtractionStatus,

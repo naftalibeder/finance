@@ -1,6 +1,6 @@
 import fs from "fs";
 import { Locator } from "playwright-core";
-import { AccountKind, Price } from "shared";
+import { ConfigAccountKind, Price } from "shared";
 import {
   Extractor,
   ExtractorFuncArgs,
@@ -83,7 +83,7 @@ class CharlesSchwabBankExtractor implements Extractor {
 
     loc = dashboardFrame
       .locator("single-account")
-      .filter({ hasText: configAccount.info.display })
+      .filter({ hasText: configAccount.display })
       .locator("div.balance-container-cs > div > span")
       .first();
     let text = await loc.evaluate((o) => o.childNodes[2].textContent ?? "");
@@ -112,7 +112,7 @@ class CharlesSchwabBankExtractor implements Extractor {
     await page.waitForTimeout(3000);
 
     loc = dashboardFrame.locator(".sdps-account-selector__list-item", {
-      hasText: configAccount.info.number,
+      hasText: configAccount.number,
     });
     await loc.click();
     await page.waitForTimeout(3000);
@@ -186,7 +186,9 @@ class CharlesSchwabBankExtractor implements Extractor {
     }
   };
 
-  getColumnMap = (accountKind: AccountKind): ExtractorColumnMap | undefined => {
+  getColumnMap = (
+    accountKind: ConfigAccountKind
+  ): ExtractorColumnMap | undefined => {
     if (accountKind === "checking") {
       return {
         date: 0,
@@ -212,7 +214,7 @@ class CharlesSchwabBankExtractor implements Extractor {
     }
   };
 
-  getMaxDateRangeMonths = (accountKind: AccountKind): number => {
+  getMaxDateRangeMonths = (accountKind: ConfigAccountKind): number => {
     return 12;
   };
 }

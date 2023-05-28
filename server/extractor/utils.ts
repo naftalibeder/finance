@@ -11,7 +11,7 @@ export const parseTransactions = async (
 ): Promise<{ transactions: Transaction[]; skipCt: number }> => {
   let skipCt = 0;
 
-  const columnMap = extractor.getColumnMap(configAccount.info.kind);
+  const columnMap = extractor.getColumnMap(configAccount.kind);
   if (!columnMap) {
     throw "Column map not provided";
   }
@@ -51,8 +51,6 @@ const buildTransaction = (
   configAccount: ConfigAccount,
   columnMap: ExtractorColumnMap
 ): Transaction | undefined => {
-  const { info } = configAccount;
-
   const val = (i?: number) => (i !== undefined ? row[i] ?? "" : "");
 
   const rowNorm: Record<ExtractorColumnMapKey, string> = {
@@ -97,7 +95,7 @@ const buildTransaction = (
   const transaction: Transaction = {
     date: dateStr,
     postDate: postDateStr,
-    accountId: info.id,
+    accountId: configAccount.id,
     payee: rowNorm.payee,
     price,
     type: rowNorm.type,
