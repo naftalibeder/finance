@@ -4,6 +4,7 @@
     Account,
     Transaction,
     ExtractionStatus,
+    Price,
     // TODO: Fix this error if possible.
     // @ts-ignore
   } from "shared";
@@ -13,18 +14,18 @@
 
   let accounts: Account[] = [];
   let transactions: Transaction[] = [];
-  let transactionsFiltered: Transaction[] = [];
-  $: {
-    transactionsFiltered = transactions.filter(
-      (o) => visibleAccounts[o.accountId] === true
-    );
-  }
+
+  let accountsVisibilityDict: Record<string, boolean> = {};
+  let searchQuery = "";
+  let filteredTransactions: Transaction[] = [];
+  let filteredTransactionsSum: Price = { amount: 0, currency: "USD" };
+  let transactionsSectionText = "";
+
   let extractionStatus: ExtractionStatus = {
     status: "idle",
     accountId: undefined,
     mfaInfos: [],
   };
-
   let statusDisplay: string | undefined;
   $: {
     switch (extractionStatus.status) {
@@ -46,14 +47,22 @@
     }
   }
 
-  var visibleAccounts: Record<string, boolean> = {};
-
   let mfaPollInterval: NodeJS.Timer | undefined;
   let isSendingMfaCode = false;
 
   onMount(async () => {
     await fetchAll();
+    document.getElementById("search-input").focus();
   });
+
+  $: {
+    accounts;
+    transactions;
+    accountsVisibilityDict;
+    searchQuery;
+
+    onChangeFilter();
+  }
 
   const fetchAll = async () => {
     await fetchAccounts();
@@ -72,8 +81,8 @@
       });
       accounts = await accountsRes.json();
       accounts.forEach((o) => {
-        if (visibleAccounts[o.id] === undefined) {
-          visibleAccounts[o.id] = true;
+        if (accountsVisibilityDict[o.id] === undefined) {
+          accountsVisibilityDict[o.id] = true;
         }
       });
     } catch (e) {
@@ -140,7 +149,37 @@
     isSendingMfaCode = false;
   };
 
-  const formatCurrency = (a: any) => {
+  const onChangeFilter = () => {
+    let list: Transaction[] = [];
+    let sum: Price = { amount: 0, currency: "USD" };
+    for (const t of transactions) {
+      const isVisible = accountsVisibilityDict[t.accountId] === true;
+      const query = searchQuery.toLowerCase();
+      const area =
+        `${t.accountId} ${t.payee} ${t.description} ${t.type} ${t.meta} ${t.price.amount}`.toLowerCase();
+
+      if (isVisible && area.includes(query.toLowerCase())) {
+        list.push(t);
+        sum.amount += t.price.amount;
+      }
+    }
+    filteredTransactions = [...list];
+    filteredTransactionsSum = sum;
+
+    let baseSectionText = "";
+    if (filteredTransactions.length === transactions.length) {
+      baseSectionText = `${transactions.length} transactions`;
+    } else {
+      baseSectionText = `${filteredTransactions.length} of ${transactions.length} transactions`;
+    }
+    if (searchQuery.length > 0) {
+      transactionsSectionText = `${baseSectionText} (matching "${searchQuery}")`;
+    } else {
+      transactionsSectionText = baseSectionText;
+    }
+  };
+
+  const formatCurrency = (a: Price) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: a.currency,
@@ -151,6 +190,14 @@
 <div class="container">
   <div class="content">
     <h1>Transactions</h1>
+
+    <input
+      id={"search-input"}
+      placeholder="Search"
+      on:input={(evt) => {
+        searchQuery = evt.currentTarget.value;
+      }}
+    />
 
     {#if extractionStatus.mfaInfos.length > 0}
       <div class="section">
@@ -201,10 +248,11 @@
             <div class="cell account toggle">
               <button
                 class="icon"
-                on:click={() =>
-                  (visibleAccounts[a.id] = !visibleAccounts[a.id])}
+                on:click={() => {
+                  accountsVisibilityDict[a.id] = !accountsVisibilityDict[a.id];
+                }}
               >
-                {visibleAccounts[a.id] === true ? "[x]" : "[ ]"}
+                {accountsVisibilityDict[a.id] === true ? "[x]" : "[ ]"}
               </button>
             </div>
             <div class="cell account name">{a.id}</div>
@@ -221,12 +269,15 @@
     <div class="section">
       <div class="grid section">
         <div class="cell section title">
-          {transactionsFiltered.length} of {transactions.length} transactions
+          {transactionsSectionText}
+        </div>
+        <div class="cell section action">
+          {formatCurrency(filteredTransactionsSum)}
         </div>
       </div>
 
       <div class="grid transactions">
-        {#each transactionsFiltered as t}
+        {#each filteredTransactions as t}
           <div
             class={`grid row ${
               secAgo(t.meta?.createdAt) < 60 * 5 ? "recent" : ""
