@@ -51,7 +51,11 @@ const setUp = async (): Promise<[Browser, BrowserContext]> => {
   return [browser, browserContext];
 };
 
-const run = async () => {
+/**
+ * Extracts the current account value and all available transactions for every
+ * active account listed in the config file, and writes info to the database.
+ */
+const runExtractors = async () => {
   const tmpRunDir = `${EXTRACTIONS_PATH}/${new Date()}`;
   fs.mkdirSync(tmpRunDir, { recursive: true });
 
@@ -158,6 +162,10 @@ const run = async () => {
   db.setExtractionStatus({ status: "idle" });
 };
 
+/**
+ * Extracts the current account value and all available transactions for a
+ * specific account.
+ */
 export const runExtractor = async (
   args: ExtractorFuncArgs
 ): Promise<{
@@ -178,7 +186,7 @@ export const runExtractor = async (
     log("Scraping account value");
     let accountValue = await extractor.scrapeAccountValue(args);
 
-    const accountType = args.configAccount.type;
+    const accountType = configAccount.type;
     if (accountType === "liabilities" || accountType === "expenses") {
       accountValue.amount *= -1;
     }
@@ -325,4 +333,4 @@ const takeErrorScreenshot = async (browserPage: Page, tmpRunDir: string) => {
   });
 };
 
-export default { run };
+export default { runExtractors };

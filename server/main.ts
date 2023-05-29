@@ -9,7 +9,7 @@ const main = async () => {
   app.use(express.urlencoded({ extended: true }));
 
   app.post("/extract", async (req, res) => {
-    await extractor.run();
+    await extractor.runExtractors();
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.send("ok");
   });
