@@ -32,15 +32,32 @@ textarea {
   padding: 8px;
 }
 
+input:disabled,
+textarea:disabled {
+  opacity: 0.5;
+}
+
 button {
   font-family: "PT Mono", monospace;
   color: white;
   background-color: transparent;
-  border-radius: 0px;
-  outline: rgb(190, 190, 190) solid 2px;
   border: 0px;
-  padding: 8px;
+  border-radius: 0px;
   cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+button.outline {
+  outline: rgb(190, 190, 190) solid 2px;
+  padding: 8px;
+}
+
+button.outline:hover {
+  opacity: 0.8;
 }
 
 button.text {

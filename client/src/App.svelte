@@ -166,6 +166,7 @@
               disabled={isSendingMfaCode}
             />
             <button
+              class="outline"
               on:click={(evt) => {
                 // @ts-ignore
                 const code = document.getElementById(mfaInfo.bankId).value;
