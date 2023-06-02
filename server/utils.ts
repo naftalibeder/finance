@@ -1,4 +1,61 @@
-import { ConfigAccount, Price } from "shared";
+import {
+  ComparePriceFilter,
+  ConfigAccount,
+  Filter,
+  Price,
+  Transaction,
+} from "shared";
+
+export const buildFiltersFromQuery = (query: string): Filter[] => {
+  let filters: Filter[] = [];
+  const queryParts = query.toLowerCase().split(" ");
+
+  for (const p of queryParts) {
+    if (/([><]?)(\d+\.?\d*)/.test(p)) {
+      filters.push({
+        type: "comparePrice",
+        operator: p[0] as ComparePriceFilter["operator"],
+        price: {
+          amount: parseFloat(p.slice(1)),
+          currency: "USD",
+        },
+      });
+    } else if (/[a-zZA-Z]+/.test(p)) {
+      filters.push({ type: "matchText", text: p });
+    }
+  }
+
+  return filters;
+};
+
+export const transactionMatchesFilters = (
+  t: Transaction,
+  filters: Filter[]
+): boolean => {
+  if (filters.length === 0) {
+    return true;
+  }
+
+  for (const f of filters) {
+    if (f.type === "matchText") {
+      const area = [t.payee, t.description, t.type, t.price.amount]
+        .join(" ")
+        .toLowerCase();
+      if (!area.includes(f.text)) {
+        return false;
+      }
+    } else if (f.type === "comparePrice") {
+      const absAmount = Math.abs(t.price.amount);
+      if (f.operator === "<" && absAmount >= f.price.amount) {
+        return false;
+      } else if (f.operator === ">" && absAmount <= f.price.amount) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+};
 
 export const prettyConfigAccount = (o: ConfigAccount): string => {
   return `${o.bankId}-${o.id}`;

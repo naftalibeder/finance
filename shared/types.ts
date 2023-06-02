@@ -1,5 +1,5 @@
 /** A specific account at a bank. */
-type Account = {
+export type Account = {
   id: string;
   number: string;
   type: AccountType;
@@ -14,7 +14,7 @@ type Account = {
 type AccountType = "assets" | "liabilities" | "equity" | "revenue" | "expenses";
 
 /** A unique transaction. */
-type Transaction = {
+export type Transaction = {
   date: string;
   postDate: string;
   accountId: string;
@@ -29,19 +29,19 @@ type Transaction = {
 };
 
 /** An amount of money in a specific currency. */
-type Price = {
+export type Price = {
   amount: number;
   currency: string;
 };
 
 /** User information loaded from `config.json`. */
-type Config = {
+export type Config = {
   accounts: ConfigAccount[];
   credentials: Record<string, ConfigCredentials>;
 };
 
 /** Information about an account for loading and running an extractor. */
-type ConfigAccount = {
+export type ConfigAccount = {
   /** A globally unique id representing the account internally. */
   id: string;
   /** A unique id that matches one of the available extractors. */
@@ -56,39 +56,52 @@ type ConfigAccount = {
   skip: boolean;
 };
 
-type ConfigAccountKind =
+export type ConfigAccountKind =
   | "checking"
   | "savings"
   | "brokerage"
   | "credit"
   | "debit";
 
-type ConfigCredentials = {
+export type ConfigCredentials = {
   username: string;
   password: string;
 };
 
-type MfaInfo = {
+export type MfaInfo = {
   bankId: string;
   code?: string;
   requestedAt: string;
 };
 
-type ExtractionStatus = {
+export type ExtractionStatus = {
   status: "idle" | "set-up" | "run-extractor" | "wait-for-mfa" | "tear-down";
   accountId?: string;
   mfaInfos: MfaInfo[];
 };
 
-export {
-  Account,
-  AccountType,
-  Transaction,
-  Price,
-  Config,
-  ConfigAccount,
-  ConfigAccountKind,
-  ConfigCredentials,
-  MfaInfo,
-  ExtractionStatus,
+export interface MatchTextFilter {
+  readonly type: "matchText";
+  text: string;
+}
+
+export interface ComparePriceFilter {
+  readonly type: "comparePrice";
+  operator: ">" | "<";
+  price: Price;
+}
+
+export type Filter = MatchTextFilter | ComparePriceFilter;
+
+export type TransactionsApiArgs = {
+  query: string;
+};
+
+export type TransactionsApiPayload = {
+  data: {
+    filteredTransactions: Transaction[];
+    filteredSum: Price;
+    filteredCt: number;
+    totalCt: number;
+  };
 };

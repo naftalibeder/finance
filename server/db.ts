@@ -1,7 +1,15 @@
 import fs from "fs";
-import { Account, ExtractionStatus, Transaction } from "shared";
+import {
+  Account,
+  ExtractionStatus,
+  Price,
+  Transaction,
+  TransactionsApiArgs,
+  TransactionsApiPayload,
+} from "shared";
 import { Database } from "types";
 import { DB_PATH } from "./constants";
+import { buildFiltersFromQuery, transactionMatchesFilters } from "./utils";
 
 const initial: Database = {
   accounts: [],
@@ -28,9 +36,9 @@ const writeDatabase = (db: Database) => {
   fs.writeFileSync(DB_PATH, dbStrUpdated, { encoding: "utf-8" });
 };
 
-const getAccounts = (): Account[] => {
+const getAccounts = (): { accounts: Account[] } => {
   const db = loadDatabase();
-  return db.accounts;
+  return { accounts: db.accounts };
 };
 
 const getAccount = (id: string): Account | undefined => {
@@ -66,9 +74,39 @@ const updateAccount = (id: string, update: Account) => {
   writeDatabase(db);
 };
 
-const getTransactions = (): Transaction[] => {
+const getTransactions = (args: TransactionsApiArgs): TransactionsApiPayload => {
   const db = loadDatabase();
-  return db.transactions;
+
+  let list: Transaction[] = [];
+  let sum: Price = {
+    amount: 0,
+    currency: "USD",
+  };
+  if (args.query.length > 0) {
+    const filters = buildFiltersFromQuery(args.query);
+    for (const t of db.transactions) {
+      const isMatchQuery = transactionMatchesFilters(t, filters);
+      if (isMatchQuery) {
+        list.push(t);
+        sum.amount += t.price.amount;
+      }
+    }
+  } else {
+    list = db.transactions;
+    sum = {
+      amount: db.transactions.reduce((acc, cur) => acc + cur.price.amount, 0),
+      currency: "USD",
+    };
+  }
+
+  return {
+    data: {
+      filteredTransactions: list,
+      filteredSum: sum,
+      filteredCt: list.length,
+      totalCt: db.transactions.length,
+    },
+  };
 };
 
 const addTransactions = (newTransactions: Transaction[]): number => {

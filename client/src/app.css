@@ -27,9 +27,10 @@ textarea {
   font-family: "PT Mono", monospace;
   color: white;
   background-color: transparent;
-  outline: rgb(190, 190, 190) solid 2px;
+  height: 24px;
   border: 0px;
   padding: 8px;
+  outline: rgb(190, 190, 190) solid 2px;
 }
 
 input:disabled,
@@ -52,8 +53,9 @@ button:disabled {
 }
 
 button.outline {
-  outline: rgb(190, 190, 190) solid 2px;
+  height: 24px;
   padding: 8px;
+  outline: rgb(190, 190, 190) solid 2px;
 }
 
 button.outline:hover {
@@ -61,8 +63,8 @@ button.outline:hover {
 }
 
 button.text {
-  outline: transparent solid 0px;
   padding: 0px;
+  outline: transparent solid 0px;
   text-decoration-style: none;
 }
 

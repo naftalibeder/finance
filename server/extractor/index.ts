@@ -22,7 +22,7 @@ import { logger } from "./log";
 import { parseTransactions } from "./utils";
 
 const BROWSER_CONTEXT_PATH = `${TMP_DIR}/browser-context.json`;
-const HEADLESS = false;
+const HEADLESS = true;
 
 const extractors: Record<string, Extractor> = {
   "charles-schwab-bank": new CharlesSchwabBankExtractor(),

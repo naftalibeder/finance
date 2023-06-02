@@ -15,15 +15,16 @@ const main = async () => {
   });
 
   app.post("/accounts", async (req, res) => {
-    const accounts = db.getAccounts();
+    const { accounts } = db.getAccounts();
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.send(accounts);
+    res.send({ accounts });
   });
 
   app.post("/transactions", async (req, res) => {
-    const transactions = db.getTransactions();
+    const { query } = req.body;
+    const payload = db.getTransactions({ query });
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.send(transactions);
+    res.send(payload);
   });
 
   app.post("/status", async (req, res) => {

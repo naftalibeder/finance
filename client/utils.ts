@@ -1,3 +1,7 @@
+// TODO: Fix this error if possible.
+// @ts-ignore
+import { Price } from "shared";
+
 export const prettyDate = (
   o: Date | string,
   opts?: { includeTime?: boolean }
@@ -37,4 +41,11 @@ export const secAgo = (s: string): number | undefined => {
 
   const msAgo = new Date().valueOf() - new Date(d).valueOf();
   return msAgo / 1000;
+};
+
+export const prettyCurrency = (a: Price) => {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: a.currency,
+  }).format(a.amount);
 };

@@ -5,21 +5,24 @@
     Transaction,
     ExtractionStatus,
     Price,
+    TransactionsApiArgs,
+    TransactionsApiPayload,
     // TODO: Fix this error if possible.
     // @ts-ignore
   } from "shared";
-  import { secAgo, prettyDate } from "../utils";
+  import { secAgo, prettyDate, prettyCurrency } from "../utils";
+  import Checkbox from "./Checkbox.svelte";
 
   const serverUrl = import.meta.env.VITE_SERVER_URL;
 
   let accounts: Account[] = [];
-  let transactions: Transaction[] = [];
+  let activeAccountsDict: Record<string, boolean> = {};
 
-  let accountsVisibilityDict: Record<string, boolean> = {};
-  let searchQuery = "";
-  let filteredTransactions: Transaction[] = [];
-  let filteredTransactionsSum: Price = { amount: 0, currency: "USD" };
+  let transactions: Transaction[] = [];
+  let transactionsSum: Price = { amount: 0, currency: "USD" };
   let transactionsSectionText = "";
+
+  let isLoading = false;
 
   let extractionStatus: ExtractionStatus = {
     status: "idle",
@@ -47,22 +50,23 @@
     }
   }
 
+  let searchTimer: NodeJS.Timer | undefined;
+  let searchInputField;
+  let isSearchFocused = false;
+  let query = "";
+  $: {
+    query;
+    onChangeQuery();
+  }
+
   let mfaPollInterval: NodeJS.Timer | undefined;
   let isSendingMfaCode = false;
 
   onMount(async () => {
+    isLoading = true;
     await fetchAll();
-    document.getElementById("search-input").focus();
+    isLoading = false;
   });
-
-  $: {
-    accounts;
-    transactions;
-    accountsVisibilityDict;
-    searchQuery;
-
-    onChangeFilter();
-  }
 
   const fetchAll = async () => {
     await fetchAccounts();
@@ -76,15 +80,17 @@
 
   const fetchAccounts = async () => {
     try {
-      const accountsRes = await fetch(`${serverUrl}/accounts`, {
+      const res = await fetch(`${serverUrl}/accounts`, {
         method: "POST",
       });
-      accounts = await accountsRes.json();
+      const resData = await res.json();
+      accounts = resData.accounts;
       accounts.forEach((o) => {
-        if (accountsVisibilityDict[o.id] === undefined) {
-          accountsVisibilityDict[o.id] = true;
+        if (activeAccountsDict[o.id] === undefined) {
+          activeAccountsDict[o.id] = true;
         }
       });
+      console.log(`Fetched ${accounts.length} accounts`);
     } catch (e) {
       console.log("Error fetching accounts:", e);
     }
@@ -92,10 +98,32 @@
 
   const fetchTransactions = async () => {
     try {
-      const transactionsRes = await fetch(`${serverUrl}/transactions`, {
+      const args: TransactionsApiArgs = { query };
+      const res = await fetch(`${serverUrl}/transactions`, {
         method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams(args).toString(),
       });
-      transactions = await transactionsRes.json();
+      const payload = (await res.json()) as TransactionsApiPayload;
+      transactions = payload.data.filteredTransactions;
+      transactionsSum = payload.data.filteredSum;
+      console.log(
+        `Fetched ${transactions.length} transactions with a sum of ${transactionsSum.amount}`
+      );
+
+      let baseSectionText = "";
+      if (payload.data.filteredCt === payload.data.totalCt) {
+        baseSectionText = `${payload.data.totalCt} transactions`;
+      } else {
+        baseSectionText = `${payload.data.filteredCt} of ${payload.data.totalCt} transactions`;
+      }
+      if (query.length > 0) {
+        transactionsSectionText = `${baseSectionText} (matching "${query}")`;
+      } else {
+        transactionsSectionText = baseSectionText;
+      }
     } catch (e) {
       console.log("Error fetching transactions:", e);
     }
@@ -116,6 +144,7 @@
     mfaPollInterval = setInterval(async () => {
       await fetchExtractionStatus();
       console.log("Extraction status:", extractionStatus);
+
       if (extractionStatus.status === "idle") {
         clearInterval(mfaPollInterval);
       }
@@ -149,55 +178,48 @@
     isSendingMfaCode = false;
   };
 
-  const onChangeFilter = () => {
-    let list: Transaction[] = [];
-    let sum: Price = { amount: 0, currency: "USD" };
-    for (const t of transactions) {
-      const isVisible = accountsVisibilityDict[t.accountId] === true;
-      const query = searchQuery.toLowerCase();
-      const area =
-        `${t.accountId} ${t.payee} ${t.description} ${t.type} ${t.meta} ${t.price.amount}`.toLowerCase();
-
-      if (isVisible && area.includes(query.toLowerCase())) {
-        list.push(t);
-        sum.amount += t.price.amount;
-      }
-    }
-    filteredTransactions = [...list];
-    filteredTransactionsSum = sum;
-
-    let baseSectionText = "";
-    if (filteredTransactions.length === transactions.length) {
-      baseSectionText = `${transactions.length} transactions`;
-    } else {
-      baseSectionText = `${filteredTransactions.length} of ${transactions.length} transactions`;
-    }
-    if (searchQuery.length > 0) {
-      transactionsSectionText = `${baseSectionText} (matching "${searchQuery}")`;
-    } else {
-      transactionsSectionText = baseSectionText;
-    }
+  const onChangeQuery = async () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(async () => {
+      await fetchTransactions();
+    }, 100);
   };
 
-  const formatCurrency = (a: Price) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: a.currency,
-    }).format(a.amount);
+  const focusSearch = () => {
+    searchInputField.focus();
   };
+
+  const blurSearch = () => {
+    searchInputField.blur();
+  };
+
+  document.addEventListener("keydown", (evt) => {
+    if (evt.metaKey && evt.key === "k") {
+      evt.preventDefault();
+      focusSearch();
+    } else if (evt.key === "Escape") {
+      evt.preventDefault();
+      searchInputField.value = "";
+      query = "";
+      blurSearch();
+    }
+  });
 </script>
 
 <div class="container">
   <div class="content">
-    <h1>Transactions</h1>
-
-    <input
-      id={"search-input"}
-      placeholder="Search"
-      on:input={(evt) => {
-        searchQuery = evt.currentTarget.value;
-      }}
-    />
+    <div class="row">
+      <h1 style={"flex: 2"}>Transactions</h1>
+      <input
+        id={"search-input"}
+        style={"flex: 1"}
+        placeholder={isSearchFocused ? "Type to search" : "Search (⌘K)"}
+        on:focus={() => (isSearchFocused = true)}
+        on:blur={() => (isSearchFocused = false)}
+        bind:value={query}
+        bind:this={searchInputField}
+      />
+    </div>
 
     {#if extractionStatus.mfaInfos.length > 0}
       <div class="section">
@@ -228,74 +250,87 @@
       </div>
     {/if}
 
-    <div class="section">
-      <div class="grid section">
-        <div class="cell section title">{accounts.length} accounts</div>
-        <div class="cell section action">
-          {#if !statusDisplay}
-            <button class="text" on:click={() => onClickExtract()}>
-              Refresh all
-            </button>
-          {:else}
-            <div class="faded">{statusDisplay}</div>
-          {/if}
-        </div>
+    {#if isLoading}
+      <div style="padding: 4px 0px">
+        <div class="faded">Loading...</div>
       </div>
-
-      <div class="grid accounts">
-        {#each accounts as a}
-          <div class="grid row">
-            <div class="cell account toggle">
-              <button
-                class="icon"
-                on:click={() => {
-                  accountsVisibilityDict[a.id] = !accountsVisibilityDict[a.id];
-                }}
-              >
-                {accountsVisibilityDict[a.id] === true ? "[x]" : "[ ]"}
-              </button>
+    {:else}
+      <div class="section">
+        <div class="grid accounts">
+          <div class="grid contents tall">
+            <div class="cell account-section title">
+              {accounts.length} accounts
             </div>
-            <div class="cell account name">{a.id}</div>
-            <div class="cell account price">{formatCurrency(a.price)}</div>
-            <!-- <div class="cell account timestamp">
+            <div class="cell account-section action">
+              {#if !statusDisplay}
+                <button class="text" on:click={() => onClickExtract()}>
+                  Refresh all
+                </button>
+              {:else}
+                <div class="faded">{statusDisplay}</div>
+              {/if}
+            </div>
+          </div>
+
+          {#each accounts as a}
+            <div class="grid contents">
+              <div class="cell account toggle">
+                <Checkbox
+                  active={activeAccountsDict[a.id] === true}
+                  onClick={() => {
+                    activeAccountsDict[a.id] = !activeAccountsDict[a.id];
+                  }}
+                />
+              </div>
+              <div class="cell account name">{a.id}</div>
+              <div class="cell account price">{prettyCurrency(a.price)}</div>
+              <!-- <div class="cell account timestamp">
               {prettyDate(a.updatedAt, { includeTime: true }) ??
                 "Never updated"}
             </div> -->
-          </div>
-        {/each}
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="grid section">
-        <div class="cell section title">
-          {transactionsSectionText}
-        </div>
-        <div class="cell section action">
-          {formatCurrency(filteredTransactionsSum)}
-        </div>
-      </div>
-
-      <div class="grid transactions">
-        {#each filteredTransactions as t}
-          <div
-            class={`grid row ${
-              secAgo(t.meta?.createdAt) < 60 * 5 ? "recent" : ""
-            }`}
-          >
-            <div class="cell transaction date">
-              {prettyDate(t.date, { includeTime: false })}
             </div>
-            <div class="cell transaction account">{t.accountId}</div>
-            <div class="cell transaction payee">{t.payee}</div>
-            <div class="cell transaction price">{formatCurrency(t.price)}</div>
-            <!-- <div class="cell transaction timestamp">
+          {/each}
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="grid transactions">
+          <div class="grid contents tall">
+            <div class="cell transaction-section title">
+              {transactionsSectionText}
+            </div>
+            <div class="cell transaction-section action">
+              {prettyCurrency(transactionsSum)}
+            </div>
+          </div>
+
+          {#each transactions as t}
+            <div
+              class={`grid contents ${
+                secAgo(t.meta?.createdAt) < 60 * 5 ? "recent" : ""
+              }`}
+            >
+              <div class="cell account toggle">
+                <Checkbox active={false} onClick={() => {}} />
+              </div>
+              <div class="cell transaction date">
+                {prettyDate(t.date, { includeTime: false })}
+              </div>
+              <div class="cell transaction account">{t.accountId}</div>
+              <div class="cell transaction payee">{t.payee}</div>
+              <div class="cell transaction description">{t.description}</div>
+              <div class="cell transaction type">{t.type}</div>
+              <div class="cell transaction price">
+                {prettyCurrency(t.price)}
+              </div>
+              <!-- <div class="cell transaction timestamp">
               {prettyDate(t.createdAt, { includeTime: true })}
             </div> -->
-          </div>
-        {/each}
+            </div>
+          {/each}
+        </div>
       </div>
-    </div>
+    {/if}
   </div>
 </div>
 
@@ -317,7 +352,15 @@
   .section {
     display: flex;
     flex-direction: column;
-    row-gap: 32px;
+    row-gap: 24px;
+  }
+
+  .row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    column-gap: 16px;
   }
 
   .grid {
@@ -326,44 +369,45 @@
     grid-template-rows: auto;
   }
 
-  .grid.section {
-    grid-template-areas: "title action";
-    grid-template-columns: 1fr auto;
-  }
-
-  .grid.accounts {
-    grid-template-areas: "toggle name price";
-    grid-template-columns: auto 6fr 2fr;
-  }
-
-  .grid.transactions {
-    grid-template-areas: "date account payee price";
-    grid-template-columns: auto 2fr 5fr 1fr;
-  }
-
-  .grid.row {
+  .grid.contents {
     display: contents;
   }
 
-  .grid.row:hover .cell {
+  .grid.contents:hover .cell {
     opacity: 0.5;
   }
 
-  .grid.row.recent {
+  .grid.contents.recent {
     color: #90cbff;
+  }
+
+  .grid.contents.tall > .cell {
+    padding: 16px 0px;
   }
 
   .cell {
     padding: 4px 0px;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  .cell.section.title {
-    grid-column-start: title;
+  .cell.tall {
+    padding: 16px 0px;
   }
 
-  .cell.section.action {
-    grid-column-start: action;
+  .grid.accounts {
+    grid-template-areas: "toggle name price";
+    grid-template-columns: auto 6fr auto;
+  }
+
+  .cell.account-section.title {
+    grid-column: toggle / name;
+  }
+
+  .cell.account-section.action {
+    grid-column: price;
+    text-align: right;
   }
 
   .cell.account.toggle {
@@ -379,12 +423,38 @@
     text-align: right;
   }
 
+  .grid.transactions {
+    grid-template-areas: "toggle date account payee description type price";
+    grid-template-columns: auto auto auto 3fr 3fr 2fr auto;
+  }
+
+  .cell.transaction-section.title {
+    grid-column: toggle / type;
+  }
+
+  .cell.transaction-section.action {
+    grid-column: price;
+    text-align: right;
+  }
+
+  .cell.account.toggle {
+    grid-column-start: toggle;
+  }
+
   .cell.transaction.date {
     grid-column-start: date;
   }
 
   .cell.transaction.account {
     grid-column-start: account;
+  }
+
+  .cell.transaction.description {
+    grid-column-start: description;
+  }
+
+  .cell.transaction.type {
+    grid-column-start: type;
   }
 
   .cell.transaction.payee {
@@ -394,11 +464,5 @@
   .cell.transaction.price {
     grid-column-start: price;
     text-align: right;
-  }
-
-  button.icon {
-    margin: 0px;
-    padding: 0px;
-    outline: none;
   }
 </style>
