@@ -37,31 +37,40 @@ export const transactionMatchesFilters = (
   }
 
   for (const f of filters) {
-    if (f.type === "matchText") {
-      const area = [t.payee, t.description, t.type, t.price.amount]
-        .join(" ")
-        .toLowerCase();
-      if (!area.includes(f.text)) {
-        return false;
-      }
-    } else if (f.type === "comparePrice") {
-      const absFilterAmount = Math.abs(f.price.amount);
-      const absTransactionAmount = Math.abs(t.price.amount);
-      if (f.operator === "<") {
-        if (absTransactionAmount >= absFilterAmount) {
+    switch (f.type) {
+      case "matchText":
+        const area = [t.payee, t.description, t.type, t.price.amount]
+          .join(" ")
+          .toLowerCase();
+
+        if (!area.includes(f.text)) {
           return false;
         }
-      } else if (f.operator === ">") {
-        if (absTransactionAmount <= absFilterAmount) {
-          return false;
+        break;
+      case "comparePrice":
+        const absFilterAmount = Math.abs(f.price.amount);
+        const absTransactionAmount = Math.abs(t.price.amount);
+
+        switch (f.operator) {
+          case "<":
+            if (absTransactionAmount >= absFilterAmount) {
+              return false;
+            }
+            break;
+          case ">":
+            if (absTransactionAmount <= absFilterAmount) {
+              return false;
+            }
+            break;
+          case "~":
+            const delta = Math.abs(absTransactionAmount - absFilterAmount);
+            const maxDelta = absFilterAmount * 0.1;
+            if (delta > maxDelta) {
+              return false;
+            }
+            break;
         }
-      } else if (f.operator === "~") {
-        const delta = Math.abs(absTransactionAmount - absFilterAmount);
-        const maxDelta = absFilterAmount * 0.1;
-        if (delta > maxDelta) {
-          return false;
-        }
-      }
+        break;
     }
   }
 
