@@ -43,6 +43,20 @@ export const secAgo = (s: string): number | undefined => {
   return msAgo / 1000;
 };
 
+export const daysBetweenDates = (start: Date, end: Date): Date[] => {
+  const dates: Date[] = [];
+  const cur = start;
+
+  dates.push(new Date(cur.getTime()));
+
+  while (cur.getTime() < end.getTime()) {
+    cur.setDate(cur.getDate() + 1);
+    dates.push(new Date(cur.getTime()));
+  }
+
+  return dates;
+};
+
 export const prettyCurrency = (a: Price) => {
   return new Intl.NumberFormat("en-US", {
     style: "currency",

@@ -11,7 +11,12 @@
     // TODO: Fix this error if possible.
     // @ts-ignore
   } from "shared";
-  import { secAgo, prettyDate, prettyCurrency } from "../utils";
+  import {
+    secAgo,
+    prettyDate,
+    prettyCurrency,
+    daysBetweenDates,
+  } from "../utils";
 
   const serverUrl = import.meta.env.VITE_SERVER_URL;
 
@@ -117,6 +122,8 @@
 
   const fetchTransactions = async () => {
     try {
+      // Get transaction data.
+
       const args: TransactionsApiArgs = { query };
       const res = await fetch(`${serverUrl}/transactions`, {
         method: "POST",
@@ -132,6 +139,8 @@
         `Fetched ${transactions.length} transactions with a sum of ${transactionsSum.amount}`
       );
 
+      // Set display text.
+
       let baseSectionText = "";
       if (payload.data.filteredCt === payload.data.totalCt) {
         baseSectionText = `${payload.data.totalCt} transactions`;
@@ -143,6 +152,13 @@
       } else {
         transactionsSectionText = baseSectionText;
       }
+
+      // Populate list for graph.
+
+      const startDate = new Date(transactions[0].date);
+      const endDate = new Date(transactions[transactions.length - 1].date);
+      const days = daysBetweenDates(startDate, endDate);
+      console.log(days);
     } catch (e) {
       console.log("Error fetching transactions:", e);
     }

@@ -3,7 +3,8 @@
   "type": "module",
   "scripts": {
     "build": "vite build && npx tsc -p ./tsconfig-main.json",
-    "start": "set -a && source ../.env && export VITE_SERVER_URL=\"$SERVER_URL\" && set +a && npm run build && node dist/main.js"
+    "start": "set -a && source ../.env && export VITE_SERVER_URL=\"$SERVER_URL\" && set +a && npm run build && node dist/main.js",
+    "test": "npm run build && mocha dist/**/*_test.js"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "2.0.3",

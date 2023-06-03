@@ -1,12 +1,15 @@
 {
   "name": "transactions",
   "scripts": {
-    "preinstall": "(cd client && npm i) && (cd server && npm i)",
+    "postinstall": "(cd client && npm i) && (cd server && npm i)",
     "start": "npx concurrently \"npm:client:start\" \"npm:server:start\"",
     "client:start": "cd client && npm run start",
-    "server:start": "cd server && npm run start"
+    "server:start": "cd server && npm run start",
+    "test": "(cd client && npm run test) && (cd server && npm run test)"
   },
   "devDependencies": {
-    "concurrently": "8.0.1"
+    "concurrently": "8.0.1",
+    "@types/mocha": "10.0.1",
+    "mocha": "10.2.0"
   }
 }
