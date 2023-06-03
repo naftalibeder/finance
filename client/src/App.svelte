@@ -52,8 +52,25 @@
   }
 
   let searchTimer: NodeJS.Timer | undefined;
-  let searchInputField;
+  let searchInputFieldRef;
   let isSearchFocused = false;
+  let searchPlaceholderText: string;
+  $: {
+    if (!isSearchFocused) {
+      searchPlaceholderText = "Search (⌘K)";
+    } else {
+      const options: string[] = [
+        "coffee",
+        accounts[Math.floor(Math.random() * accounts.length)].id,
+        ">250 <350",
+        "<15.20",
+        ">2000",
+        "~10",
+      ];
+      const randOption = options[Math.floor(Math.random() * options.length)];
+      searchPlaceholderText = `E.g. ${randOption}`;
+    }
+  }
   let query = "";
   $: {
     query;
@@ -194,11 +211,11 @@
   };
 
   const focusSearch = () => {
-    searchInputField.focus();
+    searchInputFieldRef.focus();
   };
 
   const blurSearch = () => {
-    searchInputField.blur();
+    searchInputFieldRef.blur();
   };
 
   document.addEventListener("keydown", (evt) => {
@@ -207,7 +224,7 @@
       focusSearch();
     } else if (evt.key === "Escape") {
       evt.preventDefault();
-      searchInputField.value = "";
+      searchInputFieldRef.value = "";
       query = "";
       blurSearch();
     }
@@ -222,11 +239,11 @@
         <input
           id={"search-input"}
           style={"flex: 1"}
-          placeholder={isSearchFocused ? "Type to search" : "Search (⌘K)"}
+          placeholder={searchPlaceholderText}
           on:focus={() => (isSearchFocused = true)}
           on:blur={() => (isSearchFocused = false)}
           bind:value={query}
-          bind:this={searchInputField}
+          bind:this={searchInputFieldRef}
         />
       </div>
     </div>
