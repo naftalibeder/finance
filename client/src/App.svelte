@@ -405,10 +405,23 @@
   }
 
   .cell {
+    display: flex;
+    align-items: center;
     padding: 4px 0px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .cell.gutter-l {
+    grid-column-start: gutter-l;
+    text-align: right;
+    padding-right: 12px;
+  }
+
+  .cell.gutter-r {
+    grid-column-start: gutter-r;
+    padding-left: 12px;
   }
 
   .grid.accounts {
@@ -422,13 +435,7 @@
 
   .cell.account-section.action {
     grid-column: price;
-    text-align: right;
-  }
-
-  .cell.account.gutter-l {
-    grid-column-start: gutter-l;
-    text-align: right;
-    padding-right: 8px;
+    justify-content: flex-end;
   }
 
   .cell.account.name {
@@ -441,12 +448,7 @@
 
   .cell.account.price {
     grid-column-start: price;
-    text-align: right;
-  }
-
-  .cell.account.gutter-r {
-    grid-column-start: gutter-r;
-    padding-left: 8px;
+    justify-content: flex-end;
   }
 
   .grid.transactions {
@@ -460,18 +462,12 @@
 
   .cell.transaction-section.action {
     grid-column: price;
-    text-align: right;
-  }
-
-  .cell.transaction.gutter-l {
-    grid-column-start: gutter-l;
-    text-align: right;
-    padding-right: 8px;
+    justify-content: flex-end;
   }
 
   .cell.transaction.date {
     grid-column-start: date;
-    padding-right: 8px;
+    padding-right: 12px;
   }
 
   .cell.transaction.account {
@@ -492,11 +488,6 @@
 
   .cell.transaction.price {
     grid-column-start: price;
-    text-align: right;
-  }
-
-  .cell.transaction.gutter-r {
-    grid-column-start: gutter-r;
-    padding-left: 8px;
+    justify-content: flex-end;
   }
 </style>
