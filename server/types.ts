@@ -40,6 +40,9 @@ export type ExtractorColumnMap = Record<
 >;
 
 export interface Extractor {
+  bankId: string;
+  bankDisplayName: string;
+  bankDisplayNameShort: string;
   loadStartPage: (args: ExtractorFuncArgs) => Promise<void>;
   enterCredentials: (args: ExtractorFuncArgs) => Promise<void>;
   enterMfaCode: (args: ExtractorFuncArgs) => Promise<void>;

@@ -18,25 +18,24 @@ import {
 } from "../utils";
 import { Extractor, ExtractorFuncArgs } from "types";
 import { CharlesSchwabBankExtractor, ChaseBankExtractor } from "./extractors";
-import { logger } from "./log";
 import { parseTransactions } from "./utils";
 
 const BROWSER_CONTEXT_PATH = `${TMP_DIR}/browser-context.json`;
 const HEADLESS = true;
 
-const extractors: Record<string, Extractor> = {
-  "charles-schwab-bank": new CharlesSchwabBankExtractor(),
-  "chase-bank": new ChaseBankExtractor(),
-};
+const extractors: Extractor[] = [
+  new CharlesSchwabBankExtractor(),
+  new ChaseBankExtractor(),
+];
+const extractorsDict: Record<string, Extractor> = {};
+for (const extractor of extractors) {
+  extractorsDict[extractor.bankId] = extractor;
+}
 
 const setUp = async (): Promise<[Browser, BrowserContext]> => {
   const launchOptions: LaunchOptions = {
     headless: HEADLESS,
     timeout: 0,
-    env: {
-      PWDEBUG: "0",
-    },
-    logger,
   };
   const browser = await firefox.launch(launchOptions);
 
@@ -55,7 +54,7 @@ const setUp = async (): Promise<[Browser, BrowserContext]> => {
  * Extracts the current account value and all available transactions for every
  * active account listed in the config file, and writes info to the database.
  */
-const runExtractors = async () => {
+const runExtractors = async (accountIds?: string[]) => {
   const tmpRunDir = `${EXTRACTIONS_PATH}/${new Date()}`;
   fs.mkdirSync(tmpRunDir, { recursive: true });
 
@@ -67,7 +66,17 @@ const runExtractors = async () => {
 
   const configStr = fs.readFileSync(CONFIG_PATH, { encoding: "utf-8" });
   const config = JSON.parse(configStr) as Config;
-  const configAccounts = config.accounts.filter((o) => !o.skip);
+  const configAccounts = config.accounts.filter((o) => {
+    if (o.skip) {
+      return false;
+    } else if (!accountIds || accountIds.length === 0) {
+      return true;
+    } else if (accountIds.includes(o.id)) {
+      return true;
+    } else {
+      return false;
+    }
+  });
   console.log(`Preparing extraction for ${configAccounts.length} accounts`);
 
   const [browser, browserContext] = await setUp();
@@ -82,7 +91,7 @@ const runExtractors = async () => {
 
     log(`Starting extraction`);
 
-    const extractor = extractors[configAccount.bankId];
+    const extractor = extractorsDict[configAccount.bankId];
     const configCredentials = config.credentials[configAccount.bankId];
 
     const page = await browserContext.newPage();

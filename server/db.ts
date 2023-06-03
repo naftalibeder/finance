@@ -1,6 +1,7 @@
 import fs from "fs";
 import {
   Account,
+  AccountsApiPayload,
   ExtractionStatus,
   Price,
   Transaction,
@@ -36,9 +37,24 @@ const writeDatabase = (db: Database) => {
   fs.writeFileSync(DB_PATH, dbStrUpdated, { encoding: "utf-8" });
 };
 
-const getAccounts = (): { accounts: Account[] } => {
+const getAccounts = (): AccountsApiPayload => {
   const db = loadDatabase();
-  return { accounts: db.accounts };
+  const accounts = db.accounts;
+
+  let sum: Price = {
+    amount: 0,
+    currency: "USD",
+  };
+  for (const account of accounts) {
+    sum.amount += account.price.amount;
+  }
+
+  return {
+    data: {
+      accounts,
+      sum,
+    },
+  };
 };
 
 const getAccount = (id: string): Account | undefined => {

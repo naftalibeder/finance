@@ -7,15 +7,16 @@
     Price,
     TransactionsApiArgs,
     TransactionsApiPayload,
+    AccountsApiPayload,
     // TODO: Fix this error if possible.
     // @ts-ignore
   } from "shared";
   import { secAgo, prettyDate, prettyCurrency } from "../utils";
-  import Checkbox from "./Checkbox.svelte";
 
   const serverUrl = import.meta.env.VITE_SERVER_URL;
 
   let accounts: Account[] = [];
+  let accountsSum: Price = { amount: 0, currency: "USD" };
   let activeAccountsDict: Record<string, boolean> = {};
 
   let transactions: Transaction[] = [];
@@ -83,13 +84,14 @@
       const res = await fetch(`${serverUrl}/accounts`, {
         method: "POST",
       });
-      const resData = await res.json();
-      accounts = resData.accounts;
+      const payload = (await res.json()) as AccountsApiPayload;
+      accounts = payload.data.accounts;
       accounts.forEach((o) => {
         if (activeAccountsDict[o.id] === undefined) {
           activeAccountsDict[o.id] = true;
         }
       });
+      accountsSum = payload.data.sum;
       console.log(`Fetched ${accounts.length} accounts`);
     } catch (e) {
       console.log("Error fetching accounts:", e);
@@ -151,11 +153,17 @@
     }, 1000);
   };
 
-  const onClickExtract = async () => {
+  const onClickExtract = async (accountIds?: string[]) => {
     pollExtractionStatus();
     extractionStatus.status = "set-up";
+
+    const args = { accountIds: JSON.stringify(accountIds) };
     await fetch(`${serverUrl}/extract`, {
       method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams(args).toString(),
     });
   };
 
@@ -208,17 +216,19 @@
 
 <div class="container">
   <div class="content">
-    <div class="row">
-      <h1 style={"flex: 2"}>Transactions</h1>
-      <input
-        id={"search-input"}
-        style={"flex: 1"}
-        placeholder={isSearchFocused ? "Type to search" : "Search (⌘K)"}
-        on:focus={() => (isSearchFocused = true)}
-        on:blur={() => (isSearchFocused = false)}
-        bind:value={query}
-        bind:this={searchInputField}
-      />
+    <div class="header">
+      <div class="row">
+        <h1 style={"flex: 2"}>Transactions</h1>
+        <input
+          id={"search-input"}
+          style={"flex: 1"}
+          placeholder={isSearchFocused ? "Type to search" : "Search (⌘K)"}
+          on:focus={() => (isSearchFocused = true)}
+          on:blur={() => (isSearchFocused = false)}
+          bind:value={query}
+          bind:this={searchInputField}
+        />
+      </div>
     </div>
 
     {#if extractionStatus.mfaInfos.length > 0}
@@ -250,91 +260,96 @@
       </div>
     {/if}
 
-    {#if isLoading}
-      <div style="padding: 4px 0px">
-        <div class="faded">Loading...</div>
-      </div>
-    {:else}
-      <div class="section">
-        <div class="grid accounts">
-          <div class="grid contents tall">
-            <div class="cell account-section title">
-              {accounts.length} accounts
-            </div>
-            <div class="cell account-section action">
-              {#if !statusDisplay}
-                <button class="text" on:click={() => onClickExtract()}>
-                  Refresh all
-                </button>
-              {:else}
-                <div class="faded">{statusDisplay}</div>
-              {/if}
-            </div>
+    <div class="section">
+      <div class="grid accounts">
+        <div class="grid contents tall">
+          <div class="cell account-section title">
+            {accounts.length} accounts
           </div>
+          <div class="cell account-section action">
+            {prettyCurrency(accountsSum)}
+          </div>
+          <div class="cell account gutter-r">
+            {#if extractionStatus.accountId}
+              <div>...</div>
+            {:else}
+              <button on:click={() => onClickExtract()}>↻</button>
+            {/if}
+          </div>
+        </div>
 
-          {#each accounts as a}
-            <div class="grid contents">
-              <div class="cell account toggle">
+        {#each accounts as a}
+          <div class="grid contents">
+            <!-- <div class="cell account gutter-l">
                 <Checkbox
                   active={activeAccountsDict[a.id] === true}
                   onClick={() => {
                     activeAccountsDict[a.id] = !activeAccountsDict[a.id];
                   }}
                 />
-              </div>
-              <div class="cell account name">{a.id}</div>
-              <div class="cell account price">{prettyCurrency(a.price)}</div>
-              <!-- <div class="cell account timestamp">
+              </div> -->
+            <div class="cell account name">
+              {a.id}
+            </div>
+            <div class="cell account price">{prettyCurrency(a.price)}</div>
+            <div class="cell account gutter-r">
+              {#if a.id === extractionStatus.accountId}
+                <div>...</div>
+              {:else}
+                <button on:click={() => onClickExtract([a.id])}>↻</button>
+              {/if}
+            </div>
+            <!-- <div class="cell account timestamp">
               {prettyDate(a.updatedAt, { includeTime: true }) ??
                 "Never updated"}
             </div> -->
-            </div>
-          {/each}
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="grid transactions">
-          <div class="grid contents tall">
-            <div class="cell transaction-section title">
-              {transactionsSectionText}
-            </div>
-            <div class="cell transaction-section action">
-              {prettyCurrency(transactionsSum)}
-            </div>
           </div>
+        {/each}
+      </div>
+    </div>
 
-          {#each transactions as t}
-            <div
-              class={`grid contents ${
-                secAgo(t.meta?.createdAt) < 60 * 5 ? "recent" : ""
-              }`}
-            >
-              <div class="cell account toggle">
-                <Checkbox active={false} onClick={() => {}} />
-              </div>
-              <div class="cell transaction date">
-                {prettyDate(t.date, { includeTime: false })}
-              </div>
-              <div class="cell transaction account">{t.accountId}</div>
-              <div class="cell transaction payee">{t.payee}</div>
-              <div class="cell transaction description">{t.description}</div>
-              <div class="cell transaction type">{t.type}</div>
-              <div class="cell transaction price">
-                {prettyCurrency(t.price)}
-              </div>
-              <!-- <div class="cell transaction timestamp">
+    <div class="section">
+      <div class="grid transactions">
+        <div class="grid contents tall">
+          <div class="cell transaction-section title">
+            {transactionsSectionText}
+          </div>
+          <div class="cell transaction-section action">
+            {prettyCurrency(transactionsSum)}
+          </div>
+        </div>
+
+        {#each transactions as t}
+          <div
+            class={`grid contents ${
+              secAgo(t.meta?.createdAt) < 60 * 5 ? "recent" : ""
+            }`}
+          >
+            <div class="cell transaction date">
+              {prettyDate(t.date, { includeTime: false })}
+            </div>
+            <div class="cell transaction account">{t.accountId}</div>
+            <div class="cell transaction payee">{t.payee}</div>
+            <div class="cell transaction description">{t.description}</div>
+            <div class="cell transaction type">{t.type}</div>
+            <div class="cell transaction price">
+              {prettyCurrency(t.price)}
+            </div>
+            <!-- <div class="cell transaction timestamp">
               {prettyDate(t.createdAt, { includeTime: true })}
             </div> -->
-            </div>
-          {/each}
-        </div>
+          </div>
+        {/each}
       </div>
-    {/if}
+    </div>
   </div>
 </div>
 
 <style>
+  :root {
+    --gutter: 40px;
+  }
+
   .container {
     display: flex;
     justify-content: center;
@@ -345,8 +360,12 @@
     flex: 1;
     flex-direction: column;
     row-gap: 48px;
-    max-width: 1280px;
-    padding: 0px 120px;
+    max-width: 1440px;
+    padding: 0px 0px;
+  }
+
+  .header {
+    padding: 0px var(--gutter);
   }
 
   .section {
@@ -365,7 +384,6 @@
 
   .grid {
     display: grid;
-    column-gap: 16px;
     grid-template-rows: auto;
   }
 
@@ -382,7 +400,8 @@
   }
 
   .grid.contents.tall > .cell {
-    padding: 16px 0px;
+    padding-top: 16px;
+    padding-bottom: 16px;
   }
 
   .cell {
@@ -392,17 +411,13 @@
     text-overflow: ellipsis;
   }
 
-  .cell.tall {
-    padding: 16px 0px;
-  }
-
   .grid.accounts {
-    grid-template-areas: "toggle name price";
-    grid-template-columns: auto 6fr auto;
+    grid-template-areas: "gutter-l name status price gutter-r";
+    grid-template-columns: var(--gutter) 1fr 2fr auto var(--gutter);
   }
 
   .cell.account-section.title {
-    grid-column: toggle / name;
+    grid-column: name / status;
   }
 
   .cell.account-section.action {
@@ -410,12 +425,18 @@
     text-align: right;
   }
 
-  .cell.account.toggle {
-    grid-column-start: toggle;
+  .cell.account.gutter-l {
+    grid-column-start: gutter-l;
+    text-align: right;
+    padding-right: 8px;
   }
 
   .cell.account.name {
     grid-column-start: name;
+  }
+
+  .cell.account.status {
+    grid-column-start: status;
   }
 
   .cell.account.price {
@@ -423,13 +444,18 @@
     text-align: right;
   }
 
+  .cell.account.gutter-r {
+    grid-column-start: gutter-r;
+    padding-left: 8px;
+  }
+
   .grid.transactions {
-    grid-template-areas: "toggle date account payee description type price";
-    grid-template-columns: auto auto auto 3fr 3fr 2fr auto;
+    grid-template-areas: "gutter-l date account payee description type price gutter-r";
+    grid-template-columns: var(--gutter) auto 1fr 2fr 1fr 1fr auto var(--gutter);
   }
 
   .cell.transaction-section.title {
-    grid-column: toggle / type;
+    grid-column: date / type;
   }
 
   .cell.transaction-section.action {
@@ -437,12 +463,15 @@
     text-align: right;
   }
 
-  .cell.account.toggle {
-    grid-column-start: toggle;
+  .cell.transaction.gutter-l {
+    grid-column-start: gutter-l;
+    text-align: right;
+    padding-right: 8px;
   }
 
   .cell.transaction.date {
     grid-column-start: date;
+    padding-right: 8px;
   }
 
   .cell.transaction.account {
@@ -464,5 +493,10 @@
   .cell.transaction.price {
     grid-column-start: price;
     text-align: right;
+  }
+
+  .cell.transaction.gutter-r {
+    grid-column-start: gutter-r;
+    padding-left: 8px;
   }
 </style>

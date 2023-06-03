@@ -11,6 +11,10 @@ import { toPrice } from "../../utils";
 import { getSelectorExists } from "../utils";
 
 class ChaseBankExtractor implements Extractor {
+  bankId = "chase-bank";
+  bankDisplayName = "Chase Bank";
+  bankDisplayNameShort = "Chase";
+
   loadStartPage = async (args: ExtractorFuncArgs) => {
     const { extractor, configAccount, configCredentials, page } = args;
     await page.goto("https://chase.com", { timeout: 6000 });

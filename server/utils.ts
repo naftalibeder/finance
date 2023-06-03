@@ -11,7 +11,7 @@ export const buildFiltersFromQuery = (query: string): Filter[] => {
   const queryParts = query.toLowerCase().split(" ");
 
   for (const p of queryParts) {
-    if (/([><]?)(\d+\.?\d*)/.test(p)) {
+    if (/([><~]?)(\d+\.?\d*)/.test(p)) {
       filters.push({
         type: "comparePrice",
         operator: p[0] as ComparePriceFilter["operator"],
@@ -45,11 +45,22 @@ export const transactionMatchesFilters = (
         return false;
       }
     } else if (f.type === "comparePrice") {
-      const absAmount = Math.abs(t.price.amount);
-      if (f.operator === "<" && absAmount >= f.price.amount) {
-        return false;
-      } else if (f.operator === ">" && absAmount <= f.price.amount) {
-        return false;
+      const absFilterAmount = Math.abs(f.price.amount);
+      const absTransactionAmount = Math.abs(t.price.amount);
+      if (f.operator === "<") {
+        if (absTransactionAmount >= absFilterAmount) {
+          return false;
+        }
+      } else if (f.operator === ">") {
+        if (absTransactionAmount <= absFilterAmount) {
+          return false;
+        }
+      } else if (f.operator === "~") {
+        const delta = Math.abs(absTransactionAmount - absFilterAmount);
+        const maxDelta = absFilterAmount * 0.1;
+        if (delta > maxDelta) {
+          return false;
+        }
       }
     }
   }

@@ -11,6 +11,10 @@ import { getSelectorExists } from "../utils";
 import { toPrice } from "../../utils";
 
 class CharlesSchwabBankExtractor implements Extractor {
+  bankId = "charles-schwab-bank";
+  bankDisplayName = "Charles Schwab Bank";
+  bankDisplayNameShort = "Schwab";
+
   loadStartPage = async (args: ExtractorFuncArgs) => {
     const { extractor, configAccount, configCredentials, page } = args;
     await page.goto("https://schwab.com", { timeout: 6000 });

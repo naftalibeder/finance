@@ -87,11 +87,18 @@ export interface MatchTextFilter {
 
 export interface ComparePriceFilter {
   readonly type: "comparePrice";
-  operator: ">" | "<";
+  operator: ">" | "<" | "~";
   price: Price;
 }
 
 export type Filter = MatchTextFilter | ComparePriceFilter;
+
+export type AccountsApiPayload = {
+  data: {
+    accounts: Account[];
+    sum: Price;
+  };
+};
 
 export type TransactionsApiArgs = {
   query: string;

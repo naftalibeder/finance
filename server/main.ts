@@ -9,15 +9,16 @@ const main = async () => {
   app.use(express.urlencoded({ extended: true }));
 
   app.post("/extract", async (req, res) => {
-    await extractor.runExtractors();
+    const { accountIds } = req.body;
+    await extractor.runExtractors(accountIds);
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.send("ok");
   });
 
   app.post("/accounts", async (req, res) => {
-    const { accounts } = db.getAccounts();
+    const payload = db.getAccounts();
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.send({ accounts });
+    res.send(payload);
   });
 
   app.post("/transactions", async (req, res) => {
