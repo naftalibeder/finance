@@ -121,6 +121,7 @@ const getTransactions = (args: TransactionsApiArgs): TransactionsApiPayload => {
       filteredSum: sum,
       filteredCt: list.length,
       totalCt: db.transactions.length,
+      earliestDate: db.transactions[db.transactions.length - 1].date,
     },
   };
 };

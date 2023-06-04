@@ -15,8 +15,9 @@
     secAgo,
     prettyDate,
     prettyCurrency,
-    daysBetweenDates,
+    buildTransactionsByDateArray,
   } from "../utils";
+  import { TransactionsByDate } from "../types";
 
   const serverUrl = import.meta.env.VITE_SERVER_URL;
 
@@ -25,8 +26,35 @@
   let activeAccountsDict: Record<string, boolean> = {};
 
   let transactions: Transaction[] = [];
+  let transactionsTotalCt = 0;
+  let transactionsEarliestDate: string | undefined;
   let transactionsSum: Price = { amount: 0, currency: "USD" };
+
+  let transactionsByDate: TransactionsByDate[] = [];
+  let transactionsMaxCtOnDate = 0;
+  $: {
+    const res = buildTransactionsByDateArray(
+      transactions,
+      transactionsEarliestDate
+    );
+    transactionsByDate = res.byDate;
+    transactionsMaxCtOnDate = res.maxCtOnDate;
+  }
+
   let transactionsSectionText = "";
+  $: {
+    let baseSectionText = "";
+    if (transactions.length === transactionsTotalCt) {
+      baseSectionText = `${transactionsTotalCt} transactions`;
+    } else {
+      baseSectionText = `${transactions.length} of ${transactionsTotalCt} transactions`;
+    }
+    if (query.length > 0) {
+      transactionsSectionText = `${baseSectionText} (matching "${query}")`;
+    } else {
+      transactionsSectionText = baseSectionText;
+    }
+  }
 
   let isLoading = false;
 
@@ -35,26 +63,6 @@
     accountId: undefined,
     mfaInfos: [],
   };
-  let statusDisplay: string | undefined;
-  $: {
-    switch (extractionStatus.status) {
-      case "idle":
-        statusDisplay = undefined;
-        break;
-      case "set-up":
-        statusDisplay = "Setting up";
-        break;
-      case "run-extractor":
-        statusDisplay = `Extracting ${extractionStatus.accountId}`;
-        break;
-      case "wait-for-mfa":
-        statusDisplay = "Waiting for code";
-        break;
-      case "tear-down":
-        statusDisplay = "Closing down";
-        break;
-    }
-  }
 
   let searchTimer: NodeJS.Timer | undefined;
   let searchInputFieldRef;
@@ -122,8 +130,6 @@
 
   const fetchTransactions = async () => {
     try {
-      // Get transaction data.
-
       const args: TransactionsApiArgs = { query };
       const res = await fetch(`${serverUrl}/transactions`, {
         method: "POST",
@@ -135,30 +141,11 @@
       const payload = (await res.json()) as TransactionsApiPayload;
       transactions = payload.data.filteredTransactions;
       transactionsSum = payload.data.filteredSum;
+      transactionsTotalCt = payload.data.totalCt;
+      transactionsEarliestDate = payload.data.earliestDate;
       console.log(
         `Fetched ${transactions.length} transactions with a sum of ${transactionsSum.amount}`
       );
-
-      // Set display text.
-
-      let baseSectionText = "";
-      if (payload.data.filteredCt === payload.data.totalCt) {
-        baseSectionText = `${payload.data.totalCt} transactions`;
-      } else {
-        baseSectionText = `${payload.data.filteredCt} of ${payload.data.totalCt} transactions`;
-      }
-      if (query.length > 0) {
-        transactionsSectionText = `${baseSectionText} (matching "${query}")`;
-      } else {
-        transactionsSectionText = baseSectionText;
-      }
-
-      // Populate list for graph.
-
-      const startDate = new Date(transactions[0].date);
-      const endDate = new Date(transactions[transactions.length - 1].date);
-      const days = daysBetweenDates(startDate, endDate);
-      console.log(days);
     } catch (e) {
       console.log("Error fetching transactions:", e);
     }
@@ -226,23 +213,15 @@
     }, 100);
   };
 
-  const focusSearch = () => {
-    searchInputFieldRef.focus();
-  };
-
-  const blurSearch = () => {
-    searchInputFieldRef.blur();
-  };
-
   document.addEventListener("keydown", (evt) => {
     if (evt.metaKey && evt.key === "k") {
       evt.preventDefault();
-      focusSearch();
+      searchInputFieldRef.focus();
     } else if (evt.key === "Escape") {
       evt.preventDefault();
       searchInputFieldRef.value = "";
       query = "";
-      blurSearch();
+      searchInputFieldRef.blur();
     }
   });
 </script>
@@ -292,6 +271,34 @@
         {/each}
       </div>
     {/if}
+
+    <div
+      style="display: flex; flex-direction: column; padding: 0px 40px; row-gap: 12px"
+    >
+      <div
+        style="display: flex; flex: auto; flex-direction: row; justify-content: space-between; align-items: flex-end; height: 40px"
+      >
+        {#each transactionsByDate as item}
+          <div
+            style={`display: flex; flex: 1; max-width: 2px; height: ${
+              item.transactions.length * 10
+            }%; background-color: ${
+              item.transactions.length > 0 ? "white" : "transparent"
+            }`}
+          />
+        {/each}
+      </div>
+      {#if transactionsByDate.length > 0}
+        <div
+          style="display: flex; flex: auto; flex-direction: row; justify-content: space-between"
+        >
+          <div class="faded">{transactionsByDate[0].date ?? "-"}</div>
+          <div class="faded">
+            {transactionsByDate[transactionsByDate.length - 1].date ?? "-"}
+          </div>
+        </div>
+      {/if}
+    </div>
 
     <div class="section">
       <div class="grid accounts">
@@ -450,11 +457,13 @@
     grid-column-start: gutter-l;
     text-align: right;
     padding-right: 12px;
+    opacity: 0.5;
   }
 
   .cell.gutter-r {
     grid-column-start: gutter-r;
     padding-left: 12px;
+    opacity: 0.5;
   }
 
   .grid.accounts {

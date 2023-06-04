@@ -1,6 +1,7 @@
 // TODO: Fix this error if possible.
 // @ts-ignore
-import { Price } from "shared";
+import { Price, Transaction } from "shared";
+import { TransactionsByDate } from "types";
 
 export const prettyDate = (
   o: Date | string,
@@ -43,7 +44,7 @@ export const secAgo = (s: string): number | undefined => {
   return msAgo / 1000;
 };
 
-export const daysBetweenDates = (start: Date, end: Date): Date[] => {
+export const datesInRange = (start: Date, end: Date): Date[] => {
   const dates: Date[] = [];
   const cur = start;
 
@@ -55,6 +56,65 @@ export const daysBetweenDates = (start: Date, end: Date): Date[] => {
   }
 
   return dates;
+};
+
+export const buildTransactionsByDateArray = (
+  transactions: Transaction[],
+  transactionsEarliestDate: string
+): {
+  byDate: TransactionsByDate[];
+  maxCtOnDate: number;
+} => {
+  const byDate: TransactionsByDate[] = [
+    {
+      date: transactionsEarliestDate,
+      transactions: [],
+    },
+  ];
+  let maxCtOnDate = 0;
+  let latest = byDate[0];
+
+  if (transactions.length > 0) {
+    for (let i = transactions.length - 1; i >= 0; i--) {
+      const t = transactions[i];
+      latest = byDate[byDate.length - 1];
+
+      if (t.date === latest.date) {
+        latest.transactions.push(t);
+      } else {
+        const datesUntilCurrent = datesInRange(
+          new Date(latest.date),
+          new Date(t.date)
+        );
+        for (const d of datesUntilCurrent) {
+          byDate.push({
+            date: d.toISOString(),
+            transactions: [],
+          });
+        }
+        latest = byDate[byDate.length - 1];
+        latest.transactions.push(t);
+      }
+
+      latest = byDate[byDate.length - 1];
+      if (latest.transactions.length > maxCtOnDate) {
+        maxCtOnDate = latest.transactions.length;
+      }
+    }
+
+    const datesUntilNow = datesInRange(new Date(latest.date), new Date());
+    for (const d of datesUntilNow) {
+      byDate.push({
+        date: d.toISOString(),
+        transactions: [],
+      });
+    }
+  }
+
+  return {
+    byDate,
+    maxCtOnDate,
+  };
 };
 
 export const prettyCurrency = (a: Price) => {

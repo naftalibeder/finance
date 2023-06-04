@@ -110,5 +110,6 @@ export type TransactionsApiPayload = {
     filteredSum: Price;
     filteredCt: number;
     totalCt: number;
+    earliestDate: string;
   };
 };
