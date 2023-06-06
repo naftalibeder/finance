@@ -60,7 +60,9 @@
 <style>
   .grid.transactions {
     grid-template-areas: "gutter-l date account payee description type price gutter-r";
-    grid-template-columns: var(--gutter) auto 1fr 2fr 1fr 1fr auto var(--gutter);
+    grid-template-columns: var(--gutter) auto auto 2fr 1fr 1fr auto var(
+        --gutter
+      );
   }
 
   .cell.transaction-section.title {
@@ -79,18 +81,21 @@
 
   .cell.transaction.account {
     grid-column-start: account;
-  }
-
-  .cell.transaction.description {
-    grid-column-start: description;
-  }
-
-  .cell.transaction.type {
-    grid-column-start: type;
+    padding-right: 12px;
   }
 
   .cell.transaction.payee {
     grid-column-start: payee;
+    padding-right: 12px;
+  }
+  .cell.transaction.description {
+    grid-column-start: description;
+    padding-right: 12px;
+  }
+
+  .cell.transaction.type {
+    grid-column-start: type;
+    padding-right: 12px;
   }
 
   .cell.transaction.price {
