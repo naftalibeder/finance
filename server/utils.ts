@@ -1,27 +1,48 @@
-import {
-  Account,
-  ComparePriceFilter,
-  Filter,
-  Price,
-  Transaction,
-} from "shared";
+import { Account, PriceFilter, Filter, Price, Transaction } from "shared";
 
 export const buildFiltersFromQuery = (query: string): Filter[] => {
   let filters: Filter[] = [];
   const queryParts = query.toLowerCase().split(" ");
 
   for (const p of queryParts) {
-    if (/([><~]?)(\d+\.?\d*)/.test(p)) {
+    if (/([><~])(\d+\.?\d*)/.test(p)) {
+      const [operatorStr, ...amount] = p;
+      const map: Record<string, PriceFilter["operator"]> = {
+        "<": "lt",
+        ">": "gt",
+        "~": "approx",
+      };
       filters.push({
-        type: "comparePrice",
-        operator: p[0] as ComparePriceFilter["operator"],
-        price: {
-          amount: parseFloat(p.slice(1)),
-          currency: "USD",
-        },
+        type: "price",
+        operator: map[operatorStr],
+        prices: [
+          {
+            amount: parseFloat(amount.join("")),
+            currency: "USD",
+          },
+        ],
+      });
+    } else if (/(\d+\.?\d*)-(\d+\.?\d*)/.test(p)) {
+      const [lower, upper] = p.split("-");
+      filters.push({
+        type: "price",
+        operator: "between",
+        prices: [
+          {
+            amount: parseFloat(lower),
+            currency: "USD",
+          },
+          {
+            amount: parseFloat(upper),
+            currency: "USD",
+          },
+        ],
       });
     } else if (/[a-zZA-Z]+/.test(p)) {
-      filters.push({ type: "matchText", text: p });
+      filters.push({
+        type: "text",
+        text: p,
+      });
     }
   }
 
@@ -38,7 +59,7 @@ export const transactionMatchesFilters = (
 
   for (const f of filters) {
     switch (f.type) {
-      case "matchText":
+      case "text":
         const area = [t.payee, t.description, t.type, t.price.amount]
           .join(" ")
           .toLowerCase();
@@ -47,28 +68,40 @@ export const transactionMatchesFilters = (
           return false;
         }
         break;
-      case "comparePrice":
-        const absFilterAmount = Math.abs(f.price.amount);
-        const absTransactionAmount = Math.abs(t.price.amount);
+      case "price":
+        const transactionAmount = Math.abs(t.price.amount);
 
         switch (f.operator) {
-          case "<":
-            if (absTransactionAmount >= absFilterAmount) {
+          case "lt": {
+            const filterAmount = Math.abs(f.prices[0].amount);
+            if (transactionAmount >= filterAmount) {
               return false;
             }
             break;
-          case ">":
-            if (absTransactionAmount <= absFilterAmount) {
+          }
+          case "gt": {
+            const filterAmount = Math.abs(f.prices[0].amount);
+            if (transactionAmount <= filterAmount) {
               return false;
             }
             break;
-          case "~":
-            const delta = Math.abs(absTransactionAmount - absFilterAmount);
-            const maxDelta = absFilterAmount * 0.1;
+          }
+          case "approx": {
+            const filterAmount = Math.abs(f.prices[0].amount);
+            const delta = Math.abs(transactionAmount - filterAmount);
+            const maxDelta = filterAmount * 0.1;
             if (delta > maxDelta) {
               return false;
             }
             break;
+          }
+          case "between": {
+            const [lower, upper] = f.prices.map((o) => Math.abs(o.amount));
+            if (transactionAmount < lower || transactionAmount > upper) {
+              return false;
+            }
+            break;
+          }
         }
         break;
     }

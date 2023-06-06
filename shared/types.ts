@@ -63,18 +63,18 @@ export type ExtractionStatus = {
   mfaInfos: MfaInfo[];
 };
 
-export interface MatchTextFilter {
-  readonly type: "matchText";
+export interface TextFilter {
+  readonly type: "text";
   text: string;
 }
 
-export interface ComparePriceFilter {
-  readonly type: "comparePrice";
-  operator: ">" | "<" | "~";
-  price: Price;
+export interface PriceFilter {
+  readonly type: "price";
+  operator: "lt" | "gt" | "approx" | "between";
+  prices: Price[];
 }
 
-export type Filter = MatchTextFilter | ComparePriceFilter;
+export type Filter = TextFilter | PriceFilter;
 
 export type AccountsApiPayload = {
   data: {

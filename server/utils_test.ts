@@ -7,6 +7,8 @@ import { randomUUID } from "crypto";
 
 const { describe, it } = mocha;
 
+let query = "";
+
 const transaction: Transaction = {
   _id: randomUUID(),
   _createdAt: new Date().toISOString(),
@@ -17,7 +19,10 @@ const transaction: Transaction = {
   payee: "DAILYGRINDCOFFEE",
   description: "",
   type: "debit",
-  price: { amount: 14.89, currency: "USD" },
+  price: {
+    amount: 14.89,
+    currency: "USD",
+  },
 };
 
 const matchesQuery = (t: Transaction, q: string) => {
@@ -26,16 +31,26 @@ const matchesQuery = (t: Transaction, q: string) => {
 
 describe("filter transactions", () => {
   it("empty query", () => {
-    if (!matchesQuery(transaction, "")) {
+    query = "";
+    if (!matchesQuery(transaction, query)) {
       throw new Error("did not correctly handle empty query");
     }
   });
+
   it("price comparison", () => {
-    if (!matchesQuery(transaction, "coffee <15")) {
-      throw new Error("did not find desired match");
+    let query = "coffee <15";
+    if (!matchesQuery(transaction, query)) {
+      throw new Error(`did not find desired match for ${query}`);
     }
-    if (matchesQuery(transaction, "coffee >15")) {
-      throw new Error("found illegal match");
+
+    query = "coffee >15";
+    if (matchesQuery(transaction, query)) {
+      throw new Error(`found illegal match for ${query}`);
+    }
+
+    query = "14.20-15";
+    if (matchesQuery(transaction, query)) {
+      throw new Error(`did not find desired match for ${query}`);
     }
   });
 });
