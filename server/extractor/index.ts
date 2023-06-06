@@ -7,15 +7,10 @@ import {
   Page,
   firefox,
 } from "playwright-core";
-import { Config, Price, Transaction } from "shared";
+import { Account, Config, Price, Transaction } from "shared";
 import { CONFIG_PATH, EXTRACTIONS_PATH, TMP_DIR } from "../constants";
 import db from "../db";
-import {
-  delay,
-  prettyConfigAccount,
-  prettyDate,
-  prettyDuration,
-} from "../utils";
+import { delay, prettyAccount, prettyDate, prettyDuration } from "../utils";
 import { Extractor, ExtractorFuncArgs } from "types";
 import { CharlesSchwabBankExtractor, ChaseBankExtractor } from "./extractors";
 import { parseTransactions } from "./utils";
@@ -66,33 +61,30 @@ const runExtractors = async (accountIds?: string[]) => {
 
   const configStr = fs.readFileSync(CONFIG_PATH, { encoding: "utf-8" });
   const config = JSON.parse(configStr) as Config;
-  const configAccounts = config.accounts.filter((o) => {
-    if (o.skip) {
-      return false;
-    } else if (!accountIds || accountIds.length === 0) {
-      return true;
-    } else if (accountIds.includes(o.id)) {
-      return true;
-    } else {
-      return false;
-    }
-  });
-  console.log(`Preparing extraction for ${configAccounts.length} accounts`);
+
+  const allAccounts = db.getAccounts();
+
+  let accounts: Account[];
+  if (accountIds && accountIds.length > 0) {
+    accounts = allAccounts.data.accounts.filter((o) =>
+      accountIds.includes(o._id)
+    );
+  } else {
+    accounts = allAccounts.data.accounts;
+  }
+  console.log(`Preparing extraction for ${accounts.length} accounts`);
 
   const [browser, browserContext] = await setUp();
 
-  for (const configAccount of configAccounts) {
+  for (const account of accounts) {
     const log: ExtractorFuncArgs["log"] = (message?: any, ...params: any[]) => {
-      console.log(
-        `${configAccount.bankId} | ${configAccount.id} | ${message}`,
-        ...params
-      );
+      console.log(`${account.bankId} | ${account._id} | ${message}`, ...params);
     };
 
     log(`Starting extraction`);
 
-    const extractor = extractorsDict[configAccount.bankId];
-    const configCredentials = config.credentials[configAccount.bankId];
+    const extractor = extractorsDict[account.bankId];
+    const credentials = config.credentials[account.bankId];
 
     const page = await browserContext.newPage();
     page.setViewportSize({ width: 1948, height: 955 });
@@ -106,7 +98,7 @@ const runExtractors = async (accountIds?: string[]) => {
 
     db.setExtractionStatus({
       status: "run-extractor",
-      accountId: configAccount.id,
+      accountId: account._id,
     });
 
     let accountValue: Price | undefined;
@@ -115,19 +107,19 @@ const runExtractors = async (accountIds?: string[]) => {
     try {
       const resp = await runExtractor({
         extractor,
-        configAccount,
-        configCredentials,
+        account,
+        credentials,
         page,
         tmpRunDir,
         getMfaCode: async (): Promise<string> => {
           const code = await waitForMfaCode(
-            configAccount.bankId,
+            account.bankId,
             () => db.setExtractionStatus({ status: "wait-for-mfa" }),
             log
           );
           db.setExtractionStatus({
             status: "run-extractor",
-            accountId: configAccount.id,
+            accountId: account._id,
           });
           return code;
         },
@@ -137,16 +129,14 @@ const runExtractors = async (accountIds?: string[]) => {
       transactions = resp.transactions;
     } catch (e) {
       log(`Error running extractor: ${e}`);
-      db.deleteMfaInfo(configAccount.bankId);
+      db.deleteMfaInfo(account.bankId);
       await takeErrorScreenshot(page, tmpRunDir);
       await page.close();
       continue;
     }
 
-    db.updateAccount(configAccount.id, {
-      id: configAccount.id,
-      number: configAccount.number,
-      type: configAccount.type,
+    db.updateAccount(account._id, {
+      ...account,
       price: accountValue,
     });
     log(`Updated account value: ${accountValue.amount}`);
@@ -157,6 +147,11 @@ const runExtractors = async (accountIds?: string[]) => {
     totalAddCt += addCt;
     log(`Added ${addCt} new of ${foundCt} found transactions`);
 
+    db.setExtractionStatus({
+      status: "idle",
+      accountId: undefined,
+    });
+
     await browserContext.storageState({ path: BROWSER_CONTEXT_PATH });
     await page.close();
   }
@@ -165,7 +160,7 @@ const runExtractors = async (accountIds?: string[]) => {
   await tearDown(browser, browserContext);
 
   const deltaTime = Date.now() - startTime.valueOf();
-  console.log(`Completed extraction across ${configAccounts.length} accounts`);
+  console.log(`Completed extraction across ${accounts.length} accounts`);
   console.log(`Added ${totalAddCt} new of ${totalFoundCt} found transactions`);
   console.log(`Finished in ${prettyDuration(deltaTime)}`);
   db.setExtractionStatus({ status: "idle" });
@@ -181,7 +176,7 @@ export const runExtractor = async (
   accountValue: Price;
   transactions: Transaction[];
 }> => {
-  const { extractor, configAccount, page, tmpRunDir, log } = args;
+  const { extractor, account, page, tmpRunDir, log } = args;
 
   const getAccountValue = async (): Promise<Price> => {
     log("Loading start page");
@@ -195,7 +190,7 @@ export const runExtractor = async (
     log("Scraping account value");
     let accountValue = await extractor.scrapeAccountValue(args);
 
-    const accountType = configAccount.type;
+    const accountType = account.type;
     if (accountType === "liabilities" || accountType === "expenses") {
       accountValue.amount *= -1;
     }
@@ -205,7 +200,7 @@ export const runExtractor = async (
   };
 
   const getTransactions = async (): Promise<Transaction[]> => {
-    const spanMonths = extractor.getMaxDateRangeMonths(configAccount.kind);
+    const spanMonths = extractor.getMaxDateRangeMonths(account.kind);
     const spanMs = spanMonths * 30 * 24 * 60 * 60 * 1000;
 
     let transactions: Transaction[] = [];
@@ -233,14 +228,12 @@ export const runExtractor = async (
           ...args,
           range: { start, end },
         });
-        fs.writeFileSync(
-          `${tmpRunDir}/${prettyConfigAccount(configAccount)}.csv`,
-          data,
-          { encoding: "utf-8" }
-        );
+        fs.writeFileSync(`${tmpRunDir}/${prettyAccount(account)}.csv`, data, {
+          encoding: "utf-8",
+        });
 
         log("Parsing transactions");
-        const res = await parseTransactions(data, configAccount, extractor);
+        const res = await parseTransactions(data, account, extractor);
         transactionsChunk = res.transactions;
         skipCt = res.skipCt;
       } catch (e) {

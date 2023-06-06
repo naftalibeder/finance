@@ -2,8 +2,6 @@ import { Page } from "playwright-core";
 import {
   Account,
   Transaction,
-  ConfigAccount,
-  ConfigAccountKind,
   ConfigCredentials,
   Price,
   ExtractionStatus,
@@ -17,8 +15,8 @@ export type Database = {
 
 export interface ExtractorFuncArgs {
   extractor: Extractor;
-  configAccount: ConfigAccount;
-  configCredentials: ConfigCredentials;
+  account: Account;
+  credentials: ConfigCredentials;
   page: Page;
   tmpRunDir: string;
   getMfaCode: () => Promise<string>;
@@ -30,7 +28,7 @@ export interface ExtractorRangeFuncArgs extends ExtractorFuncArgs {
 }
 
 export type ExtractorColumnMapKey =
-  | keyof Omit<Transaction, "accountId" | "meta">
+  | keyof Omit<Transaction, "_id" | "_createdAt" | "_updatedAt" | "accountId">
   | "priceWithdrawal"
   | "priceDeposit";
 
@@ -50,9 +48,9 @@ export interface Extractor {
   scrapeTransactionData: (args: ExtractorRangeFuncArgs) => Promise<string>;
   getDashboardExists: (args: ExtractorFuncArgs) => Promise<boolean>;
   getColumnMap: (
-    accountKind: ConfigAccountKind
+    accountKind: Account["kind"]
   ) => ExtractorColumnMap | undefined;
-  getMaxDateRangeMonths: (accountKind: ConfigAccountKind) => number;
+  getMaxDateRangeMonths: (accountKind: Account["kind"]) => number;
 }
 
 export type ExtractorDateRange = {

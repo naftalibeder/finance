@@ -18,6 +18,9 @@
     buildTransactionsByDateArray,
   } from "../utils";
   import { TransactionsByDate } from "../types";
+  import TimeChart from "./TimeChart.svelte";
+  import AccountsList from "./AccountsList.svelte";
+  import TransactionsList from "./TransactionsList.svelte";
 
   const serverUrl = import.meta.env.VITE_SERVER_URL;
 
@@ -26,9 +29,10 @@
   let activeAccountsDict: Record<string, boolean> = {};
 
   let transactions: Transaction[] = [];
+  let transactionsFilteredCt = 0;
   let transactionsTotalCt = 0;
   let transactionsEarliestDate: string | undefined;
-  let transactionsSum: Price = { amount: 0, currency: "USD" };
+  let transactionsFilteredSum: Price = { amount: 0, currency: "USD" };
 
   let transactionsByDate: TransactionsByDate[] = [];
   let transactionsMaxCtOnDate = 0;
@@ -39,21 +43,6 @@
     );
     transactionsByDate = res.byDate;
     transactionsMaxCtOnDate = res.maxCtOnDate;
-  }
-
-  let transactionsSectionText = "";
-  $: {
-    let baseSectionText = "";
-    if (transactions.length === transactionsTotalCt) {
-      baseSectionText = `${transactionsTotalCt} transactions`;
-    } else {
-      baseSectionText = `${transactions.length} of ${transactionsTotalCt} transactions`;
-    }
-    if (query.length > 0) {
-      transactionsSectionText = `${baseSectionText} (matching "${query}")`;
-    } else {
-      transactionsSectionText = baseSectionText;
-    }
   }
 
   let isLoading = false;
@@ -74,7 +63,7 @@
     } else {
       const options: string[] = [
         "coffee",
-        accounts[Math.floor(Math.random() * accounts.length)].id,
+        accounts[Math.floor(Math.random() * accounts.length)].display,
         ">250 <350",
         "<15.20",
         ">2000",
@@ -117,8 +106,8 @@
       const payload = (await res.json()) as AccountsApiPayload;
       accounts = payload.data.accounts;
       accounts.forEach((o) => {
-        if (activeAccountsDict[o.id] === undefined) {
-          activeAccountsDict[o.id] = true;
+        if (activeAccountsDict[o._id] === undefined) {
+          activeAccountsDict[o._id] = true;
         }
       });
       accountsSum = payload.data.sum;
@@ -140,11 +129,12 @@
       });
       const payload = (await res.json()) as TransactionsApiPayload;
       transactions = payload.data.filteredTransactions;
-      transactionsSum = payload.data.filteredSum;
+      transactionsFilteredSum = payload.data.filteredSum;
+      transactionsFilteredCt = payload.data.filteredTransactions.length;
       transactionsTotalCt = payload.data.totalCt;
       transactionsEarliestDate = payload.data.earliestDate;
       console.log(
-        `Fetched ${transactions.length} transactions with a sum of ${transactionsSum.amount}`
+        `Fetched ${transactions.length} transactions with a sum of ${transactionsFilteredSum.amount}`
       );
     } catch (e) {
       console.log("Error fetching transactions:", e);
@@ -177,7 +167,10 @@
     pollExtractionStatus();
     extractionStatus.status = "set-up";
 
-    const args = { accountIds: JSON.stringify(accountIds) };
+    const args = {};
+    if (accountIds) {
+      args["accountIds"] = JSON.stringify(accountIds);
+    }
     await fetch(`${serverUrl}/extract`, {
       method: "POST",
       headers: {
@@ -272,264 +265,21 @@
       </div>
     {/if}
 
-    <div
-      style="display: flex; flex-direction: column; padding: 0px 40px; row-gap: 12px"
-    >
-      <div
-        style="display: flex; flex: auto; flex-direction: row; justify-content: space-between; align-items: flex-end; height: 40px"
-      >
-        {#each transactionsByDate as item}
-          <div
-            style={`display: flex; flex: 1; max-width: 2px; height: ${
-              item.transactions.length * 10
-            }%; background-color: ${
-              item.transactions.length > 0 ? "white" : "transparent"
-            }`}
-          />
-        {/each}
-      </div>
-      {#if transactionsByDate.length > 0}
-        <div
-          style="display: flex; flex: auto; flex-direction: row; justify-content: space-between"
-        >
-          <div class="faded">{transactionsByDate[0].date ?? "-"}</div>
-          <div class="faded">
-            {transactionsByDate[transactionsByDate.length - 1].date ?? "-"}
-          </div>
-        </div>
-      {/if}
-    </div>
+    <TimeChart {transactionsByDate} />
 
-    <div class="section">
-      <div class="grid accounts">
-        <div class="grid contents tall">
-          <div class="cell account-section title">
-            {accounts.length} accounts
-          </div>
-          <div class="cell account-section action">
-            {prettyCurrency(accountsSum)}
-          </div>
-          <div class="cell account gutter-r">
-            {#if extractionStatus.accountId}
-              <div>...</div>
-            {:else}
-              <button on:click={() => onClickExtract()}>↻</button>
-            {/if}
-          </div>
-        </div>
+    <AccountsList
+      {accounts}
+      {accountsSum}
+      {extractionStatus}
+      {onClickExtract}
+    />
 
-        {#each accounts as a}
-          <div class="grid contents">
-            <!-- <div class="cell account gutter-l">
-                <Checkbox
-                  active={activeAccountsDict[a.id] === true}
-                  onClick={() => {
-                    activeAccountsDict[a.id] = !activeAccountsDict[a.id];
-                  }}
-                />
-              </div> -->
-            <div class="cell account name">
-              {a.id}
-            </div>
-            <div class="cell account price">{prettyCurrency(a.price)}</div>
-            <div class="cell account gutter-r">
-              {#if a.id === extractionStatus.accountId}
-                <div>...</div>
-              {:else}
-                <button on:click={() => onClickExtract([a.id])}>↻</button>
-              {/if}
-            </div>
-            <!-- <div class="cell account timestamp">
-              {prettyDate(a.updatedAt, { includeTime: true }) ??
-                "Never updated"}
-            </div> -->
-          </div>
-        {/each}
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="grid transactions">
-        <div class="grid contents tall">
-          <div class="cell transaction-section title">
-            {transactionsSectionText}
-          </div>
-          <div class="cell transaction-section action">
-            {prettyCurrency(transactionsSum)}
-          </div>
-        </div>
-
-        {#each transactions as t}
-          <div
-            class={`grid contents ${
-              secAgo(t.meta?.createdAt) < 60 * 5 ? "recent" : ""
-            }`}
-          >
-            <div class="cell transaction date">
-              {prettyDate(t.date, { includeTime: false })}
-            </div>
-            <div class="cell transaction account">{t.accountId}</div>
-            <div class="cell transaction payee">{t.payee}</div>
-            <div class="cell transaction description">{t.description}</div>
-            <div class="cell transaction type">{t.type}</div>
-            <div class="cell transaction price">
-              {prettyCurrency(t.price)}
-            </div>
-            <!-- <div class="cell transaction timestamp">
-              {prettyDate(t.createdAt, { includeTime: true })}
-            </div> -->
-          </div>
-        {/each}
-      </div>
-    </div>
+    <TransactionsList
+      {transactions}
+      {transactionsFilteredSum}
+      transactionsFilteredCt={transactions.length}
+      {transactionsTotalCt}
+      {query}
+    />
   </div>
 </div>
-
-<style>
-  :root {
-    --gutter: 40px;
-  }
-
-  .container {
-    display: flex;
-    justify-content: center;
-  }
-
-  .content {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    row-gap: 48px;
-    max-width: 1440px;
-    padding: 0px 0px;
-  }
-
-  .header {
-    padding: 0px var(--gutter);
-  }
-
-  .section {
-    display: flex;
-    flex-direction: column;
-    row-gap: 24px;
-  }
-
-  .row {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    column-gap: 16px;
-  }
-
-  .grid {
-    display: grid;
-    grid-template-rows: auto;
-  }
-
-  .grid.contents {
-    display: contents;
-  }
-
-  .grid.contents:hover .cell {
-    opacity: 0.5;
-  }
-
-  .grid.contents.recent {
-    color: #90cbff;
-  }
-
-  .grid.contents.tall > .cell {
-    padding-top: 16px;
-    padding-bottom: 16px;
-  }
-
-  .cell {
-    display: flex;
-    align-items: center;
-    padding: 4px 0px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .cell.gutter-l {
-    grid-column-start: gutter-l;
-    text-align: right;
-    padding-right: 12px;
-    opacity: 0.5;
-  }
-
-  .cell.gutter-r {
-    grid-column-start: gutter-r;
-    padding-left: 12px;
-    opacity: 0.5;
-  }
-
-  .grid.accounts {
-    grid-template-areas: "gutter-l name status price gutter-r";
-    grid-template-columns: var(--gutter) 1fr 2fr auto var(--gutter);
-  }
-
-  .cell.account-section.title {
-    grid-column: name / status;
-  }
-
-  .cell.account-section.action {
-    grid-column: price;
-    justify-content: flex-end;
-  }
-
-  .cell.account.name {
-    grid-column-start: name;
-  }
-
-  .cell.account.status {
-    grid-column-start: status;
-  }
-
-  .cell.account.price {
-    grid-column-start: price;
-    justify-content: flex-end;
-  }
-
-  .grid.transactions {
-    grid-template-areas: "gutter-l date account payee description type price gutter-r";
-    grid-template-columns: var(--gutter) auto 1fr 2fr 1fr 1fr auto var(--gutter);
-  }
-
-  .cell.transaction-section.title {
-    grid-column: date / type;
-  }
-
-  .cell.transaction-section.action {
-    grid-column: price;
-    justify-content: flex-end;
-  }
-
-  .cell.transaction.date {
-    grid-column-start: date;
-    padding-right: 12px;
-  }
-
-  .cell.transaction.account {
-    grid-column-start: account;
-  }
-
-  .cell.transaction.description {
-    grid-column-start: description;
-  }
-
-  .cell.transaction.type {
-    grid-column-start: type;
-  }
-
-  .cell.transaction.payee {
-    grid-column-start: payee;
-  }
-
-  .cell.transaction.price {
-    grid-column-start: price;
-    justify-content: flex-end;
-  }
-</style>

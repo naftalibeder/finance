@@ -1,20 +1,31 @@
+import { UUID } from "crypto";
+
 /** A specific account at a bank. */
 export type Account = {
-  id: string;
+  /** A globally unique id representing the account internally. */
+  _id: string;
+  _createdAt: string;
+  _updatedAt: string;
+  /** A unique id that matches one of the available extractors. */
+  bankId: string;
+  /** The display name or nickname of the account. */
+  display: string;
+  /** The account number. */
   number: string;
-  type: AccountType;
+  /** The purpose of the account, e.g. checking, brokerage, etc. */
+  kind: "checking" | "savings" | "brokerage" | "credit" | "debit";
+  /** The type of resource stored in the account. */
+  type: "assets" | "liabilities" | "equity" | "revenue" | "expenses";
+  /** The current value of the account's assets. */
   price: Price;
-  meta?: {
-    createdAt: string;
-    updatedAt: string;
-  };
 };
-
-/** The type of resource stored in the account. */
-type AccountType = "assets" | "liabilities" | "equity" | "revenue" | "expenses";
 
 /** A unique transaction. */
 export type Transaction = {
+  /** A globally unique id representing the account internally. */
+  _id: UUID;
+  _createdAt: string;
+  _updatedAt: string;
   date: string;
   postDate: string;
   accountId: string;
@@ -22,10 +33,6 @@ export type Transaction = {
   price: Price;
   type: string;
   description: string;
-  meta?: {
-    createdAt: string;
-    updatedAt: string;
-  };
 };
 
 /** An amount of money in a specific currency. */
@@ -36,32 +43,8 @@ export type Price = {
 
 /** User information loaded from `config.json`. */
 export type Config = {
-  accounts: ConfigAccount[];
   credentials: Record<string, ConfigCredentials>;
 };
-
-/** Information about an account for loading and running an extractor. */
-export type ConfigAccount = {
-  /** A globally unique id representing the account internally. */
-  id: string;
-  /** A unique id that matches one of the available extractors. */
-  bankId: string;
-  /** The display name or nickname of the account. */
-  display: string;
-  /** The account number. */
-  number: string;
-  kind: ConfigAccountKind;
-  type: AccountType;
-  /** Whether the extractor for this account should be skipped. */
-  skip: boolean;
-};
-
-export type ConfigAccountKind =
-  | "checking"
-  | "savings"
-  | "brokerage"
-  | "credit"
-  | "debit";
 
 export type ConfigCredentials = {
   username: string;

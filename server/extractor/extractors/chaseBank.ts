@@ -1,6 +1,6 @@
 import fs from "fs";
 import { Locator } from "playwright-core";
-import { ConfigAccountKind, Price } from "shared";
+import { Account, Price } from "shared";
 import {
   Extractor,
   ExtractorColumnMap,
@@ -16,12 +16,12 @@ class ChaseBankExtractor implements Extractor {
   bankDisplayNameShort = "Chase";
 
   loadStartPage = async (args: ExtractorFuncArgs) => {
-    const { extractor, configAccount, configCredentials, page } = args;
+    const { extractor, account, credentials, page } = args;
     await page.goto("https://chase.com", { timeout: 6000 });
   };
 
   enterCredentials = async (args: ExtractorFuncArgs) => {
-    const { extractor, configAccount, configCredentials, page, log } = args;
+    const { extractor, account, credentials, page, log } = args;
 
     let loc: Locator;
 
@@ -44,10 +44,10 @@ class ChaseBankExtractor implements Extractor {
     }
 
     loc = loginFrame.locator("#userId-text-input-field");
-    await loc.fill(configCredentials.username);
+    await loc.fill(credentials.username);
 
     loc = loginFrame.locator("#password-text-input-field");
-    await loc.fill(configCredentials.password);
+    await loc.fill(credentials.password);
 
     loc = loginFrame.locator("#input-rememberMe");
     await loc.click();
@@ -57,7 +57,7 @@ class ChaseBankExtractor implements Extractor {
   };
 
   enterMfaCode = async (args: ExtractorFuncArgs) => {
-    const { extractor, configAccount, configCredentials, page } = args;
+    const { extractor, account, credentials, page } = args;
 
     let loc: Locator;
 
@@ -90,14 +90,14 @@ class ChaseBankExtractor implements Extractor {
     await loc.fill(code);
 
     loc = codeInputFrame.locator("#password_input-input-field");
-    await loc.fill(configCredentials.password);
+    await loc.fill(credentials.password);
 
     loc = codeInputFrame.locator("button[type=submit]").first();
     await loc.click();
   };
 
   scrapeAccountValue = async (args: ExtractorFuncArgs): Promise<Price> => {
-    const { extractor, configAccount, configCredentials, page } = args;
+    const { extractor, account, credentials, page } = args;
 
     let loc: Locator;
 
@@ -106,9 +106,7 @@ class ChaseBankExtractor implements Extractor {
     loc = dashboardFrame
       .locator(".accounts-blade")
       .filter({
-        has: dashboardFrame.locator(
-          `[text*="${configAccount.number.slice(-4)}"]`
-        ),
+        has: dashboardFrame.locator(`[text*="${account.number.slice(-4)}"]`),
       })
       .locator(".primary-value");
     const text = await loc.innerText();
@@ -120,7 +118,7 @@ class ChaseBankExtractor implements Extractor {
   scrapeTransactionData = async (
     args: ExtractorRangeFuncArgs
   ): Promise<string> => {
-    const { extractor, configAccount, configCredentials, range, page } = args;
+    const { extractor, account, credentials, range, page } = args;
 
     let loc: Locator;
 
@@ -128,7 +126,7 @@ class ChaseBankExtractor implements Extractor {
 
     const dashboardFrame = page.frames()[0];
 
-    loc = dashboardFrame.locator(`[text*="${configAccount.number.slice(-4)}"]`);
+    loc = dashboardFrame.locator(`[text*="${account.number.slice(-4)}"]`);
     await loc.click();
     await page.waitForTimeout(3000);
 
@@ -180,7 +178,7 @@ class ChaseBankExtractor implements Extractor {
   };
 
   getDashboardExists = async (args: ExtractorFuncArgs): Promise<boolean> => {
-    const { extractor, configAccount, configCredentials, page } = args;
+    const { extractor, account, credentials, page } = args;
 
     try {
       const loc = page.frames()[0].locator(".global-nav-position-container");
@@ -192,7 +190,7 @@ class ChaseBankExtractor implements Extractor {
   };
 
   getColumnMap = (
-    accountKind: ConfigAccountKind
+    accountKind: Account["kind"]
   ): ExtractorColumnMap | undefined => {
     if (accountKind === "credit") {
       return {
@@ -208,7 +206,7 @@ class ChaseBankExtractor implements Extractor {
     }
   };
 
-  getMaxDateRangeMonths = (accountKind: ConfigAccountKind): number => {
+  getMaxDateRangeMonths = (accountKind: Account["kind"]): number => {
     return 6;
   };
 }

@@ -1,6 +1,6 @@
 import fs from "fs";
 import { Locator } from "playwright-core";
-import { ConfigAccountKind, Price } from "shared";
+import { Account, Price } from "shared";
 import {
   Extractor,
   ExtractorFuncArgs,
@@ -16,12 +16,12 @@ class CharlesSchwabBankExtractor implements Extractor {
   bankDisplayNameShort = "Schwab";
 
   loadStartPage = async (args: ExtractorFuncArgs) => {
-    const { extractor, configAccount, configCredentials, page } = args;
+    const { extractor, account, credentials, page } = args;
     await page.goto("https://schwab.com", { timeout: 6000 });
   };
 
   enterCredentials = async (args: ExtractorFuncArgs) => {
-    const { extractor, configAccount, configCredentials, page, log } = args;
+    const { extractor, account, credentials, page, log } = args;
 
     let loc: Locator;
 
@@ -40,17 +40,17 @@ class CharlesSchwabBankExtractor implements Extractor {
     }
 
     loc = loginFrame.locator("#loginIdInput");
-    await loc.fill(configCredentials.username);
+    await loc.fill(credentials.username);
 
     loc = loginFrame.locator("#passwordInput");
-    await loc.fill(configCredentials.password);
+    await loc.fill(credentials.password);
 
     loc = loginFrame.locator("#btnLogin");
     await loc.click();
   };
 
   enterMfaCode = async (args: ExtractorFuncArgs) => {
-    const { extractor, configAccount, configCredentials, page } = args;
+    const { extractor, account, credentials, page } = args;
 
     let loc: Locator;
 
@@ -79,7 +79,7 @@ class CharlesSchwabBankExtractor implements Extractor {
   };
 
   scrapeAccountValue = async (args: ExtractorFuncArgs): Promise<Price> => {
-    const { extractor, configAccount, configCredentials, page } = args;
+    const { extractor, account, credentials, page } = args;
 
     let loc: Locator;
 
@@ -87,7 +87,7 @@ class CharlesSchwabBankExtractor implements Extractor {
 
     loc = dashboardFrame
       .locator("single-account")
-      .filter({ hasText: configAccount.display })
+      .filter({ hasText: account.display })
       .locator("div.balance-container-cs > div > span")
       .first();
     let text = await loc.evaluate((o) => o.childNodes[2].textContent ?? "");
@@ -99,7 +99,7 @@ class CharlesSchwabBankExtractor implements Extractor {
   scrapeTransactionData = async (
     args: ExtractorRangeFuncArgs
   ): Promise<string> => {
-    const { extractor, configAccount, configCredentials, range, page } = args;
+    const { extractor, account, credentials, range, page } = args;
 
     let loc: Locator;
 
@@ -116,7 +116,7 @@ class CharlesSchwabBankExtractor implements Extractor {
     await page.waitForTimeout(3000);
 
     loc = dashboardFrame.locator(".sdps-account-selector__list-item", {
-      hasText: configAccount.number,
+      hasText: account.number,
     });
     await loc.click();
     await page.waitForTimeout(3000);
@@ -179,7 +179,7 @@ class CharlesSchwabBankExtractor implements Extractor {
   };
 
   getDashboardExists = async (args: ExtractorFuncArgs): Promise<boolean> => {
-    const { extractor, configAccount, configCredentials, page } = args;
+    const { extractor, account, credentials, page } = args;
 
     try {
       const loc = page.frames()[0].locator("#site-header");
@@ -191,7 +191,7 @@ class CharlesSchwabBankExtractor implements Extractor {
   };
 
   getColumnMap = (
-    accountKind: ConfigAccountKind
+    accountKind: Account["kind"]
   ): ExtractorColumnMap | undefined => {
     if (accountKind === "checking") {
       return {
@@ -218,7 +218,7 @@ class CharlesSchwabBankExtractor implements Extractor {
     }
   };
 
-  getMaxDateRangeMonths = (accountKind: ConfigAccountKind): number => {
+  getMaxDateRangeMonths = (accountKind: Account["kind"]): number => {
     return 12;
   };
 }

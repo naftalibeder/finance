@@ -4,9 +4,13 @@ import { Price, Transaction } from "shared";
 import { TransactionsByDate } from "types";
 
 export const prettyDate = (
-  o: Date | string,
+  o?: Date | string,
   opts?: { includeTime?: boolean }
 ): string | undefined => {
+  if (!o) {
+    return undefined;
+  }
+
   let d: Date;
   if (typeof o === "string") {
     try {

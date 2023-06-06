@@ -4,11 +4,14 @@
   color-scheme: light dark;
   color: white;
   background-color: #2a2a2a;
+
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+
+  --gutter: 40px;
 }
 
 div,
@@ -75,5 +78,81 @@ button.text:hover {
 }
 
 .faded {
+  opacity: 0.5;
+}
+
+.container {
+  display: flex;
+  justify-content: center;
+}
+
+.content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  row-gap: 48px;
+  max-width: 1440px;
+  padding: 0px 0px;
+}
+
+.header {
+  padding: 0px var(--gutter);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  row-gap: 24px;
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  column-gap: 16px;
+}
+
+.grid {
+  display: grid;
+  grid-template-rows: auto;
+}
+
+.grid.contents {
+  display: contents;
+}
+
+.grid.contents:hover .cell {
+  opacity: 0.5;
+}
+
+.grid.contents.recent {
+  color: #90cbff;
+}
+
+.grid.contents.tall > .cell {
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  padding: 4px 0px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cell.gutter-l {
+  grid-column-start: gutter-l;
+  text-align: right;
+  padding-right: 12px;
+  opacity: 0.5;
+}
+
+.cell.gutter-r {
+  grid-column-start: gutter-r;
+  padding-left: 12px;
   opacity: 0.5;
 }

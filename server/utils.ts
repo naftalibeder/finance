@@ -1,6 +1,6 @@
 import {
+  Account,
   ComparePriceFilter,
-  ConfigAccount,
   Filter,
   Price,
   Transaction,
@@ -77,8 +77,8 @@ export const transactionMatchesFilters = (
   return true;
 };
 
-export const prettyConfigAccount = (o: ConfigAccount): string => {
-  return `${o.bankId}-${o.id}`;
+export const prettyAccount = (o: Account): string => {
+  return `${o.bankId}-${o._id}`;
 };
 
 // TODO: Handle "01/18/2022 as of 01/15/2022" etc.

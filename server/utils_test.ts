@@ -3,10 +3,14 @@ import { buildFiltersFromQuery, transactionMatchesFilters } from "./utils.js";
 // TODO: Fix this error if possible.
 // @ts-ignore
 import { Transaction } from "shared";
+import { randomUUID } from "crypto";
 
 const { describe, it } = mocha;
 
 const transaction: Transaction = {
+  _id: randomUUID(),
+  _createdAt: new Date().toISOString(),
+  _updatedAt: new Date().toISOString(),
   accountId: "test-id",
   date: new Date().toISOString(),
   postDate: new Date().toISOString(),

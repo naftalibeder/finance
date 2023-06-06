@@ -1,12 +1,13 @@
 import { parse } from "csv-parse";
-import { ConfigAccount, Transaction } from "shared/types";
+import { Account, Transaction } from "shared/types";
 import { Frame, FrameLocator } from "playwright-core";
 import { toDate, toPrice } from "../utils";
 import { Extractor, ExtractorColumnMap, ExtractorColumnMapKey } from "types";
+import { randomUUID } from "crypto";
 
 export const parseTransactions = async (
   transactionData: string,
-  configAccount: ConfigAccount,
+  configAccount: Account,
   extractor: Extractor
 ): Promise<{ transactions: Transaction[]; skipCt: number }> => {
   let skipCt = 0;
@@ -48,7 +49,7 @@ export const parseTransactions = async (
 
 const buildTransaction = (
   row: string[],
-  configAccount: ConfigAccount,
+  configAccount: Account,
   columnMap: ExtractorColumnMap
 ): Transaction | undefined => {
   const val = (i?: number) => (i !== undefined ? row[i] ?? "" : "");
@@ -93,9 +94,12 @@ const buildTransaction = (
   price.amount = price.amount * multiplier;
 
   const transaction: Transaction = {
+    _id: randomUUID(),
+    _createdAt: new Date().toISOString(),
+    _updatedAt: new Date().toISOString(),
     date: dateStr,
     postDate: postDateStr,
-    accountId: configAccount.id,
+    accountId: configAccount._id,
     payee: rowNorm.payee,
     price,
     type: rowNorm.type,

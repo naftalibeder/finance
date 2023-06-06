@@ -59,31 +59,30 @@ const getAccounts = (): AccountsApiPayload => {
 
 const getAccount = (id: string): Account | undefined => {
   const db = loadDatabase();
-  const account = db.accounts.find((o) => o.id === id);
+  const account = db.accounts.find((o) => o._id === id);
   return account;
 };
 
-const updateAccount = (id: string, update: Account) => {
+const updateAccount = (
+  id: string,
+  update: Omit<Account, "_createdAt" | "_updatedAt">
+) => {
   const db = loadDatabase();
-  const index = db.accounts.findIndex((o) => o.id === id);
+  const index = db.accounts.findIndex((o) => o._id === id);
 
   if (index > -1) {
     const existing = db.accounts[index];
     db.accounts[index] = {
       ...existing,
       ...update,
-      meta: {
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
+      _createdAt: new Date().toISOString(),
+      _updatedAt: new Date().toISOString(),
     };
   } else {
     db.accounts.push({
       ...update,
-      meta: {
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
+      _createdAt: new Date().toISOString(),
+      _updatedAt: new Date().toISOString(),
     });
   }
 
@@ -101,8 +100,7 @@ const getTransactions = (args: TransactionsApiArgs): TransactionsApiPayload => {
   if (args.query.length > 0) {
     const filters = buildFiltersFromQuery(args.query);
     for (const t of db.transactions) {
-      const isMatchQuery = transactionMatchesFilters(t, filters);
-      if (isMatchQuery) {
+      if (transactionMatchesFilters(t, filters)) {
         list.push(t);
         sum.amount += t.price.amount;
       }
@@ -147,10 +145,8 @@ const addTransactions = (newTransactions: Transaction[]): number => {
 
     updatedTransactions.push({
       ...n,
-      meta: {
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
+      _createdAt: new Date().toISOString(),
+      _updatedAt: new Date().toISOString(),
     });
     addCt += 1;
   });
