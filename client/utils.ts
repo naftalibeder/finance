@@ -38,6 +38,27 @@ export const prettyDate = (
   }
 };
 
+export const prettyTimeAgo = (s: string): string | undefined => {
+  const sec = secAgo(s);
+  if (!sec) {
+    return undefined;
+  }
+
+  const min = Math.round(sec / 60);
+  const hr = Math.round(min / 60);
+  const day = Math.round(hr / 24);
+
+  if (sec < 60) {
+    return `${sec}s`;
+  } else if (min < 60) {
+    return `${min}m`;
+  } else if (hr < 24) {
+    return `${hr}h`;
+  } else {
+    return `${day}d`;
+  }
+};
+
 export const secAgo = (s: string): number | undefined => {
   const d = new Date(s);
   if (!d) {
@@ -45,7 +66,7 @@ export const secAgo = (s: string): number | undefined => {
   }
 
   const msAgo = new Date().valueOf() - new Date(d).valueOf();
-  return msAgo / 1000;
+  return Math.round(msAgo / 1000);
 };
 
 export const datesInRange = (start: Date, end: Date): Date[] => {

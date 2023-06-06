@@ -31,7 +31,7 @@
   .container {
     display: flex;
     flex-direction: column;
-    padding: 0px 40px;
+    padding: 0px var(--gutter);
     row-gap: 12px;
   }
   .bars-holder {

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Account, ExtractionStatus, Price } from "shared";
-  import { prettyCurrency } from "../utils";
+  import { prettyCurrency, prettyTimeAgo } from "../utils";
 
   export let accounts: Account[];
   export let accountsSum: Price;
@@ -28,14 +28,6 @@
 
     {#each accounts as a}
       <div class="grid contents">
-        <!-- <div class="cell account gutter-l">
-            <Checkbox
-              active={activeAccountsDict[a._id] === true}
-              onClick={() => {
-                activeAccountsDict[a._id] = !activeAccountsDict[a._id];
-              }}
-            />
-          </div> -->
         <div class="cell account name">
           {a.display}
         </div>
@@ -44,13 +36,12 @@
           {#if a._id === extractionStatus.accountId}
             <div>...</div>
           {:else}
-            <button on:click={() => onClickExtract([a._id])}>↻</button>
+            <button class="refresh" on:click={() => onClickExtract([a._id])}
+              >↻</button
+            >
+            <div class="timestamp">{prettyTimeAgo(a._updatedAt)}</div>
           {/if}
         </div>
-        <!-- <div class="cell account timestamp">
-          {prettyDate(a.updatedAt, { includeTime: true }) ??
-            "Never updated"}
-        </div> -->
       </div>
     {/each}
   </div>
@@ -78,5 +69,21 @@
   .cell.account.price {
     grid-column-start: price;
     justify-content: flex-end;
+  }
+
+  .gutter-r {
+    opacity: 0;
+  }
+
+  .grid.contents:hover .gutter-r {
+    opacity: 0.5;
+  }
+
+  .refresh:hover {
+    opacity: 0.35;
+  }
+
+  .timestamp {
+    margin-left: 6px;
   }
 </style>
