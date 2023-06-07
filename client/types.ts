@@ -4,5 +4,6 @@ import { Transaction } from "shared";
 
 export type TransactionsByDate = {
   date: string;
+  ratioAlongRange: number;
   transactions: Transaction[];
 };

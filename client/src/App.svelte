@@ -11,13 +11,6 @@
     // TODO: Fix this error if possible.
     // @ts-ignore
   } from "shared";
-  import {
-    secAgo,
-    prettyDate,
-    prettyCurrency,
-    buildTransactionsByDateArray,
-  } from "../utils";
-  import { TransactionsByDate } from "../types";
   import TimeChart from "./TimeChart.svelte";
   import AccountsList from "./AccountsList.svelte";
   import TransactionsList from "./TransactionsList.svelte";
@@ -33,17 +26,6 @@
   let transactionsTotalCt = 0;
   let transactionsEarliestDate: string | undefined;
   let transactionsFilteredSum: Price = { amount: 0, currency: "USD" };
-
-  let transactionsByDate: TransactionsByDate[] = [];
-  let transactionsMaxCtOnDate = 0;
-  $: {
-    const res = buildTransactionsByDateArray(
-      transactions,
-      transactionsEarliestDate
-    );
-    transactionsByDate = res.byDate;
-    transactionsMaxCtOnDate = res.maxCtOnDate;
-  }
 
   let isLoading = false;
 
@@ -265,7 +247,7 @@
       </div>
     {/if}
 
-    <TimeChart {transactionsByDate} />
+    <TimeChart {transactions} {transactionsEarliestDate} />
 
     <AccountsList
       {accounts}

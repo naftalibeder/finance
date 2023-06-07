@@ -1,19 +1,91 @@
 <script lang="ts">
+  import { Transaction } from "shared";
   import { TransactionsByDate } from "../types";
-  import { prettyDate } from "../utils";
+  import { buildTransactionsByDateArray, prettyDate } from "../utils";
 
-  export let transactionsByDate: TransactionsByDate[];
+  export let transactions: Transaction[];
+  export let transactionsEarliestDate: string;
+
+  let transactionsByDate: TransactionsByDate[] = [];
+  let transactionsMaxCtOnDate = 0;
+  $: {
+    const res = buildTransactionsByDateArray(
+      transactions,
+      transactionsEarliestDate
+    );
+    transactionsByDate = res.list;
+    transactionsMaxCtOnDate = res.maxCtOnDate;
+  }
+
+  let barHoverIndex: number | undefined;
+  $: isHover = barHoverIndex !== undefined;
+
+  const onHoverMove = (evt: MouseEvent) => {
+    const target = evt.target as HTMLElement;
+    if (!target || target.tagName !== "svg") {
+      return;
+    }
+
+    const containerRect = target.getBoundingClientRect();
+    const containerPosX = containerRect.x;
+    const containerWidth = containerRect.width;
+    //@ts-ignore
+    const hoverPosX = evt.layerX - containerPosX;
+    const ratio = hoverPosX / containerWidth;
+
+    let min = 1;
+    let minIndex = 0;
+    transactionsByDate.forEach((item, i) => {
+      const distance = Math.abs(item.ratioAlongRange - ratio);
+      if (distance < min) {
+        min = distance;
+        minIndex = i;
+      }
+    });
+    barHoverIndex = minIndex;
+  };
+
+  const getBarPosXPercent = (i: number): number => {
+    return transactionsByDate[i].ratioAlongRange * 100;
+  };
+
+  const getBarHeightPercent = (i: number): number => {
+    return transactionsByDate[i].transactions.length * 10;
+  };
 </script>
 
 <div class="container">
-  <div class="bars-holder">
-    {#each transactionsByDate as item}
-      <div
-        class={`bar ${item.transactions.length === 0 ? "empty" : ""}`}
-        style={`height: ${item.transactions.length * 10}%`}
+  <svg
+    width="100%"
+    height="40"
+    on:mousemove={onHoverMove}
+    on:mouseleave={() => {
+      barHoverIndex = undefined;
+    }}
+    on:focus={() => {}}
+  >
+    {#each transactionsByDate as item, i}
+      <rect
+        x={`${getBarPosXPercent(i)}%`}
+        y={`${100 - getBarHeightPercent(i)}%`}
+        width={1}
+        height={`${getBarHeightPercent(i)}%`}
+        fill="white"
+        opacity={!isHover ? 1 : i === barHoverIndex ? 1 : 0.5}
+        style="pointer-events: none"
       />
     {/each}
-  </div>
+    {#if isHover}
+      <rect
+        x={`${getBarPosXPercent(barHoverIndex)}%`}
+        y={`${100 - getBarHeightPercent(barHoverIndex)}%`}
+        width={1}
+        height={`${getBarHeightPercent(barHoverIndex)}%`}
+        fill="white"
+        style="pointer-events: none"
+      />
+    {/if}
+  </svg>
   {#if transactionsByDate.length > 0}
     <div class="labels-holder">
       <div class="faded">
@@ -30,34 +102,16 @@
 <style>
   .container {
     display: flex;
+    flex: 1;
     flex-direction: column;
     padding: 0px var(--gutter);
-    row-gap: 12px;
   }
-  .bars-holder {
-    display: flex;
-    flex: auto;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: flex-end;
-    height: 40px;
-  }
-  .bar {
-    display: flex;
-    flex: 1;
-    max-width: 2px;
-    background-color: white;
-  }
-  .bar.empty {
-    background-color: transparent;
-  }
-  .bar:hover {
-    opacity: 0.6;
-  }
+
   .labels-holder {
     display: flex;
     flex: auto;
     flex-direction: row;
     justify-content: space-between;
+    margin-top: 12px;
   }
 </style>

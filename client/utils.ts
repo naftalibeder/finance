@@ -87,57 +87,47 @@ export const buildTransactionsByDateArray = (
   transactions: Transaction[],
   transactionsEarliestDate: string
 ): {
-  byDate: TransactionsByDate[];
+  list: TransactionsByDate[];
   maxCtOnDate: number;
 } => {
-  const byDate: TransactionsByDate[] = [
+  const entireRangeMs =
+    new Date().valueOf() - new Date(transactionsEarliestDate).valueOf();
+
+  const list: TransactionsByDate[] = [
     {
       date: transactionsEarliestDate,
+      ratioAlongRange: 0,
       transactions: [],
     },
   ];
   let maxCtOnDate = 0;
-  let latest = byDate[0];
+  let latest = list[0];
 
-  if (transactions.length > 0) {
-    for (let i = transactions.length - 1; i >= 0; i--) {
-      const t = transactions[i];
-      latest = byDate[byDate.length - 1];
+  for (let i = transactions.length - 1; i >= 0; i--) {
+    const t = transactions[i];
+    latest = list[list.length - 1];
 
-      if (t.date === latest.date) {
-        latest.transactions.push(t);
-      } else {
-        const datesUntilCurrent = datesInRange(
-          new Date(latest.date),
-          new Date(t.date)
-        );
-        for (const d of datesUntilCurrent) {
-          byDate.push({
-            date: d.toISOString(),
-            transactions: [],
-          });
-        }
-        latest = byDate[byDate.length - 1];
-        latest.transactions.push(t);
-      }
-
-      latest = byDate[byDate.length - 1];
-      if (latest.transactions.length > maxCtOnDate) {
-        maxCtOnDate = latest.transactions.length;
-      }
+    if (t.date === latest.date) {
+      latest.transactions.push(t);
+    } else {
+      const progressRangeMs =
+        new Date(t.date).valueOf() -
+        new Date(transactionsEarliestDate).valueOf();
+      list.push({
+        date: t.date,
+        ratioAlongRange: progressRangeMs / entireRangeMs,
+        transactions: [t],
+      });
+      latest = list[list.length - 1];
     }
 
-    const datesUntilNow = datesInRange(new Date(latest.date), new Date());
-    for (const d of datesUntilNow) {
-      byDate.push({
-        date: d.toISOString(),
-        transactions: [],
-      });
+    if (latest.transactions.length > maxCtOnDate) {
+      maxCtOnDate = latest.transactions.length;
     }
   }
 
   return {
-    byDate,
+    list,
     maxCtOnDate,
   };
 };
