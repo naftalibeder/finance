@@ -17,15 +17,22 @@
 
   const serverUrl = import.meta.env.VITE_SERVER_URL;
 
+  const zeroPrice: Price = {
+    amount: 0,
+    currency: "USD",
+  };
+
   let accounts: Account[] = [];
-  let accountsSum: Price = { amount: 0, currency: "USD" };
+  let accountsSum: Price = zeroPrice;
   let activeAccountsDict: Record<string, boolean> = {};
 
-  let transactions: Transaction[] = [];
+  let transactionsFiltered: Transaction[] = [];
   let transactionsFilteredCt = 0;
-  let transactionsTotalCt = 0;
-  let transactionsEarliestDate: string | undefined;
-  let transactionsFilteredSum: Price = { amount: 0, currency: "USD" };
+  let transactionsFilteredSumPrice: Price = zeroPrice;
+  let transactionsOverallCt = 0;
+  let transactionsOverallSumPrice: Price = zeroPrice;
+  let transactionsOverallMaxPrice: Price = zeroPrice;
+  let transactionsOverallEarliestDate: string | undefined;
 
   let isLoading = false;
 
@@ -110,13 +117,15 @@
         body: new URLSearchParams(args).toString(),
       });
       const payload = (await res.json()) as TransactionsApiPayload;
-      transactions = payload.data.filteredTransactions;
-      transactionsFilteredSum = payload.data.filteredSum;
-      transactionsFilteredCt = payload.data.filteredTransactions.length;
-      transactionsTotalCt = payload.data.totalCt;
-      transactionsEarliestDate = payload.data.earliestDate;
+      transactionsFiltered = payload.data.filteredTransactions;
+      transactionsFilteredCt = payload.data.filteredCt;
+      transactionsFilteredSumPrice = payload.data.filteredSumPrice;
+      transactionsOverallCt = payload.data.overallCt;
+      transactionsOverallSumPrice = payload.data.filteredSumPrice;
+      transactionsOverallMaxPrice = payload.data.overallMaxPrice;
+      transactionsOverallEarliestDate = payload.data.overallEarliestDate;
       console.log(
-        `Fetched ${transactions.length} transactions with a sum of ${transactionsFilteredSum.amount}`
+        `Fetched ${transactionsFiltered.length} transactions with a sum of ${transactionsFilteredSumPrice.amount}`
       );
     } catch (e) {
       console.log("Error fetching transactions:", e);
@@ -247,7 +256,11 @@
       </div>
     {/if}
 
-    <TimeChart {transactions} {transactionsEarliestDate} />
+    <TimeChart
+      transactions={transactionsFiltered}
+      {transactionsOverallMaxPrice}
+      {transactionsOverallEarliestDate}
+    />
 
     <AccountsList
       {accounts}
@@ -257,10 +270,10 @@
     />
 
     <TransactionsList
-      {transactions}
-      {transactionsFilteredSum}
-      transactionsFilteredCt={transactions.length}
-      {transactionsTotalCt}
+      transactions={transactionsFiltered}
+      transactionsSumPrice={transactionsFilteredSumPrice}
+      transactionsCt={transactionsFilteredCt}
+      {transactionsOverallCt}
       {query}
     />
   </div>

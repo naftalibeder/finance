@@ -10,7 +10,12 @@ import {
 } from "shared";
 import { Database } from "types";
 import { DB_PATH } from "./constants";
-import { buildFiltersFromQuery, transactionMatchesFilters } from "./utils";
+import {
+  buildFiltersFromQuery,
+  transactionMatchesFilters,
+  transactionsMaxPrice,
+  transactionsSumPrice,
+} from "./utils";
 
 const initial: Database = {
   accounts: [],
@@ -92,36 +97,33 @@ const updateAccount = (
 const getTransactions = (args: TransactionsApiArgs): TransactionsApiPayload => {
   const db = loadDatabase();
 
-  let list: Transaction[] = [];
-  let sum: Price = {
-    amount: 0,
-    currency: "USD",
+  let payload: TransactionsApiPayload["data"] = {
+    filteredTransactions: [],
+    filteredCt: 0,
+    filteredSumPrice: {
+      amount: 0,
+      currency: "USD",
+    },
+    overallCt: db.transactions.length,
+    overallSumPrice: transactionsSumPrice(db.transactions),
+    overallMaxPrice: transactionsMaxPrice(db.transactions),
+    overallEarliestDate: db.transactions[db.transactions.length - 1].date,
   };
+
   if (args.query.length > 0) {
     const filters = buildFiltersFromQuery(args.query);
     for (const t of db.transactions) {
       if (transactionMatchesFilters(t, filters)) {
-        list.push(t);
-        sum.amount += t.price.amount;
+        payload.filteredTransactions.push(t);
       }
     }
   } else {
-    list = db.transactions;
-    sum = {
-      amount: db.transactions.reduce((acc, cur) => acc + cur.price.amount, 0),
-      currency: "USD",
-    };
+    payload.filteredTransactions = db.transactions;
   }
+  payload.filteredCt = payload.filteredTransactions.length;
+  payload.filteredSumPrice = transactionsSumPrice(payload.filteredTransactions);
 
-  return {
-    data: {
-      filteredTransactions: list,
-      filteredSum: sum,
-      filteredCt: list.length,
-      totalCt: db.transactions.length,
-      earliestDate: db.transactions[db.transactions.length - 1].date,
-    },
-  };
+  return { data: payload };
 };
 
 const addTransactions = (newTransactions: Transaction[]): number => {

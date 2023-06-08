@@ -38,7 +38,7 @@ export type Transaction = {
 /** An amount of money in a specific currency. */
 export type Price = {
   amount: number;
-  currency: string;
+  currency: "USD";
 };
 
 /** User information loaded from `config.json`. */
@@ -90,9 +90,11 @@ export type TransactionsApiArgs = {
 export type TransactionsApiPayload = {
   data: {
     filteredTransactions: Transaction[];
-    filteredSum: Price;
     filteredCt: number;
-    totalCt: number;
-    earliestDate: string;
+    filteredSumPrice: Price;
+    overallCt: number;
+    overallSumPrice: Price;
+    overallMaxPrice: Price;
+    overallEarliestDate: string;
   };
 };

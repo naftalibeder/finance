@@ -1,20 +1,20 @@
 <script lang="ts">
-  import { Transaction } from "shared";
+  import { Price, Transaction } from "shared";
   import { TransactionsByDate } from "../types";
   import { buildTransactionsByDateArray, prettyDate } from "../utils";
+  import TimeChartBar from "./TimeChartBar.svelte";
 
   export let transactions: Transaction[];
-  export let transactionsEarliestDate: string;
+  export let transactionsOverallMaxPrice: Price;
+  export let transactionsOverallEarliestDate: string;
 
   let transactionsByDate: TransactionsByDate[] = [];
-  let transactionsMaxCtOnDate = 0;
   $: {
     const res = buildTransactionsByDateArray(
       transactions,
-      transactionsEarliestDate
+      transactionsOverallEarliestDate
     );
     transactionsByDate = res.list;
-    transactionsMaxCtOnDate = res.maxCtOnDate;
   }
 
   let barHoverIndex: number | undefined;
@@ -44,14 +44,6 @@
     });
     barHoverIndex = minIndex;
   };
-
-  const getBarPosXPercent = (i: number): number => {
-    return transactionsByDate[i].ratioAlongRange * 100;
-  };
-
-  const getBarHeightPercent = (i: number): number => {
-    return transactionsByDate[i].transactions.length * 10;
-  };
 </script>
 
 <div class="container">
@@ -65,26 +57,24 @@
     on:focus={() => {}}
   >
     {#each transactionsByDate as item, i}
-      <rect
-        x={`${getBarPosXPercent(i)}%`}
-        y={`${100 - getBarHeightPercent(i)}%`}
-        width={1}
-        height={`${getBarHeightPercent(i)}%`}
-        fill="white"
-        opacity={!isHover ? 1 : i === barHoverIndex ? 1 : 0.5}
-        style="pointer-events: none"
-      />
+      <TimeChartBar {item} {transactionsOverallMaxPrice} faded={isHover} />
     {/each}
     {#if isHover}
-      <rect
-        x={`${getBarPosXPercent(barHoverIndex)}%`}
-        y={`${100 - getBarHeightPercent(barHoverIndex)}%`}
-        width={1}
-        height={`${getBarHeightPercent(barHoverIndex)}%`}
-        fill="white"
-        style="pointer-events: none"
+      <TimeChartBar
+        item={transactionsByDate[barHoverIndex]}
+        {transactionsOverallMaxPrice}
+        faded={false}
       />
     {/if}
+    <line
+      x1="0%"
+      y1="50%"
+      x2="100%"
+      y2="50%"
+      stroke="white"
+      stroke-width="1"
+      opacity="0.5"
+    />
   </svg>
   {#if transactionsByDate.length > 0}
     <div class="labels-holder">

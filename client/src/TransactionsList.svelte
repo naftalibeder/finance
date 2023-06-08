@@ -3,18 +3,18 @@
   import { prettyCurrency, prettyDate, secAgo } from "../utils";
 
   export let transactions: Transaction[];
-  export let transactionsFilteredSum: Price;
-  export let transactionsFilteredCt: number;
-  export let transactionsTotalCt: number;
+  export let transactionsSumPrice: Price;
+  export let transactionsCt: number;
+  export let transactionsOverallCt: number;
   export let query: string;
 
   let transactionsSectionText = "";
   $: {
     let baseSectionText = "";
-    if (transactionsFilteredCt === transactionsTotalCt) {
-      baseSectionText = `${transactionsTotalCt} transactions`;
+    if (transactionsCt === transactionsOverallCt) {
+      baseSectionText = `${transactionsOverallCt} transactions`;
     } else {
-      baseSectionText = `${transactionsFilteredCt} of ${transactionsTotalCt} transactions`;
+      baseSectionText = `${transactionsCt} of ${transactionsOverallCt} transactions`;
     }
     if (query.length > 0) {
       transactionsSectionText = `${baseSectionText} (matching "${query}")`;
@@ -31,7 +31,7 @@
         {transactionsSectionText}
       </div>
       <div class="cell transaction-section action">
-        {prettyCurrency(transactionsFilteredSum)}
+        {prettyCurrency(transactionsSumPrice)}
       </div>
     </div>
 
