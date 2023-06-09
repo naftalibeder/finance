@@ -1,18 +1,18 @@
 <script lang="ts">
   import { Price } from "shared";
-  import { TransactionsByDate } from "../types";
+  import { TransactionDateGroup } from "../types";
 
-  export let item: TransactionsByDate;
+  export let item: TransactionDateGroup;
   export let transactionsOverallMaxPrice: Price;
   export let faded: boolean;
 
   const barWidth = 1.2;
-  $: barOpacity = faded ? 0.8 : 1;
+  $: barOpacity = faded ? 0.5 : 1;
 
   const percentFromSum = (sum: number): number => {
     const ratio = sum / transactionsOverallMaxPrice.amount;
     const absRatio = Math.abs(ratio);
-    const skewedRatio = Math.max(Math.tanh(absRatio * 10), 0.02);
+    const skewedRatio = (1.2 / (1 + Math.pow(Math.E, -absRatio)) - 0.5) * 2;
     return (skewedRatio * 100) / 2;
   };
 
@@ -39,13 +39,13 @@
 
 {#if posSum > 0}
   <rect
+    class="pos"
     id={item.date}
     x={`${item.ratioAlongRange * 100}%`}
     y={`${50 - posBarHeightPercent}%`}
     rx={barWidth / 2}
     width={barWidth}
     height={`${posBarHeightPercent}%`}
-    fill={"white"}
     opacity={barOpacity}
     style="pointer-events: none"
   />
@@ -53,14 +53,24 @@
 
 {#if negSum < 0}
   <rect
+    class="neg"
     id={item.date}
     x={`${item.ratioAlongRange * 100}%`}
     y={`50%`}
     rx={barWidth / 2}
     width={barWidth}
     height={`${negBarHeightPercent}%`}
-    fill={"#EC4856"}
     opacity={barOpacity}
     style="pointer-events: none"
   />
 {/if}
+
+<style>
+  rect.pos {
+    fill: var(--text-gray-100);
+  }
+
+  rect.neg {
+    fill: var(--text-red);
+  }
+</style>

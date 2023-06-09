@@ -1,7 +1,7 @@
 // TODO: Fix this error if possible.
 // @ts-ignore
 import { Price, Transaction } from "shared";
-import { TransactionsByDate } from "types";
+import { TransactionDateGroup } from "types";
 
 export const prettyDate = (
   o?: Date | string,
@@ -83,24 +83,20 @@ export const datesInRange = (start: Date, end: Date): Date[] => {
   return dates;
 };
 
-export const buildTransactionsByDateArray = (
+export const buildTransactionsDateGroups = (
   transactions: Transaction[],
   transactionsEarliestDate: string
-): {
-  list: TransactionsByDate[];
-  maxCtOnDate: number;
-} => {
+): TransactionDateGroup[] => {
   const entireRangeMs =
     new Date().valueOf() - new Date(transactionsEarliestDate).valueOf();
 
-  const list: TransactionsByDate[] = [
+  const list: TransactionDateGroup[] = [
     {
       date: transactionsEarliestDate,
       ratioAlongRange: 0,
       transactions: [],
     },
   ];
-  let maxCtOnDate = 0;
   let latest = list[0];
 
   for (let i = transactions.length - 1; i >= 0; i--) {
@@ -120,16 +116,9 @@ export const buildTransactionsByDateArray = (
       });
       latest = list[list.length - 1];
     }
-
-    if (latest.transactions.length > maxCtOnDate) {
-      maxCtOnDate = latest.transactions.length;
-    }
   }
 
-  return {
-    list,
-    maxCtOnDate,
-  };
+  return list;
 };
 
 export const prettyCurrency = (a: Price) => {

@@ -12,6 +12,9 @@
   -webkit-text-size-adjust: 100%;
 
   --gutter: 60px;
+
+  --text-gray-100: #e7e7e7;
+  --text-red: #ec4856;
 }
 
 div,

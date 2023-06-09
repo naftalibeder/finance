@@ -1,21 +1,24 @@
 <script lang="ts">
   import { Price, Transaction } from "shared";
-  import { TransactionsByDate } from "../types";
-  import { buildTransactionsByDateArray, prettyDate } from "../utils";
+  import { TransactionDateGroup } from "../types";
+  import { buildTransactionsDateGroups, prettyDate } from "../utils";
   import TimeChartBar from "./TimeChartBar.svelte";
+  import TimeChartInfo from "./TimeChartInfo.svelte";
 
   export let transactions: Transaction[];
   export let transactionsOverallMaxPrice: Price;
   export let transactionsOverallEarliestDate: string;
 
-  let transactionsByDate: TransactionsByDate[] = [];
+  let transactionDateGroups: TransactionDateGroup[] = [];
   $: {
-    const res = buildTransactionsByDateArray(
+    transactionDateGroups = buildTransactionsDateGroups(
       transactions,
       transactionsOverallEarliestDate
     );
-    transactionsByDate = res.list;
   }
+
+  $: earliestDate = new Date(transactionsOverallEarliestDate);
+  $: latestDate = new Date();
 
   let barHoverIndex: number | undefined;
   $: isHover = barHoverIndex !== undefined;
@@ -35,7 +38,7 @@
 
     let min = 1;
     let minIndex = 0;
-    transactionsByDate.forEach((item, i) => {
+    transactionDateGroups.forEach((item, i) => {
       const distance = Math.abs(item.ratioAlongRange - ratio);
       if (distance < min) {
         min = distance;
@@ -49,43 +52,51 @@
 <div class="container">
   <svg
     width="100%"
-    height="40"
+    height="60"
+    overflow="visible"
     on:mousemove={onHoverMove}
     on:mouseleave={() => {
       barHoverIndex = undefined;
     }}
     on:focus={() => {}}
   >
-    {#each transactionsByDate as item, i}
+    {#each transactionDateGroups as item, i}
       <TimeChartBar {item} {transactionsOverallMaxPrice} faded={isHover} />
     {/each}
     {#if isHover}
       <TimeChartBar
-        item={transactionsByDate[barHoverIndex]}
+        item={transactionDateGroups[barHoverIndex]}
         {transactionsOverallMaxPrice}
         faded={false}
       />
     {/if}
     <line
+      class="axis"
       x1="0%"
       y1="50%"
       x2="100%"
       y2="50%"
-      stroke="white"
       stroke-width="1"
       opacity="0.5"
     />
   </svg>
-  {#if transactionsByDate.length > 0}
-    <div class="labels-holder">
-      <div class="faded">
-        {prettyDate(transactionsByDate[0].date) ?? "-"}
-      </div>
-      <div class="faded">
-        {prettyDate(transactionsByDate[transactionsByDate.length - 1].date) ??
-          "-"}
-      </div>
-    </div>
+  {#if transactionDateGroups.length > 0}
+    <svg width="100%" height="60" overflow="visible">
+      {#if isHover}
+        <TimeChartInfo item={transactionDateGroups[barHoverIndex]} />
+      {:else}
+        <text class="default" x="0%" text-anchor="middle">
+          <tspan dominant-baseline="hanging">
+            {prettyDate(earliestDate) ?? "-"}
+          </tspan>
+        </text>
+        <text class="default" x="100%" text-anchor="middle">
+          <tspan dominant-baseline="hanging">
+            {prettyDate(latestDate) ?? "-"}
+          </tspan>
+        </text>
+      {/if}
+    </svg>
   {/if}
 </div>
 
@@ -97,11 +108,11 @@
     padding: 0px var(--gutter);
   }
 
-  .labels-holder {
-    display: flex;
-    flex: auto;
-    flex-direction: row;
-    justify-content: space-between;
-    margin-top: 12px;
+  line.axis {
+    stroke: var(--text-gray-100);
+  }
+
+  text.default {
+    fill: var(--text-gray-100);
   }
 </style>
