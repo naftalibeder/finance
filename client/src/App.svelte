@@ -38,8 +38,7 @@
   let isLoading = false;
 
   let extractionStatus: ExtractionStatus = {
-    status: "idle",
-    accountId: undefined,
+    accounts: {},
     mfaInfos: [],
   };
 
@@ -85,7 +84,7 @@
     await fetchTransactions();
     await fetchExtractionStatus();
 
-    if (extractionStatus.status !== "idle") {
+    if (Object.keys(extractionStatus.accounts).length > 0) {
       pollExtractionStatus();
     }
   };
@@ -151,7 +150,7 @@
       await fetchExtractionStatus();
       console.log("Extraction status:", extractionStatus);
 
-      if (extractionStatus.status === "idle") {
+      if (Object.keys(extractionStatus.accounts).length === 0) {
         clearInterval(mfaPollInterval);
         await fetchAll();
       }
@@ -160,7 +159,6 @@
 
   const onClickExtract = async (accountIds?: string[]) => {
     pollExtractionStatus();
-    extractionStatus.status = "set-up";
 
     const args = {};
     if (accountIds) {

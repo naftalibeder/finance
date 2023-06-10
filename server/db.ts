@@ -21,8 +21,7 @@ const initial: Database = {
   accounts: [],
   transactions: [],
   extractionStatus: {
-    status: "idle",
-    accountId: undefined,
+    accounts: {},
     mfaInfos: [],
   },
 };
@@ -166,9 +165,18 @@ const getExtractionStatus = (): ExtractionStatus => {
   return status;
 };
 
-const setExtractionStatus = (status: Partial<ExtractionStatus>) => {
+const setExtractionStatus = (
+  accountIds: string[],
+  status?: ExtractionStatus["accounts"][string]
+) => {
   const db = loadDatabase();
-  db.extractionStatus = { ...db.extractionStatus, ...status };
+  for (const id of accountIds) {
+    if (status) {
+      db.extractionStatus.accounts[id] = status;
+    } else {
+      delete db.extractionStatus.accounts[id];
+    }
+  }
   writeDatabase(db);
 };
 

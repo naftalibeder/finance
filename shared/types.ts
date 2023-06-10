@@ -58,8 +58,7 @@ export type MfaInfo = {
 };
 
 export type ExtractionStatus = {
-  status: "idle" | "set-up" | "run-extractor" | "wait-for-mfa" | "tear-down";
-  accountId?: string;
+  accounts: Record<string, "pending" | "in-progress">;
   mfaInfos: MfaInfo[];
 };
 

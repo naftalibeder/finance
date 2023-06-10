@@ -32,14 +32,8 @@
   $: posX = item.ratioAlongRange * 100;
 
   $: dateDisp = prettyDate(item.date);
-  $: posSumDisp = `+${prettyCurrency({
-    amount: posSum,
-    currency: "USD",
-  })} (${posCt})`;
-  $: negSumDisp = `${prettyCurrency({
-    amount: negSum,
-    currency: "USD",
-  })} (${negCt})`;
+  $: posSumDisp = `${prettyCurrency({ amount: posSum, currency: "USD" })}`;
+  $: negSumDisp = `${prettyCurrency({ amount: -negSum, currency: "USD" })}`;
 </script>
 
 <svg x={`${posX}%`} overflow="visible">
@@ -53,21 +47,30 @@
       {dateDisp}
     </tspan>
   </text>
-  <text>
-    <tspan
-      y="20"
-      text-anchor="middle"
-      dominant-baseline="hanging"
-      class="default"
-    >
-      {posSumDisp}
-    </tspan>
-  </text>
-  <text>
-    <tspan y="40" text-anchor="middle" dominant-baseline="hanging" class="red">
-      {negSumDisp}
-    </tspan>
-  </text>
+  {#each [{ isPos: true, y: 20, class: "default" }, { isPos: false, y: 40, class: "red" }] as item}
+    <text>
+      <tspan
+        dx="-50"
+        y={item.y}
+        text-anchor="start"
+        dominant-baseline="hanging"
+        class={item.class}
+      >
+        {item.isPos ? "+" : "-"}
+      </tspan>
+    </text>
+    <text>
+      <tspan
+        dx="50"
+        y={item.y}
+        text-anchor="end"
+        dominant-baseline="hanging"
+        class={item.class}
+      >
+        {item.isPos ? posSumDisp : negSumDisp}
+      </tspan>
+    </text>
+  {/each}
 </svg>
 
 <style>

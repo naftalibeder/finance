@@ -94,12 +94,12 @@
       {#if isHover}
         <TimeChartInfo item={hoverGroup} />
       {:else}
-        <text class="default" x="0%" text-anchor="start">
+        <text class="default faded" x="0%" text-anchor="start">
           <tspan dominant-baseline="hanging">
             {prettyDate(earliestDate) ?? ""}
           </tspan>
         </text>
-        <text class="default" x="100%" text-anchor="end">
+        <text class="default faded" x="100%" text-anchor="end">
           <tspan dominant-baseline="hanging">
             {prettyDate(latestDate)}
           </tspan>

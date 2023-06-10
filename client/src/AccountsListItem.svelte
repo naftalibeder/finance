@@ -3,11 +3,11 @@
   import { prettyCurrency, prettyTimeAgo, secAgo } from "../utils";
 
   export let account: Account;
-  export let isExtracting: boolean;
+  export let extractionStatus: ExtractionStatus["accounts"][string] | undefined;
   export let onClickExtract: (accountIds?: string[]) => void;
 
   $: isRecent = secAgo(account._createdAt) < 60 * 60;
-  $: statusIsHidden = !isExtracting && !isRecent;
+  $: isAlwaysVisible = extractionStatus !== undefined;
 </script>
 
 <div class="grid contents">
@@ -17,9 +17,9 @@
   <div class={`cell account price ${account.price.amount < 0 ? "neg" : ""}`}>
     {prettyCurrency(account.price)}
   </div>
-  <div class={`cell account gutter-r ${statusIsHidden ? "hidden" : ""}`}>
-    {#if isExtracting}
-      <div>...</div>
+  <div class={`cell account gutter-r ${!isAlwaysVisible ? "hidden" : ""}`}>
+    {#if extractionStatus}
+      <div>•</div>
     {:else}
       <button class="refresh" on:click={() => onClickExtract([account._id])}>
         ↻

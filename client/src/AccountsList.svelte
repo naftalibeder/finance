@@ -7,6 +7,8 @@
   export let accountsSum: Price;
   export let extractionStatus: ExtractionStatus;
   export let onClickExtract: (accountIds?: string[]) => void;
+
+  $: anyIsActive = Object.keys(extractionStatus.accounts).length > 0;
 </script>
 
 <div class="section">
@@ -19,9 +21,7 @@
         {prettyCurrency(accountsSum)}
       </div>
       <div class="cell account gutter-r">
-        {#if extractionStatus.accountId}
-          <div>...</div>
-        {:else}
+        {#if !anyIsActive}
           <button on:click={() => onClickExtract()}>↻</button>
         {/if}
       </div>
@@ -30,7 +30,7 @@
     {#each accounts as a}
       <AccountsListItem
         account={a}
-        isExtracting={a._id === extractionStatus.accountId}
+        extractionStatus={extractionStatus.accounts[a._id]}
         {onClickExtract}
       />
     {/each}

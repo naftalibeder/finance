@@ -55,9 +55,7 @@ const runExtractors = async (accountIds?: string[]) => {
 
   let totalFoundCt = 0;
   let totalAddCt = 0;
-
   let startTime = new Date();
-  db.setExtractionStatus({ status: "set-up" });
 
   const configStr = fs.readFileSync(CONFIG_PATH, { encoding: "utf-8" });
   const config = JSON.parse(configStr) as Config;
@@ -74,6 +72,11 @@ const runExtractors = async (accountIds?: string[]) => {
   }
   console.log(`Preparing extraction for ${accounts.length} accounts`);
 
+  db.setExtractionStatus(
+    accounts.map((o) => o._id),
+    "pending"
+  );
+
   const [browser, browserContext] = await setUp();
 
   for (const account of accounts) {
@@ -89,17 +92,7 @@ const runExtractors = async (accountIds?: string[]) => {
     const page = await browserContext.newPage();
     page.setViewportSize({ width: 1948, height: 955 });
 
-    // page.on("close", (e) => console.log("close"));
-    // page.on("domcontentloaded", (e) => console.log("domcontentloaded"));
-    // page.on("frameattached", (e) => console.log("frameattached"));
-    // page.on("framedetached", (e) => console.log("framedetached"));
-    // page.on("framenavigated", (e) => console.log("framenavigated"));
-    // page.on("load", (e) => console.log("load"));
-
-    db.setExtractionStatus({
-      status: "run-extractor",
-      accountId: account._id,
-    });
+    db.setExtractionStatus([account._id], "in-progress");
 
     let accountValue: Price | undefined;
     let transactions: Transaction[] = [];
@@ -112,15 +105,7 @@ const runExtractors = async (accountIds?: string[]) => {
         page,
         tmpRunDir,
         getMfaCode: async (): Promise<string> => {
-          const code = await waitForMfaCode(
-            account.bankId,
-            () => db.setExtractionStatus({ status: "wait-for-mfa" }),
-            log
-          );
-          db.setExtractionStatus({
-            status: "run-extractor",
-            accountId: account._id,
-          });
+          const code = await waitForMfaCode(account.bankId, () => {}, log);
           return code;
         },
         log,
@@ -147,23 +132,18 @@ const runExtractors = async (accountIds?: string[]) => {
     totalAddCt += addCt;
     log(`Added ${addCt} new of ${foundCt} found transactions`);
 
-    db.setExtractionStatus({
-      status: "idle",
-      accountId: undefined,
-    });
+    db.setExtractionStatus([account._id], undefined);
 
     await browserContext.storageState({ path: BROWSER_CONTEXT_PATH });
     await page.close();
   }
 
-  db.setExtractionStatus({ status: "tear-down" });
   await tearDown(browser, browserContext);
 
   const deltaTime = Date.now() - startTime.valueOf();
   console.log(`Completed extraction across ${accounts.length} accounts`);
   console.log(`Added ${totalAddCt} new of ${totalFoundCt} found transactions`);
   console.log(`Finished in ${prettyDuration(deltaTime)}`);
-  db.setExtractionStatus({ status: "idle" });
 };
 
 /**
