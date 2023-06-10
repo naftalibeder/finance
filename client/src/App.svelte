@@ -14,6 +14,7 @@
   import TimeChart from "./TimeChart.svelte";
   import AccountsList from "./AccountsList.svelte";
   import TransactionsList from "./TransactionsList.svelte";
+  import { TransactionDateGroup } from "../types";
 
   const serverUrl = import.meta.env.VITE_SERVER_URL;
 
@@ -67,6 +68,8 @@
     query;
     onChangeQuery();
   }
+
+  let hoverGroup: TransactionDateGroup | undefined;
 
   let mfaPollInterval: NodeJS.Timer | undefined;
   let isSendingMfaCode = false;
@@ -150,6 +153,7 @@
 
       if (extractionStatus.status === "idle") {
         clearInterval(mfaPollInterval);
+        await fetchAll();
       }
     }, 1000);
   };
@@ -260,6 +264,9 @@
       transactions={transactionsFiltered}
       {transactionsOverallMaxPrice}
       {transactionsOverallEarliestDate}
+      onHoverGroup={(group) => {
+        hoverGroup = group;
+      }}
     />
 
     <AccountsList
@@ -274,6 +281,7 @@
       transactionsSumPrice={transactionsFilteredSumPrice}
       transactionsCt={transactionsFilteredCt}
       {transactionsOverallCt}
+      activeGroup={hoverGroup}
       {query}
     />
   </div>

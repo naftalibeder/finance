@@ -7,14 +7,14 @@ import { randomUUID } from "crypto";
 
 export const parseTransactions = async (
   transactionData: string,
-  configAccount: Account,
+  account: Account,
   extractor: Extractor
 ): Promise<{ transactions: Transaction[]; skipCt: number }> => {
   let skipCt = 0;
 
-  const columnMap = extractor.getColumnMap(configAccount.kind);
+  const columnMap = extractor.getColumnMap(account.kind);
   if (!columnMap) {
-    throw "Column map not provided";
+    throw `Column map not provided for account kind ${account.kind}`;
   }
 
   const transactions = await new Promise<Transaction[]>((res, rej) => {
@@ -26,7 +26,7 @@ export const parseTransactions = async (
     parser.on("readable", () => {
       let row: string[];
       while ((row = parser.read()) !== null) {
-        const t = buildTransaction(row, configAccount, columnMap);
+        const t = buildTransaction(row, account, columnMap);
         if (!t) {
           skipCt += 1;
           continue;
@@ -49,7 +49,7 @@ export const parseTransactions = async (
 
 const buildTransaction = (
   row: string[],
-  configAccount: Account,
+  account: Account,
   columnMap: ExtractorColumnMap
 ): Transaction | undefined => {
   const val = (i?: number) => (i !== undefined ? row[i] ?? "" : "");
@@ -99,7 +99,7 @@ const buildTransaction = (
     _updatedAt: new Date().toISOString(),
     date: dateStr,
     postDate: postDateStr,
-    accountId: configAccount._id,
+    accountId: account._id,
     payee: rowNorm.payee,
     price,
     type: rowNorm.type,

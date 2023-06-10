@@ -17,7 +17,7 @@ class ChaseBankExtractor implements Extractor {
 
   loadStartPage = async (args: ExtractorFuncArgs) => {
     const { extractor, account, credentials, page } = args;
-    await page.goto("https://chase.com", { timeout: 6000 });
+    await page.goto("https://chase.com", { timeout: 12000 });
   };
 
   enterCredentials = async (args: ExtractorFuncArgs) => {
@@ -25,7 +25,7 @@ class ChaseBankExtractor implements Extractor {
 
     let loc: Locator;
 
-    const loginFrame = page.frameLocator("#logonbox");
+    const loginFrame = page.frameLocator("#actual-login-iframe");
 
     // Sometimes instead of a login form, the page loads a button leading to the
     // login form. This button is inaccessible (?) programmatically, but reloading
@@ -34,7 +34,7 @@ class ChaseBankExtractor implements Extractor {
       log("Waiting for login page");
       try {
         loc = loginFrame.locator("#userId-text-input-field");
-        await loc.waitFor({ state: "attached", timeout: 6000 });
+        await loc.waitFor({ state: "attached", timeout: 10000 });
       } catch (e) {
         log("Could not load login page; reloading");
         page.reload();

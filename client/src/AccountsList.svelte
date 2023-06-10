@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Account, ExtractionStatus, Price } from "shared";
-  import { prettyCurrency, prettyTimeAgo } from "../utils";
+  import { prettyCurrency } from "../utils";
+  import AccountsListItem from "./AccountsListItem.svelte";
 
   export let accounts: Account[];
   export let accountsSum: Price;
@@ -27,22 +28,11 @@
     </div>
 
     {#each accounts as a}
-      <div class="grid contents">
-        <div class="cell account name">
-          {a.display}
-        </div>
-        <div class="cell account price">{prettyCurrency(a.price)}</div>
-        <div class="cell account gutter-r">
-          {#if a._id === extractionStatus.accountId}
-            <div>...</div>
-          {:else}
-            <button class="refresh" on:click={() => onClickExtract([a._id])}
-              >↻</button
-            >
-            <div class="timestamp">{prettyTimeAgo(a._updatedAt)}</div>
-          {/if}
-        </div>
-      </div>
+      <AccountsListItem
+        account={a}
+        isExtracting={a._id === extractionStatus.accountId}
+        {onClickExtract}
+      />
     {/each}
   </div>
 </div>
@@ -62,28 +52,11 @@
     justify-content: flex-end;
   }
 
-  .cell.account.name {
-    grid-column-start: name;
-  }
-
-  .cell.account.price {
-    grid-column-start: price;
-    justify-content: flex-end;
-  }
-
   .gutter-r {
     opacity: 0;
   }
 
   .grid.contents:hover .gutter-r {
     opacity: 0.5;
-  }
-
-  .refresh:hover {
-    opacity: 0.35;
-  }
-
-  .timestamp {
-    margin-left: 6px;
   }
 </style>

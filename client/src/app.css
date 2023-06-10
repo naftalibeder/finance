@@ -14,7 +14,8 @@
   --gutter: 60px;
 
   --text-gray-100: #e7e7e7;
-  --text-red: #ec4856;
+  --text-red: #ff6d94;
+  --text-blue: #90cbff;
 }
 
 div,
@@ -127,10 +128,6 @@ button.text:hover {
 
 .grid.contents:hover .cell {
   opacity: 0.5;
-}
-
-.grid.contents.recent {
-  color: #90cbff;
 }
 
 .grid.contents.tall > .cell {

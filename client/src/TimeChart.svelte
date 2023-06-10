@@ -8,6 +8,7 @@
   export let transactions: Transaction[];
   export let transactionsOverallMaxPrice: Price;
   export let transactionsOverallEarliestDate: string;
+  export let onHoverGroup: (group?: TransactionDateGroup) => void;
 
   let transactionDateGroups: TransactionDateGroup[] = [];
   $: {
@@ -17,15 +18,17 @@
     );
   }
 
-  $: earliestDate = new Date(transactionsOverallEarliestDate);
-  $: latestDate = new Date();
+  $: earliestDate = transactionsOverallEarliestDate;
+  $: latestDate = new Date().toISOString();
 
   let barHoverIndex: number | undefined;
+  $: hoverGroup = transactionDateGroups[barHoverIndex] ?? undefined;
   $: isHover = barHoverIndex !== undefined;
 
   const onHoverMove = (evt: MouseEvent) => {
     const target = evt.target as HTMLElement;
     if (!target || target.tagName !== "svg") {
+      onHoverGroup(undefined);
       return;
     }
 
@@ -46,6 +49,12 @@
       }
     });
     barHoverIndex = minIndex;
+    onHoverGroup(transactionDateGroups[barHoverIndex]);
+  };
+
+  const onHoverLeave = (evt: MouseEvent) => {
+    barHoverIndex = undefined;
+    onHoverGroup(undefined);
   };
 </script>
 
@@ -55,17 +64,16 @@
     height="60"
     overflow="visible"
     on:mousemove={onHoverMove}
-    on:mouseleave={() => {
-      barHoverIndex = undefined;
-    }}
+    on:mouseout={onHoverLeave}
     on:focus={() => {}}
+    on:blur={() => {}}
   >
     {#each transactionDateGroups as item, i}
       <TimeChartBar {item} {transactionsOverallMaxPrice} faded={isHover} />
     {/each}
     {#if isHover}
       <TimeChartBar
-        item={transactionDateGroups[barHoverIndex]}
+        item={hoverGroup}
         {transactionsOverallMaxPrice}
         faded={false}
       />
@@ -78,21 +86,22 @@
       y2="50%"
       stroke-width="1"
       opacity="0.5"
+      pointer-events="none"
     />
   </svg>
   {#if transactionDateGroups.length > 0}
-    <svg width="100%" height="60" overflow="visible">
+    <svg width="100%" height="20" overflow="visible">
       {#if isHover}
-        <TimeChartInfo item={transactionDateGroups[barHoverIndex]} />
+        <TimeChartInfo item={hoverGroup} />
       {:else}
-        <text class="default" x="0%" text-anchor="middle">
+        <text class="default" x="0%" text-anchor="start">
           <tspan dominant-baseline="hanging">
-            {prettyDate(earliestDate) ?? "-"}
+            {prettyDate(earliestDate) ?? ""}
           </tspan>
         </text>
-        <text class="default" x="100%" text-anchor="middle">
+        <text class="default" x="100%" text-anchor="end">
           <tspan dominant-baseline="hanging">
-            {prettyDate(latestDate) ?? "-"}
+            {prettyDate(latestDate)}
           </tspan>
         </text>
       {/if}
