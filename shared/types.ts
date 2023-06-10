@@ -67,13 +67,23 @@ export interface TextFilter {
   text: string;
 }
 
-export interface PriceFilter {
-  readonly type: "price";
-  operator: "lt" | "gt" | "approx" | "between";
-  prices: Price[];
+export type ComparisonOperator = "lt" | "gt" | "eq" | "approx";
+
+export interface ComparisonFilter<T> {
+  readonly type: "comparison";
+  operator: ComparisonOperator;
+  value: T;
 }
 
-export type Filter = TextFilter | PriceFilter;
+export interface DateFilter extends ComparisonFilter<Date> {
+  readonly valueType: "date";
+}
+
+export interface PriceFilter extends ComparisonFilter<Price> {
+  readonly valueType: "price";
+}
+
+export type Filter = TextFilter | PriceFilter | DateFilter;
 
 export type AccountsApiPayload = {
   data: {
