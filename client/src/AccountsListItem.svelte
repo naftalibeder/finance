@@ -6,7 +6,6 @@
   export let extractionStatus: ExtractionStatus["accounts"][string] | undefined;
   export let onClickExtract: (accountIds?: string[]) => void;
 
-  $: isRecent = secAgo(account._createdAt) < 60 * 60;
   $: isAlwaysVisible = extractionStatus !== undefined;
 </script>
 

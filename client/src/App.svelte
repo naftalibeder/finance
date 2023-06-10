@@ -25,7 +25,6 @@
 
   let accounts: Account[] = [];
   let accountsSum: Price = zeroPrice;
-  let activeAccountsDict: Record<string, boolean> = {};
 
   let transactionsFiltered: Transaction[] = [];
   let transactionsFilteredCt = 0;
@@ -96,11 +95,6 @@
       });
       const payload = (await res.json()) as AccountsApiPayload;
       accounts = payload.data.accounts;
-      accounts.forEach((o) => {
-        if (activeAccountsDict[o._id] === undefined) {
-          activeAccountsDict[o._id] = true;
-        }
-      });
       accountsSum = payload.data.sum;
       console.log(`Fetched ${accounts.length} accounts`);
     } catch (e) {
@@ -230,16 +224,16 @@
     </div>
 
     {#if extractionStatus.mfaInfos.length > 0}
-      <div class="section">
+      <div class="section" style="padding: 0px var(--gutter)">
         <div class="row">
           <p><b>Code needed</b></p>
         </div>
         {#each extractionStatus.mfaInfos as mfaInfo}
-          <div class="row">
+          <div class="row" style="justify-content: flex-start">
             <label for={mfaInfo.bankId}>{mfaInfo.bankId}</label>
             <input
               id={mfaInfo.bankId}
-              placeholder="Enter code"
+              placeholder={isSendingMfaCode ? "Sending..." : "Enter code"}
               disabled={isSendingMfaCode}
             />
             <button
