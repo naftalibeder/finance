@@ -11,11 +11,11 @@ let query = "";
 
 const transaction: Transaction = {
   _id: randomUUID(),
-  _createdAt: new Date().toISOString(),
-  _updatedAt: new Date().toISOString(),
+  _createdAt: new Date(2011, 2, 3).toISOString(),
+  _updatedAt: new Date(2012, 4, 5).toISOString(),
   accountId: "test-id",
-  date: new Date().toISOString(),
-  postDate: new Date().toISOString(),
+  date: new Date(2011, 2, 3).toISOString(),
+  postDate: new Date(2011, 2, 3).toISOString(),
   payee: "DAILYGRINDCOFFEE",
   description: "",
   type: "debit",
@@ -38,7 +38,7 @@ describe("filter transactions", () => {
   });
 
   it("price comparison", () => {
-    let query = "coffee <15";
+    query = "coffee <15";
     if (!matchesQuery(transaction, query)) {
       throw new Error(`did not find desired match for ${query}`);
     }
@@ -48,9 +48,26 @@ describe("filter transactions", () => {
       throw new Error(`found illegal match for ${query}`);
     }
 
-    query = "14.20-15";
-    if (matchesQuery(transaction, query)) {
+    query = "14.10-15";
+    if (!matchesQuery(transaction, query)) {
       throw new Error(`did not find desired match for ${query}`);
+    }
+
+    query = "14.90-15";
+    if (matchesQuery(transaction, query)) {
+      throw new Error(`found illegal match for ${query}`);
+    }
+  });
+
+  it("date comparison", () => {
+    query = "<2012/03";
+    if (!matchesQuery(transaction, query)) {
+      throw new Error(`did not find desired match for ${query}`);
+    }
+
+    query = ">2012/03";
+    if (matchesQuery(transaction, query)) {
+      throw new Error(`found illegal match for ${query}`);
     }
   });
 });

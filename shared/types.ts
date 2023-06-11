@@ -67,7 +67,7 @@ export interface TextFilter {
   text: string;
 }
 
-export type ComparisonOperator = "lt" | "gt" | "eq" | "approx";
+export type ComparisonOperator = "lt" | "lte" | "gt" | "gte" | "eq";
 
 export interface ComparisonFilter<T> {
   readonly type: "comparison";
