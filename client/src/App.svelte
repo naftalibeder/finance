@@ -15,6 +15,7 @@
   import AccountsList from "./AccountsList.svelte";
   import TransactionsList from "./TransactionsList.svelte";
   import { TransactionDateGroup } from "../types";
+  import MfaInputList from "./MfaInputList.svelte";
 
   const serverUrl = import.meta.env.VITE_SERVER_URL;
 
@@ -68,9 +69,7 @@
   }
 
   let hoverGroup: TransactionDateGroup | undefined;
-
-  let mfaPollInterval: NodeJS.Timer | undefined;
-  let isSendingMfaCode = false;
+  let extractionStatusPollInterval: NodeJS.Timer | undefined;
 
   onMount(async () => {
     isLoading = true;
@@ -140,17 +139,31 @@
   };
 
   const pollExtractionStatus = () => {
-    mfaPollInterval = setInterval(async () => {
+    extractionStatusPollInterval = setInterval(async () => {
       await fetchExtractionStatus();
       console.log("Extraction status:", extractionStatus);
 
       if (Object.keys(extractionStatus.accounts).length === 0) {
-        clearInterval(mfaPollInterval);
+        clearInterval(extractionStatusPollInterval);
         await fetchAll();
       }
     }, 1000);
   };
 
+  const onClickSendMfaCode = async (bankId: string, code: string) => {
+    try {
+      const data = { bankId, code };
+      await fetch(`${serverUrl}/mfa`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams(data).toString(),
+      });
+    } catch (e) {
+      console.log("Error sending mfa code:", e);
+    }
+  };
   const onClickExtract = async (accountIds?: string[]) => {
     pollExtractionStatus();
 
@@ -165,25 +178,6 @@
       },
       body: new URLSearchParams(args).toString(),
     });
-  };
-
-  const onClickSendMfaCode = async (bankId: string, code: string) => {
-    isSendingMfaCode = true;
-
-    try {
-      const data = { bankId, code };
-      const res = await fetch(`${serverUrl}/mfa`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams(data).toString(),
-      });
-    } catch (e) {
-      console.log("Error sending mfa code:", e);
-    }
-
-    isSendingMfaCode = false;
   };
 
   const onChangeQuery = async () => {
@@ -224,32 +218,10 @@
     </div>
 
     {#if extractionStatus.mfaInfos.length > 0}
-      <div class="section" style="padding: 0px var(--gutter)">
-        <div class="row">
-          <p><b>Code needed</b></p>
-        </div>
-        {#each extractionStatus.mfaInfos as mfaInfo}
-          <div class="row" style="justify-content: flex-start">
-            <label for={mfaInfo.bankId}>{mfaInfo.bankId}</label>
-            <input
-              id={mfaInfo.bankId}
-              placeholder={isSendingMfaCode ? "Sending..." : "Enter code"}
-              disabled={isSendingMfaCode}
-            />
-            <button
-              class="outline"
-              on:click={(evt) => {
-                // @ts-ignore
-                const code = document.getElementById(mfaInfo.bankId).value;
-                onClickSendMfaCode(mfaInfo.bankId, code);
-              }}
-              disabled={isSendingMfaCode}
-            >
-              Send code
-            </button>
-          </div>
-        {/each}
-      </div>
+      <MfaInputList
+        mfaInfos={extractionStatus.mfaInfos}
+        onClickSend={onClickSendMfaCode}
+      />
     {/if}
 
     <TimeChart
