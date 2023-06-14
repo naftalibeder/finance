@@ -47,7 +47,7 @@
   }
 
   .outline-box {
-    outline: var(--text-red) 2px solid;
+    outline: var(--text-red) 1px solid;
     outline-offset: 12px;
   }
 

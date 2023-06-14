@@ -13,7 +13,7 @@ const transaction: Transaction = {
   _id: randomUUID(),
   _createdAt: new Date(2011, 2, 3).toISOString(),
   _updatedAt: new Date(2012, 4, 5).toISOString(),
-  accountId: "test-id",
+  accountId: randomUUID(),
   date: new Date(2011, 2, 3).toISOString(),
   postDate: new Date(2011, 2, 3).toISOString(),
   payee: "DAILYGRINDCOFFEE",

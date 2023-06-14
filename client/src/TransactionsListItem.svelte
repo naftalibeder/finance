@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { Transaction } from "shared";
+  import { Account, Transaction } from "shared";
   import { prettyCurrency, prettyDate, secAgo } from "../utils";
 
   export let transaction: Transaction;
+  export let account: Account;
 
   $: isRecent = secAgo(transaction._createdAt) < 60 * 60;
 </script>
@@ -11,7 +12,7 @@
   <div class="cell transaction date">
     {prettyDate(transaction.date, { includeTime: false })}
   </div>
-  <div class="cell transaction account">{transaction.accountId}</div>
+  <div class="cell transaction account">{account.display}</div>
   <div class="cell transaction payee">{transaction.payee}</div>
   <div class="cell transaction description">{transaction.description}</div>
   <div class="cell transaction type">{transaction.type}</div>

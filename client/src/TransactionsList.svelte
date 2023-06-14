@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { Transaction, Price } from "shared";
+  import { UUID } from "crypto";
+  import { Transaction, Price, Account } from "shared";
   import { prettyCurrency } from "../utils";
   import TransactionsListItem from "./TransactionsListItem.svelte";
   import { TransactionDateGroup } from "../types";
@@ -10,6 +11,7 @@
   export let transactionsOverallCt: number;
   export let activeGroup: TransactionDateGroup | undefined;
   export let query: string;
+  export let accountsDict: Record<UUID, Account>;
 
   const limit = 200;
 
@@ -78,11 +80,17 @@
 
     {#if activeGroup}
       {#each activeGroup.transactions as t}
-        <TransactionsListItem transaction={t} />
+        <TransactionsListItem
+          transaction={t}
+          account={accountsDict[t.accountId]}
+        />
       {/each}
     {:else}
       {#each transactions.slice(0, limit) as t}
-        <TransactionsListItem transaction={t} />
+        <TransactionsListItem
+          transaction={t}
+          account={accountsDict[t.accountId]}
+        />
       {/each}
     {/if}
   </div>

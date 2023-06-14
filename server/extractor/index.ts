@@ -1,4 +1,5 @@
 import fs from "fs";
+import { UUID } from "crypto";
 import {
   Browser,
   BrowserContext,
@@ -47,97 +48,39 @@ const setUp = async (): Promise<[Browser, BrowserContext]> => {
 
 /**
  * Extracts the current account value and all available transactions for every
- * active account listed in the config file, and writes info to the database.
+ * provided account and writes that info to the database.
  */
-const runExtractors = async (accountIds?: string[]) => {
-  const tmpRunDir = `${EXTRACTIONS_PATH}/${new Date()}`;
+const runAccounts = async (accountIds?: UUID[]) => {
+  const tmpRunDir = `${EXTRACTIONS_PATH}/${new Date().toISOString()}`;
   fs.mkdirSync(tmpRunDir, { recursive: true });
 
   let totalFoundCt = 0;
   let totalAddCt = 0;
   let startTime = new Date();
 
-  const configStr = fs.readFileSync(CONFIG_PATH, { encoding: "utf-8" });
-  const config = JSON.parse(configStr) as Config;
-
   const allAccounts = db.getAccounts();
-
   let accounts: Account[];
   if (accountIds && accountIds.length > 0) {
-    accounts = allAccounts.data.accounts.filter((o) =>
-      accountIds.includes(o._id)
-    );
+    accounts = allAccounts.accounts.filter((o) => {
+      return accountIds.includes(o._id) && !o._pending;
+    });
   } else {
-    accounts = allAccounts.data.accounts;
+    accounts = allAccounts.accounts;
   }
   console.log(`Preparing extraction for ${accounts.length} accounts`);
-
   db.setExtractionStatus(
     accounts.map((o) => o._id),
     "pending"
   );
 
   const [browser, browserContext] = await setUp();
-
   for (const account of accounts) {
-    const log: ExtractorFuncArgs["log"] = (message?: any, ...params: any[]) => {
-      console.log(`${account.bankId} | ${account._id} | ${message}`, ...params);
-    };
-
-    log(`Starting extraction`);
-
-    const extractor = extractorsDict[account.bankId];
-    const credentials = config.credentials[account.bankId];
-
-    const page = await browserContext.newPage();
-    page.setViewportSize({ width: 1948, height: 955 });
-
-    db.setExtractionStatus([account._id], "in-progress");
-
-    let accountValue: Price | undefined;
-    let transactions: Transaction[] = [];
-
-    try {
-      const resp = await runExtractor({
-        extractor,
-        account,
-        credentials,
-        page,
-        tmpRunDir,
-        getMfaCode: async (): Promise<string> => {
-          const code = await waitForMfaCode(account.bankId, () => {}, log);
-          return code;
-        },
-        log,
-      });
-      accountValue = resp.accountValue;
-      transactions = resp.transactions;
-    } catch (e) {
-      log(`Error running extractor: ${e}`);
-      db.deleteMfaInfo(account.bankId);
-      await takeErrorScreenshot(page, tmpRunDir);
-      await page.close();
-      continue;
-    }
-
-    db.updateAccount(account._id, {
-      ...account,
-      price: accountValue,
-    });
-    log(`Updated account value: ${accountValue.amount}`);
-
-    const foundCt = transactions.length;
-    totalFoundCt += foundCt;
-    const addCt = db.addTransactions(transactions);
-    totalAddCt += addCt;
-    log(`Added ${addCt} new of ${foundCt} found transactions`);
-
-    db.setExtractionStatus([account._id], undefined);
-
-    await browserContext.storageState({ path: BROWSER_CONTEXT_PATH });
-    await page.close();
+    const { foundCt, addCt } = await runAccount(
+      account,
+      tmpRunDir,
+      browserContext
+    );
   }
-
   await tearDown(browser, browserContext);
 
   const deltaTime = Date.now() - startTime.valueOf();
@@ -146,11 +89,84 @@ const runExtractors = async (accountIds?: string[]) => {
   console.log(`Finished in ${prettyDuration(deltaTime)}`);
 };
 
+const runAccount = async (
+  account: Account,
+  tmpRunDir: string,
+  browserContext: BrowserContext
+): Promise<{ foundCt: number; addCt: number }> => {
+  const log: ExtractorFuncArgs["log"] = (message?: any, ...params: any[]) => {
+    const tag = `${account.bankId} | ${account.display} | ${message}`;
+    console.log(tag, ...params);
+  };
+
+  const page = await browserContext.newPage();
+  page.setViewportSize({ width: 1948, height: 955 });
+
+  const configStr = fs.readFileSync(CONFIG_PATH, { encoding: "utf-8" });
+  const config = JSON.parse(configStr) as Config;
+
+  log(`Starting extraction`);
+  db.setExtractionStatus([account._id], "in-progress");
+
+  const extractor = extractorsDict[account.bankId];
+  const credentials = config.credentials[account.bankId];
+
+  let accountValue: Price | undefined;
+  let transactions: Transaction[] = [];
+  let singleIterFoundCt = 0;
+  let singleIterAddCt = 0;
+
+  try {
+    const resp = await getAccountData({
+      extractor,
+      account,
+      credentials,
+      page,
+      tmpRunDir,
+      getMfaCode: async (): Promise<string> => {
+        const code = await waitForMfaCode(account.bankId, () => {}, log);
+        return code;
+      },
+      log,
+    });
+    accountValue = resp.accountValue;
+    transactions = resp.transactions;
+  } catch (e) {
+    log(`Error running extractor: ${e}`);
+    await takeErrorScreenshot(page, tmpRunDir);
+  }
+
+  if (accountValue !== undefined) {
+    db.updateAccount(account._id, {
+      ...account,
+      price: accountValue,
+    });
+    log(`Updated account value: ${accountValue.amount}`);
+  }
+
+  if (transactions.length > 0) {
+    singleIterFoundCt = transactions.length;
+    const addCt = db.addTransactions(transactions);
+    singleIterAddCt = addCt;
+    log(`Added ${addCt} new of ${singleIterFoundCt} found transactions`);
+  }
+
+  db.deleteMfaInfo(account.bankId);
+  db.setExtractionStatus([account._id], undefined);
+  await browserContext.storageState({ path: BROWSER_CONTEXT_PATH });
+  await page.close();
+
+  return {
+    foundCt: singleIterFoundCt,
+    addCt: singleIterAddCt,
+  };
+};
+
 /**
  * Extracts the current account value and all available transactions for a
  * specific account.
  */
-export const runExtractor = async (
+export const getAccountData = async (
   args: ExtractorFuncArgs
 ): Promise<{
   accountValue: Price;
@@ -315,4 +331,4 @@ const takeErrorScreenshot = async (browserPage: Page, tmpRunDir: string) => {
   });
 };
 
-export default { runExtractors };
+export default { runAccounts };

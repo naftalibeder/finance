@@ -1,12 +1,10 @@
 import fs from "fs";
 import {
   Account,
-  AccountsApiPayload,
   ExtractionStatus,
   Price,
   Transaction,
-  TransactionsApiArgs,
-  TransactionsApiPayload,
+  GetTransactionsApiPayload,
 } from "shared";
 import { Database } from "types";
 import { DB_PATH } from "./constants";
@@ -16,6 +14,7 @@ import {
   transactionsMaxPrice,
   transactionsSumPrice,
 } from "./utils";
+import { UUID, randomUUID } from "crypto";
 
 const initial: Database = {
   accounts: [],
@@ -41,7 +40,7 @@ const writeDatabase = (db: Database) => {
   fs.writeFileSync(DB_PATH, dbStrUpdated, { encoding: "utf-8" });
 };
 
-const getAccounts = (): AccountsApiPayload => {
+const getAccounts = (): { accounts: Account[]; sum: Price } => {
   const db = loadDatabase();
   const accounts = db.accounts;
 
@@ -54,10 +53,8 @@ const getAccounts = (): AccountsApiPayload => {
   }
 
   return {
-    data: {
-      accounts,
-      sum,
-    },
+    accounts,
+    sum,
   };
 };
 
@@ -67,36 +64,58 @@ const getAccount = (id: string): Account | undefined => {
   return account;
 };
 
-const updateAccount = (
-  id: string,
-  update: Omit<Account, "_createdAt" | "_updatedAt">
-) => {
+const createAccount = (): { account: Account } => {
   const db = loadDatabase();
-  const index = db.accounts.findIndex((o) => o._id === id);
 
-  if (index > -1) {
-    const existing = db.accounts[index];
-    db.accounts[index] = {
-      ...existing,
-      ...update,
-      _createdAt: new Date().toISOString(),
-      _updatedAt: new Date().toISOString(),
-    };
-  } else {
-    db.accounts.push({
-      ...update,
-      _createdAt: new Date().toISOString(),
-      _updatedAt: new Date().toISOString(),
-    });
-  }
+  const account: Account = {
+    _id: randomUUID(),
+    _pending: true,
+    _createdAt: new Date().toISOString(),
+    _updatedAt: new Date().toISOString(),
+    bankId: "",
+    display: "",
+    number: "",
+    kind: "checking",
+    type: "assets",
+    price: {
+      amount: 0,
+      currency: "USD",
+    },
+  };
+  db.accounts.push(account);
 
   writeDatabase(db);
+  return { account };
 };
 
-const getTransactions = (args: TransactionsApiArgs): TransactionsApiPayload => {
+const updateAccount = (
+  id: UUID,
+  update: Partial<Omit<Account, "_createdAt" | "_updatedAt">>
+): { account?: Account } => {
   const db = loadDatabase();
 
-  let payload: TransactionsApiPayload["data"] = {
+  const index = db.accounts.findIndex((o) => o._id === id);
+  if (index === -1) {
+    return { account: undefined };
+  }
+
+  const existing = db.accounts[index];
+  const next = {
+    ...existing,
+    ...update,
+    _createdAt: existing._createdAt,
+    _updatedAt: update.price ? new Date().toISOString() : existing._updatedAt,
+  };
+  db.accounts[index] = next;
+
+  writeDatabase(db);
+  return { account: next };
+};
+
+const getTransactions = (query: string): GetTransactionsApiPayload["data"] => {
+  const db = loadDatabase();
+
+  let payload: GetTransactionsApiPayload["data"] = {
     filteredTransactions: [],
     filteredCt: 0,
     filteredSumPrice: {
@@ -109,8 +128,8 @@ const getTransactions = (args: TransactionsApiArgs): TransactionsApiPayload => {
     overallEarliestDate: db.transactions[db.transactions.length - 1].date,
   };
 
-  if (args.query.length > 0) {
-    const filters = buildFiltersFromQuery(args.query);
+  if (query.length > 0) {
+    const filters = buildFiltersFromQuery(query);
     for (const t of db.transactions) {
       if (transactionMatchesFilters(t, filters)) {
         payload.filteredTransactions.push(t);
@@ -122,7 +141,7 @@ const getTransactions = (args: TransactionsApiArgs): TransactionsApiPayload => {
   payload.filteredCt = payload.filteredTransactions.length;
   payload.filteredSumPrice = transactionsSumPrice(payload.filteredTransactions);
 
-  return { data: payload };
+  return payload;
 };
 
 const addTransactions = (newTransactions: Transaction[]): number => {
@@ -224,6 +243,7 @@ const clearExtractionStatus = () => {
 export default {
   getAccounts,
   getAccount,
+  createAccount,
   updateAccount,
   getTransactions,
   addTransactions,

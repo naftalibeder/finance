@@ -3,7 +3,9 @@ import { UUID } from "crypto";
 /** A specific account at a bank. */
 export type Account = {
   /** A globally unique id representing the account internally. */
-  _id: string;
+  _id: UUID;
+  /** If true, the account has been initialized but not confirmed by the user. */
+  _pending?: boolean;
   _createdAt: string;
   _updatedAt: string;
   /** A unique id that matches one of the available extractors. */
@@ -28,7 +30,7 @@ export type Transaction = {
   _updatedAt: string;
   date: string;
   postDate: string;
-  accountId: string;
+  accountId: Account["_id"];
   payee: string;
   price: Price;
   type: string;
@@ -85,18 +87,39 @@ export interface PriceFilter extends ComparisonFilter<Price> {
 
 export type Filter = TextFilter | PriceFilter | DateFilter;
 
-export type AccountsApiPayload = {
+export type ExtractApiArgs = {
+  accountIds?: UUID[];
+};
+
+export type GetAccountsApiPayload = {
   data: {
     accounts: Account[];
     sum: Price;
   };
 };
 
-export type TransactionsApiArgs = {
+export type CreateAccountApiPayload = {
+  data: {
+    account: Account;
+  };
+};
+
+export type UpdateAccountApiArgs = Omit<
+  Account,
+  "_pending" | "_createdAt" | "_updatedAt" | "price"
+> & {};
+
+export type UpdateAccountApiPayload = {
+  data: {
+    account?: Account;
+  };
+};
+
+export type GetTransactionsApiArgs = {
   query: string;
 };
 
-export type TransactionsApiPayload = {
+export type GetTransactionsApiPayload = {
   data: {
     filteredTransactions: Transaction[];
     filteredCt: number;

@@ -1,13 +1,17 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { UUID } from "crypto";
   import {
     Account,
     Transaction,
     ExtractionStatus,
     Price,
-    TransactionsApiArgs,
-    TransactionsApiPayload,
-    AccountsApiPayload,
+    GetTransactionsApiArgs,
+    GetTransactionsApiPayload,
+    GetAccountsApiPayload,
+    CreateAccountApiPayload,
+    UpdateAccountApiArgs,
+    UpdateAccountApiPayload,
     // TODO: Fix this error if possible.
     // @ts-ignore
   } from "shared";
@@ -16,6 +20,8 @@
   import TransactionsList from "./TransactionsList.svelte";
   import { TransactionDateGroup } from "../types";
   import MfaInputList from "./MfaInputList.svelte";
+  import Lightbox from "./Lightbox.svelte";
+  import EditAccount from "./EditAccount.svelte";
 
   const serverUrl = import.meta.env.VITE_SERVER_URL;
 
@@ -26,6 +32,13 @@
 
   let accounts: Account[] = [];
   let accountsSum: Price = zeroPrice;
+  $: accountsDict = ((_accounts: Account[]): Record<UUID, Account> => {
+    const dict: Record<UUID, Account> = {};
+    for (const a of _accounts) {
+      dict[a._id] = a;
+    }
+    return dict;
+  })(accounts);
 
   let transactionsFiltered: Transaction[] = [];
   let transactionsFilteredCt = 0;
@@ -41,6 +54,14 @@
     accounts: {},
     mfaInfos: [],
   };
+  $: extractionStatusKey = Object.keys(extractionStatus.accounts)
+    .sort()
+    .map((k) => extractionStatus.accounts[k])
+    .join(",");
+  $: {
+    extractionStatusKey;
+    fetchAccounts();
+  }
 
   let searchTimer: NodeJS.Timer | undefined;
   let searchInputFieldRef;
@@ -71,6 +92,11 @@
   let hoverGroup: TransactionDateGroup | undefined;
   let extractionStatusPollInterval: NodeJS.Timer | undefined;
 
+  let accountIdShowingDetail: UUID | undefined = undefined;
+  $: accountShowingDetail = accounts.find(
+    (o) => o._id === accountIdShowingDetail
+  );
+
   onMount(async () => {
     isLoading = true;
     await fetchAll();
@@ -92,7 +118,7 @@
       const res = await fetch(`${serverUrl}/accounts`, {
         method: "POST",
       });
-      const payload = (await res.json()) as AccountsApiPayload;
+      const payload = (await res.json()) as GetAccountsApiPayload;
       accounts = payload.data.accounts;
       accountsSum = payload.data.sum;
       console.log(`Fetched ${accounts.length} accounts`);
@@ -101,9 +127,45 @@
     }
   };
 
+  const createAccount = async () => {
+    try {
+      const res = await fetch(`${serverUrl}/accounts/create`, {
+        method: "POST",
+      });
+      const payload = (await res.json()) as CreateAccountApiPayload;
+      accounts = [...accounts, payload.data.account];
+    } catch (e) {
+      console.log("Error creating account:", e);
+    }
+  };
+
+  const updateAccount = async (account: Account) => {
+    try {
+      const args: UpdateAccountApiArgs = {
+        _id: account._id,
+        bankId: account.bankId,
+        display: account.display,
+        number: account.number,
+        kind: account.kind,
+        type: account.type,
+      };
+      const res = await fetch(`${serverUrl}/accounts/update`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams(args).toString(),
+      });
+      const payload = (await res.json()) as UpdateAccountApiPayload;
+      await fetchAccounts();
+    } catch (e) {
+      console.log("Error updating account:", e);
+    }
+  };
+
   const fetchTransactions = async () => {
     try {
-      const args: TransactionsApiArgs = { query };
+      const args: GetTransactionsApiArgs = { query };
       const res = await fetch(`${serverUrl}/transactions`, {
         method: "POST",
         headers: {
@@ -111,7 +173,7 @@
         },
         body: new URLSearchParams(args).toString(),
       });
-      const payload = (await res.json()) as TransactionsApiPayload;
+      const payload = (await res.json()) as GetTransactionsApiPayload;
       transactionsFiltered = payload.data.filteredTransactions;
       transactionsFilteredCt = payload.data.filteredCt;
       transactionsFilteredSumPrice = payload.data.filteredSumPrice;
@@ -237,6 +299,10 @@
       {accounts}
       {accountsSum}
       {extractionStatus}
+      onClickCreate={createAccount}
+      onClickAccount={(id) => {
+        accountIdShowingDetail = id;
+      }}
       {onClickExtract}
     />
 
@@ -247,6 +313,17 @@
       {transactionsOverallCt}
       activeGroup={hoverGroup}
       {query}
+      {accountsDict}
     />
   </div>
+
+  {#if accountShowingDetail}
+    <Lightbox
+      onPressDismiss={() => {
+        accountIdShowingDetail = undefined;
+      }}
+    >
+      <EditAccount account={accountShowingDetail} onSubmit={updateAccount} />
+    </Lightbox>
+  {/if}
 </div>

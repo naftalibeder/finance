@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { UUID } from "crypto";
   import { Account, ExtractionStatus, Price } from "shared";
   import { prettyCurrency } from "../utils";
   import AccountsListItem from "./AccountsListItem.svelte";
@@ -6,22 +7,29 @@
   export let accounts: Account[];
   export let accountsSum: Price;
   export let extractionStatus: ExtractionStatus;
-  export let onClickExtract: (accountIds?: string[]) => void;
+  export let onClickCreate: () => void;
+  export let onClickAccount: (accountId: UUID) => void;
+  export let onClickExtract: (accountIds?: UUID[]) => void;
 
-  $: anyIsActive = Object.keys(extractionStatus.accounts).length > 0;
+  $: anyIsExtracting = Object.keys(extractionStatus.accounts).length > 0;
 </script>
 
 <div class="section">
   <div class="grid accounts">
     <div class="grid contents tall">
       <div class="cell account-section title">
-        {accounts.length} accounts
+        <div>
+          {accounts.length} accounts
+        </div>
+        <button style="margin-left: 8px" on:click={(evt) => onClickCreate()}>
+          +
+        </button>
       </div>
       <div class="cell account-section action">
         {prettyCurrency(accountsSum)}
       </div>
       <div class="cell account gutter-r">
-        {#if !anyIsActive}
+        {#if !anyIsExtracting}
           <button on:click={() => onClickExtract()}>↻</button>
         {/if}
       </div>
@@ -31,7 +39,8 @@
       <AccountsListItem
         account={a}
         extractionStatus={extractionStatus.accounts[a._id]}
-        {onClickExtract}
+        onClickAccount={() => onClickAccount(a._id)}
+        onClickExtract={() => onClickExtract([a._id])}
       />
     {/each}
   </div>
