@@ -43,12 +43,17 @@ export type Price = {
   currency: "USD";
 };
 
-/** User information loaded from `config.json`. */
-export type Config = {
-  credentials: Record<string, ConfigCredentials>;
+/** Sensitive information loaded from `secure.json`. */
+export type Secure = {
+  userCreds: {
+    email: string;
+    password: string;
+    token: string;
+  };
+  bankCreds: Record<string, BankCreds>;
 };
 
-export type ConfigCredentials = {
+export type BankCreds = {
   username: string;
   password: string;
 };
@@ -86,6 +91,19 @@ export interface PriceFilter extends ComparisonFilter<Price> {
 }
 
 export type Filter = TextFilter | PriceFilter | DateFilter;
+
+export type SignInApiArgs = {
+  email: string;
+  password: string;
+};
+
+export type SignInApiPayload = {
+  token: string;
+};
+
+export type VerifyTokenApiArgs = {
+  token: string;
+};
 
 export type ExtractApiArgs = {
   accountIds?: UUID[];

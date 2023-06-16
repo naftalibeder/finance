@@ -16,12 +16,12 @@ class ChaseBankExtractor implements Extractor {
   bankDisplayNameShort = "Chase";
 
   loadStartPage = async (args: ExtractorFuncArgs) => {
-    const { extractor, account, credentials, page } = args;
+    const { extractor, account, bankCreds, page } = args;
     await page.goto("https://chase.com", { timeout: 12000 });
   };
 
   enterCredentials = async (args: ExtractorFuncArgs) => {
-    const { extractor, account, credentials, page, log } = args;
+    const { extractor, account, bankCreds, page, log } = args;
 
     let loc: Locator;
 
@@ -44,10 +44,10 @@ class ChaseBankExtractor implements Extractor {
     }
 
     loc = loginFrame.locator("#userId-text-input-field");
-    await loc.fill(credentials.username);
+    await loc.fill(bankCreds.username);
 
     loc = loginFrame.locator("#password-text-input-field");
-    await loc.fill(credentials.password);
+    await loc.fill(bankCreds.password);
 
     loc = loginFrame.locator("#input-rememberMe");
     await loc.click();
@@ -57,7 +57,7 @@ class ChaseBankExtractor implements Extractor {
   };
 
   enterMfaCode = async (args: ExtractorFuncArgs) => {
-    const { extractor, account, credentials, page } = args;
+    const { extractor, account, bankCreds, page } = args;
 
     let loc: Locator;
 
@@ -90,14 +90,14 @@ class ChaseBankExtractor implements Extractor {
     await loc.fill(code);
 
     loc = codeInputFrame.locator("#password_input-input-field");
-    await loc.fill(credentials.password);
+    await loc.fill(bankCreds.password);
 
     loc = codeInputFrame.locator("button[type=submit]").first();
     await loc.click();
   };
 
   scrapeAccountValue = async (args: ExtractorFuncArgs): Promise<Price> => {
-    const { extractor, account, credentials, page } = args;
+    const { extractor, account, bankCreds, page } = args;
 
     let loc: Locator;
 
@@ -118,7 +118,7 @@ class ChaseBankExtractor implements Extractor {
   scrapeTransactionData = async (
     args: ExtractorRangeFuncArgs
   ): Promise<string> => {
-    const { extractor, account, credentials, range, page } = args;
+    const { extractor, account, bankCreds, range, page } = args;
 
     let loc: Locator;
 
@@ -178,7 +178,7 @@ class ChaseBankExtractor implements Extractor {
   };
 
   getDashboardExists = async (args: ExtractorFuncArgs): Promise<boolean> => {
-    const { extractor, account, credentials, page } = args;
+    const { extractor, account, bankCreds, page } = args;
 
     try {
       const loc = page.frames()[0].locator(".global-nav-position-container");

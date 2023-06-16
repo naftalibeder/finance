@@ -8,13 +8,13 @@ import {
   Page,
   firefox,
 } from "playwright-core";
-import { Account, Config, Price, Transaction } from "shared";
-import { CONFIG_PATH, EXTRACTIONS_PATH, TMP_DIR } from "../constants";
+import { Account, Price, Transaction } from "shared";
+import { EXTRACTIONS_PATH, TMP_DIR } from "../constants";
 import db from "../db";
 import { delay, prettyAccount, prettyDate, prettyDuration } from "../utils";
-import { Extractor, ExtractorFuncArgs } from "types";
 import { CharlesSchwabBankExtractor, ChaseBankExtractor } from "./extractors";
 import { parseTransactions } from "./utils";
+import { Extractor, ExtractorFuncArgs } from "types";
 
 const BROWSER_CONTEXT_PATH = `${TMP_DIR}/browser-context.json`;
 const HEADLESS = true;
@@ -102,14 +102,12 @@ const runAccount = async (
   const page = await browserContext.newPage();
   page.setViewportSize({ width: 1948, height: 955 });
 
-  const configStr = fs.readFileSync(CONFIG_PATH, { encoding: "utf-8" });
-  const config = JSON.parse(configStr) as Config;
-
   log(`Starting extraction`);
   db.setExtractionStatus([account._id], "in-progress");
 
   const extractor = extractorsDict[account.bankId];
-  const credentials = config.credentials[account.bankId];
+  const bankCredsDict = db.getBankCreds();
+  const bankCreds = bankCredsDict[account.bankId];
 
   let accountValue: Price | undefined;
   let transactions: Transaction[] = [];
@@ -120,7 +118,7 @@ const runAccount = async (
     const resp = await getAccountData({
       extractor,
       account,
-      credentials,
+      bankCreds,
       page,
       tmpRunDir,
       getMfaCode: async (): Promise<string> => {
@@ -261,7 +259,7 @@ export const getAccountData = async (
       return;
     }
 
-    log("Entering credentials if needed");
+    log("Entering bankCreds if needed");
     await extractor.enterCredentials(args);
     await page.waitForTimeout(3000);
 

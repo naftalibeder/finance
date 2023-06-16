@@ -5,9 +5,10 @@ import {
   Price,
   Transaction,
   GetTransactionsApiPayload,
+  Secure,
 } from "shared";
 import { Database } from "types";
-import { DB_PATH } from "./constants";
+import { DB_PATH, SECURE_PATH } from "./constants";
 import {
   buildFiltersFromQuery,
   transactionMatchesFilters,
@@ -25,7 +26,7 @@ const initial: Database = {
   },
 };
 
-const loadDatabase = (): Database => {
+const readDatabase = (): Database => {
   if (!fs.existsSync(DB_PATH)) {
     return initial;
   }
@@ -40,8 +41,8 @@ const writeDatabase = (db: Database) => {
   fs.writeFileSync(DB_PATH, dbStrUpdated, { encoding: "utf-8" });
 };
 
-const getAccounts = (): { accounts: Account[]; sum: Price } => {
-  const db = loadDatabase();
+export const getAccounts = (): { accounts: Account[]; sum: Price } => {
+  const db = readDatabase();
   const accounts = db.accounts;
 
   let sum: Price = {
@@ -58,14 +59,14 @@ const getAccounts = (): { accounts: Account[]; sum: Price } => {
   };
 };
 
-const getAccount = (id: string): Account | undefined => {
-  const db = loadDatabase();
+export const getAccount = (id: string): Account | undefined => {
+  const db = readDatabase();
   const account = db.accounts.find((o) => o._id === id);
   return account;
 };
 
-const createAccount = (): { account: Account } => {
-  const db = loadDatabase();
+export const createAccount = (): { account: Account } => {
+  const db = readDatabase();
 
   const account: Account = {
     _id: randomUUID(),
@@ -88,11 +89,11 @@ const createAccount = (): { account: Account } => {
   return { account };
 };
 
-const updateAccount = (
+export const updateAccount = (
   id: UUID,
   update: Partial<Omit<Account, "_createdAt" | "_updatedAt">>
 ): { account?: Account } => {
-  const db = loadDatabase();
+  const db = readDatabase();
 
   const index = db.accounts.findIndex((o) => o._id === id);
   if (index === -1) {
@@ -112,8 +113,10 @@ const updateAccount = (
   return { account: next };
 };
 
-const getTransactions = (query: string): GetTransactionsApiPayload["data"] => {
-  const db = loadDatabase();
+export const getTransactions = (
+  query: string
+): GetTransactionsApiPayload["data"] => {
+  const db = readDatabase();
 
   let payload: GetTransactionsApiPayload["data"] = {
     filteredTransactions: [],
@@ -144,8 +147,8 @@ const getTransactions = (query: string): GetTransactionsApiPayload["data"] => {
   return payload;
 };
 
-const addTransactions = (newTransactions: Transaction[]): number => {
-  const db = loadDatabase();
+export const addTransactions = (newTransactions: Transaction[]): number => {
+  const db = readDatabase();
 
   let updatedTransactions = [...db.transactions];
   let addCt = 0;
@@ -178,17 +181,17 @@ const addTransactions = (newTransactions: Transaction[]): number => {
   return addCt;
 };
 
-const getExtractionStatus = (): ExtractionStatus => {
-  const db = loadDatabase();
+export const getExtractionStatus = (): ExtractionStatus => {
+  const db = readDatabase();
   const status = db.extractionStatus;
   return status;
 };
 
-const setExtractionStatus = (
+export const setExtractionStatus = (
   accountIds: string[],
   status?: ExtractionStatus["accounts"][string]
 ) => {
-  const db = loadDatabase();
+  const db = readDatabase();
   for (const id of accountIds) {
     if (status) {
       db.extractionStatus.accounts[id] = status;
@@ -199,8 +202,8 @@ const setExtractionStatus = (
   writeDatabase(db);
 };
 
-const setMfaInfo = (bankId: string, code?: string) => {
-  const db = loadDatabase();
+export const setMfaInfo = (bankId: string, code?: string) => {
+  const db = readDatabase();
   const infos = db.extractionStatus.mfaInfos;
   const index = infos.findIndex((o) => o.bankId === bankId);
 
@@ -222,8 +225,8 @@ const setMfaInfo = (bankId: string, code?: string) => {
   writeDatabase(db);
 };
 
-const deleteMfaInfo = (bankId: string) => {
-  const db = loadDatabase();
+export const deleteMfaInfo = (bankId: string) => {
+  const db = readDatabase();
   const infos = db.extractionStatus.mfaInfos;
   const index = infos.findIndex((o) => o.bankId === bankId);
   if (index === -1) {
@@ -234,10 +237,37 @@ const deleteMfaInfo = (bankId: string) => {
   writeDatabase(db);
 };
 
-const clearExtractionStatus = () => {
-  const db = loadDatabase();
+export const clearExtractionStatus = () => {
+  const db = readDatabase();
   db.extractionStatus = initial.extractionStatus;
   writeDatabase(db);
+};
+
+const readSecure = (): Secure => {
+  const dataStr = fs.readFileSync(SECURE_PATH, { encoding: "utf-8" });
+  const data = JSON.parse(dataStr) as Secure;
+  return data;
+};
+
+const writeSecure = (secure: Secure) => {
+  const dataStrUpdated = JSON.stringify(secure, undefined, 2);
+  fs.writeFileSync(SECURE_PATH, dataStrUpdated, { encoding: "utf-8" });
+};
+
+export const getUserCreds = (): Secure["userCreds"] => {
+  const data = readSecure();
+  return data.userCreds;
+};
+
+export const setUserToken = (token: string) => {
+  const data = readSecure();
+  data.userCreds.token = token;
+  writeSecure(data);
+};
+
+export const getBankCreds = (): Secure["bankCreds"] => {
+  const data = readSecure();
+  return data.bankCreds;
 };
 
 export default {
@@ -252,4 +282,7 @@ export default {
   setMfaInfo,
   deleteMfaInfo,
   clearExtractionStatus,
+  getUserCreds,
+  setUserToken,
+  getBankCreds,
 };

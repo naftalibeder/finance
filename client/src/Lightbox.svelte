@@ -11,9 +11,9 @@
 </script>
 
 <button class="container" on:click={onClickBg} bind:this={containerRef}>
-  <button class="box">
+  <div class="box">
     <slot />
-  </button>
+  </div>
 </button>
 
 <style>

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Account } from "shared";
+  import { titleCase } from "../utils";
 
   export let account: Account;
   export let onSubmit: (account: Account) => void;
@@ -15,6 +16,22 @@
   const elemId = (key: keyof Account) => {
     return `${account._id}-${key}`;
   };
+
+  const kinds: Account["kind"][] = [
+    "checking",
+    "savings",
+    "brokerage",
+    "credit",
+    "debit",
+  ];
+
+  const types: Account["type"][] = [
+    "assets",
+    "liabilities",
+    "equity",
+    "revenue",
+    "expenses",
+  ];
 </script>
 
 <div class="container">
@@ -56,11 +73,9 @@
         onChangeProperty("kind", evt.target["value"]);
       }}
     >
-      <option value="checking">Checking</option>
-      <option value="savings">Savings</option>
-      <option value="brokerage">Brokerage</option>
-      <option value="credit">Credit</option>
-      <option value="debit">Debit</option>
+      {#each kinds as kind}
+        <option value={kind}>{titleCase(kind)}</option>
+      {/each}
     </select>
     <label for={elemId("type")}>Type</label>
     <select
@@ -71,11 +86,9 @@
         onChangeProperty("type", evt.target["value"]);
       }}
     >
-      <option value="assets">Assets</option>
-      <option value="liabilities">Liabilities</option>
-      <option value="equity">Equity</option>
-      <option value="revenue">Revenue</option>
-      <option value="expenses">Expenses</option>
+      {#each types as type}
+        <option value={type}>{titleCase(type)}</option>
+      {/each}
     </select>
   </div>
 </div>
@@ -85,8 +98,7 @@
     display: grid;
     grid-template-columns: 1fr;
     row-gap: 24px;
-    padding: 24x;
-    cursor: default;
+    padding: 36px;
   }
 
   .title {
@@ -97,7 +109,7 @@
     display: grid;
     grid-template-columns: auto 3fr;
     align-items: center;
-    column-gap: 16px;
+    column-gap: 24px;
     row-gap: 16px;
     text-align: left;
   }

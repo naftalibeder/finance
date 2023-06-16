@@ -16,12 +16,12 @@ class CharlesSchwabBankExtractor implements Extractor {
   bankDisplayNameShort = "Schwab";
 
   loadStartPage = async (args: ExtractorFuncArgs) => {
-    const { extractor, account, credentials, page } = args;
+    const { extractor, account, bankCreds, page } = args;
     await page.goto("https://schwab.com", { timeout: 6000 });
   };
 
   enterCredentials = async (args: ExtractorFuncArgs) => {
-    const { extractor, account, credentials, page, log } = args;
+    const { extractor, account, bankCreds, page, log } = args;
 
     let loc: Locator;
 
@@ -40,17 +40,17 @@ class CharlesSchwabBankExtractor implements Extractor {
     }
 
     loc = loginFrame.locator("#loginIdInput");
-    await loc.fill(credentials.username);
+    await loc.fill(bankCreds.username);
 
     loc = loginFrame.locator("#passwordInput");
-    await loc.fill(credentials.password);
+    await loc.fill(bankCreds.password);
 
     loc = loginFrame.locator("#btnLogin");
     await loc.click();
   };
 
   enterMfaCode = async (args: ExtractorFuncArgs) => {
-    const { extractor, account, credentials, page } = args;
+    const { extractor, account, bankCreds, page } = args;
 
     let loc: Locator;
 
@@ -79,7 +79,7 @@ class CharlesSchwabBankExtractor implements Extractor {
   };
 
   scrapeAccountValue = async (args: ExtractorFuncArgs): Promise<Price> => {
-    const { extractor, account, credentials, page } = args;
+    const { extractor, account, bankCreds, page } = args;
 
     let loc: Locator;
 
@@ -99,7 +99,7 @@ class CharlesSchwabBankExtractor implements Extractor {
   scrapeTransactionData = async (
     args: ExtractorRangeFuncArgs
   ): Promise<string> => {
-    const { extractor, account, credentials, range, page } = args;
+    const { extractor, account, bankCreds, range, page } = args;
 
     let loc: Locator;
 
@@ -179,7 +179,7 @@ class CharlesSchwabBankExtractor implements Extractor {
   };
 
   getDashboardExists = async (args: ExtractorFuncArgs): Promise<boolean> => {
-    const { extractor, account, credentials, page } = args;
+    const { extractor, account, bankCreds, page } = args;
 
     try {
       const loc = page.frames()[0].locator("#site-header");

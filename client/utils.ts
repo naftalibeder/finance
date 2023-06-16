@@ -127,3 +127,7 @@ export const prettyCurrency = (a: Price) => {
     currency: a.currency,
   }).format(a.amount);
 };
+
+export const titleCase = (s: string): string => {
+  return s.slice(0, 1).toUpperCase() + s.slice(1).toLowerCase();
+};

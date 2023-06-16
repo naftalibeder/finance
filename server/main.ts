@@ -1,4 +1,5 @@
 import express from "express";
+import bcrypt from "bcrypt";
 import extractor from "./extractor";
 import db from "./db";
 import {
@@ -7,8 +8,11 @@ import {
   GetAccountsApiPayload,
   GetTransactionsApiArgs,
   GetTransactionsApiPayload,
+  SignInApiArgs,
+  SignInApiPayload,
   UpdateAccountApiArgs,
   UpdateAccountApiPayload,
+  VerifyTokenApiArgs,
 } from "shared";
 
 const main = async () => {
@@ -17,58 +21,109 @@ const main = async () => {
   const app = express();
   app.use(express.urlencoded({ extended: true }));
 
+  app.post("/signIn", async (req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+
+    const args = req.body as SignInApiArgs;
+    const { email, password } = args;
+
+    const userCreds = db.getUserCreds();
+    const isValid =
+      email === userCreds.email && password === userCreds.password;
+    if (!isValid) {
+      res.status(401).send({ error: "Unauthorized" });
+      return;
+    }
+
+    // TODO: Generate a JWT instead.
+    const token = await bcrypt.hash(password, 10);
+    db.setUserToken(token);
+
+    const payload: SignInApiPayload = { token };
+    res.status(200).send(payload);
+  });
+
+  app.post("/verifyToken", async (req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+
+    const args = req.body as VerifyTokenApiArgs;
+    const { token } = args;
+
+    const userCreds = db.getUserCreds();
+    const isValid = token === userCreds.token;
+    if (!isValid) {
+      res.status(401).send({ error: "Unauthorized" });
+      return;
+    }
+
+    res.status(200).send({ message: "ok" });
+  });
+
   app.post("/extract", async (req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+
     const args = req.body as ExtractApiArgs;
     const { accountIds } = args;
     await extractor.runAccounts(accountIds);
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.send("ok");
+
+    res.status(200).send({ message: "ok" });
   });
 
   app.post("/accounts", async (req, res) => {
-    const data = db.getAccounts();
     res.setHeader("Access-Control-Allow-Origin", "*");
+
+    const data = db.getAccounts();
+
     const payload: GetAccountsApiPayload = { data };
-    res.send(payload);
+    res.status(200).send(payload);
   });
 
   app.post("/accounts/create", async (req, res) => {
-    const data = db.createAccount();
     res.setHeader("Access-Control-Allow-Origin", "*");
+
+    const data = db.createAccount();
+
     const payload: CreateAccountApiPayload = { data };
-    res.send(payload);
+    res.status(200).send(payload);
   });
 
   app.post("/accounts/update", async (req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+
     const args = req.body as UpdateAccountApiArgs;
     const account = args;
     const data = db.updateAccount(account._id, account);
-    res.setHeader("Access-Control-Allow-Origin", "*");
+
     const payload: UpdateAccountApiPayload = { data };
-    res.send(payload);
+    res.status(200).send(payload);
   });
 
   app.post("/transactions", async (req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+
     const args = req.body as GetTransactionsApiArgs;
     const { query } = args;
     const data = db.getTransactions(query);
-    res.setHeader("Access-Control-Allow-Origin", "*");
+
     const payload: GetTransactionsApiPayload = { data };
-    res.send(payload);
+    res.status(200).send(payload);
   });
 
   app.post("/status", async (req, res) => {
-    const status = db.getExtractionStatus();
     res.setHeader("Access-Control-Allow-Origin", "*");
+
+    const status = db.getExtractionStatus();
     res.send(status);
   });
 
   app.post("/mfa", async (req, res) => {
-    const { bankId, code } = req.body;
-    console.log("Received code:", code);
-    db.setMfaInfo(bankId, code);
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.send("ok");
+
+    const args = req.body as { bankId: string; code: string };
+    const { bankId, code } = args;
+    db.setMfaInfo(bankId, code);
+
+    res.status(200).send({ message: "ok" });
   });
 
   process.on("SIGINT", () => {

@@ -2,9 +2,9 @@ import { Page } from "playwright-core";
 import {
   Account,
   Transaction,
-  ConfigCredentials,
   Price,
   ExtractionStatus,
+  BankCreds,
 } from "shared";
 
 export type Database = {
@@ -16,7 +16,7 @@ export type Database = {
 export interface ExtractorFuncArgs {
   extractor: Extractor;
   account: Account;
-  credentials: ConfigCredentials;
+  bankCreds: BankCreds;
   page: Page;
   tmpRunDir: string;
   getMfaCode: () => Promise<string>;
