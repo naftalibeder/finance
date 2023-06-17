@@ -1,16 +1,23 @@
 import { Page } from "playwright-core";
-import {
-  Account,
-  Transaction,
-  Price,
-  ExtractionStatus,
-  BankCreds,
-} from "shared";
+import { Account, Transaction, Price, ExtractionStatus } from "shared";
 
 export type Database = {
+  user: User;
+  bankCredentials: Record<string, BankCreds>;
   accounts: Account[];
   transactions: Transaction[];
   extractionStatus: ExtractionStatus;
+};
+
+export type User = {
+  email: string;
+  password: string;
+  token?: string;
+};
+
+export type BankCreds = {
+  username: string;
+  password: string;
 };
 
 export interface ExtractorFuncArgs {

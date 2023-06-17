@@ -43,21 +43,6 @@ export type Price = {
   currency: "USD";
 };
 
-/** Sensitive information loaded from `secure.json`. */
-export type Secure = {
-  userCreds: {
-    email: string;
-    password: string;
-    token: string;
-  };
-  bankCreds: Record<string, BankCreds>;
-};
-
-export type BankCreds = {
-  username: string;
-  password: string;
-};
-
 export type MfaInfo = {
   bankId: string;
   code?: string;

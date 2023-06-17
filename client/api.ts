@@ -1,14 +1,19 @@
 // @ts-ignore
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 
-export const post = async <Payload, Args = undefined>(
+export const post = async <
+  Args = Record<string, any>,
+  Payload = Record<string, any>
+>(
   path: string,
   args?: Args
 ): Promise<Payload> => {
   const body = new URLSearchParams();
   if (args) {
     Object.entries(args).forEach(([k, v]) => {
-      body.set(k, v);
+      if (v !== undefined && v !== null) {
+        body.set(k, v);
+      }
     });
   }
   const token = localStorage.getItem("token");

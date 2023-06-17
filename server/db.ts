@@ -1,23 +1,27 @@
 import fs from "fs";
+import { UUID, randomUUID } from "crypto";
 import {
   Account,
   ExtractionStatus,
   Price,
   Transaction,
   GetTransactionsApiPayload,
-  Secure,
 } from "shared";
-import { Database } from "types";
-import { DB_PATH, SECURE_PATH } from "./constants";
+import { BankCreds, Database, User } from "types";
+import { DB_PATH } from "./constants";
 import {
   buildFiltersFromQuery,
   transactionMatchesFilters,
   transactionsMaxPrice,
   transactionsSumPrice,
 } from "./utils";
-import { UUID, randomUUID } from "crypto";
 
 const initial: Database = {
+  user: {
+    email: "",
+    password: "",
+  },
+  bankCredentials: {},
   accounts: [],
   transactions: [],
   extractionStatus: {
@@ -243,31 +247,20 @@ export const clearExtractionStatus = () => {
   writeDatabase(db);
 };
 
-const readSecure = (): Secure => {
-  const dataStr = fs.readFileSync(SECURE_PATH, { encoding: "utf-8" });
-  const data = JSON.parse(dataStr) as Secure;
-  return data;
-};
-
-const writeSecure = (secure: Secure) => {
-  const dataStrUpdated = JSON.stringify(secure, undefined, 2);
-  fs.writeFileSync(SECURE_PATH, dataStrUpdated, { encoding: "utf-8" });
-};
-
-export const getUserCreds = (): Secure["userCreds"] => {
-  const data = readSecure();
-  return data.userCreds;
+export const getUser = (): User => {
+  const db = readDatabase();
+  return db.user;
 };
 
 export const setUserToken = (token: string) => {
-  const data = readSecure();
-  data.userCreds.token = token;
-  writeSecure(data);
+  const db = readDatabase();
+  db.user.token = token;
+  writeDatabase(db);
 };
 
-export const getBankCreds = (): Secure["bankCreds"] => {
-  const data = readSecure();
-  return data.bankCreds;
+export const getBankCreds = (): Record<string, BankCreds> => {
+  const db = readDatabase();
+  return db.bankCredentials;
 };
 
 export default {
@@ -282,7 +275,7 @@ export default {
   setMfaInfo,
   deleteMfaInfo,
   clearExtractionStatus,
-  getUserCreds,
+  getUser,
   setUserToken,
   getBankCreds,
 };

@@ -27,9 +27,9 @@ const main = async () => {
     const args = req.body as SignInApiArgs;
     const { email, password } = args;
 
-    const userCreds = db.getUserCreds();
-    const isValid =
-      email === userCreds.email && password === userCreds.password;
+    const userCreds = db.getUser();
+    const passwordIsValid = await bcrypt.compare(password, userCreds.password);
+    const isValid = email === userCreds.email && passwordIsValid;
     if (!isValid) {
       res.status(401).send({ error: "Unauthorized" });
       return;
@@ -49,7 +49,7 @@ const main = async () => {
     const args = req.body as VerifyTokenApiArgs;
     const { token } = args;
 
-    const userCreds = db.getUserCreds();
+    const userCreds = db.getUser();
     const isValid = token === userCreds.token;
     if (!isValid) {
       res.status(401).send({ error: "Unauthorized" });

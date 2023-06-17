@@ -80,12 +80,14 @@ const runAccounts = async (accountIds?: UUID[]) => {
       tmpRunDir,
       browserContext
     );
+    totalFoundCt += foundCt;
+    totalAddCt += addCt;
   }
   await tearDown(browser, browserContext);
 
   const deltaTime = Date.now() - startTime.valueOf();
   console.log(`Completed extraction across ${accounts.length} accounts`);
-  console.log(`Added ${totalAddCt} new of ${totalFoundCt} found transactions`);
+  console.log(`Found ${totalFoundCt} transactions; added ${totalAddCt} new`);
   console.log(`Finished in ${prettyDuration(deltaTime)}`);
 };
 
@@ -204,12 +206,11 @@ export const getAccountData = async (
       const start = new Date(end.valueOf() - spanMs);
       const prettyRange = `[${prettyDate(start)}, ${prettyDate(end)}]`;
 
-      log(`Getting transactions for range ${prettyRange}`);
-
       let transactionsChunk: Transaction[] = [];
       let skipCt = 0;
+
       try {
-        log("Loading start page");
+        log(`Getting transactions for range ${prettyRange}`);
         await extractor.loadStartPage(args);
         await page.waitForTimeout(3000);
 
@@ -259,7 +260,7 @@ export const getAccountData = async (
       return;
     }
 
-    log("Entering bankCreds if needed");
+    log("Entering bank credentials if needed");
     await extractor.enterCredentials(args);
     await page.waitForTimeout(3000);
 

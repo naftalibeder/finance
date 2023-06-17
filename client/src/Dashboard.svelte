@@ -12,6 +12,7 @@
     CreateAccountApiPayload,
     UpdateAccountApiArgs,
     UpdateAccountApiPayload,
+    ExtractApiArgs,
     // TODO: Fix this error if possible.
     // @ts-ignore
   } from "shared";
@@ -113,7 +114,7 @@
 
   const fetchAccounts = async () => {
     try {
-      const payload = await post<GetAccountsApiPayload>("accounts");
+      const payload = await post<undefined, GetAccountsApiPayload>("accounts");
       accounts = payload.data.accounts;
       accountsSum = payload.data.sum;
       console.log(`Fetched ${accounts.length} accounts`);
@@ -124,7 +125,9 @@
 
   const createAccount = async () => {
     try {
-      const payload = await post<CreateAccountApiPayload>("accounts/create");
+      const payload = await post<undefined, CreateAccountApiPayload>(
+        "accounts/create"
+      );
       accounts = [...accounts, payload.data.account];
     } catch (e) {
       console.log("Error creating account:", e);
@@ -133,7 +136,7 @@
 
   const updateAccount = async (account: Account) => {
     try {
-      const payload = await post<UpdateAccountApiPayload, UpdateAccountApiArgs>(
+      const payload = await post<UpdateAccountApiArgs, UpdateAccountApiPayload>(
         "accounts/update",
         {
           _id: account._id,
@@ -153,8 +156,8 @@
   const fetchTransactions = async (q: string) => {
     try {
       const payload = await post<
-        GetTransactionsApiPayload,
-        GetTransactionsApiArgs
+        GetTransactionsApiArgs,
+        GetTransactionsApiPayload
       >("transactions", { query: q });
       transactionsFiltered = payload.data.filteredTransactions;
       transactionsFilteredCt = payload.data.filteredCt;
@@ -173,7 +176,7 @@
 
   const fetchExtractionStatus = async () => {
     try {
-      extractionStatus = await post<ExtractionStatus>("status");
+      extractionStatus = await post<undefined, ExtractionStatus>("status");
     } catch (e) {
       console.log("Error fetching extraction status:", e);
     }
@@ -198,9 +201,9 @@
       console.log("Error sending mfa code:", e);
     }
   };
-  const onClickExtract = async (accountIds?: string[]) => {
+  const onClickExtract = async (accountIds?: UUID[]) => {
     pollExtractionStatus();
-    await post<undefined, { accountIds?: string[] }>("extract", { accountIds });
+    await post<ExtractApiArgs, undefined>("extract", { accountIds });
   };
 
   const onChangeQuery = async (q: string) => {

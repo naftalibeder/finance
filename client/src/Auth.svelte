@@ -10,7 +10,7 @@
 
   const onClickSubmit = async () => {
     try {
-      const payload = await post<SignInApiPayload, SignInApiArgs>("signIn", {
+      const payload = await post<SignInApiArgs, SignInApiPayload>("signIn", {
         email,
         password,
       });
@@ -25,9 +25,9 @@
 
 <div class="container">
   <div class="form">
-    <input placeholder="Email" bind:value={email} />
-    <input placeholder="Password" bind:value={password} />
-    <button on:click={onClickSubmit}>Submit</button>
+    <input type="email" placeholder="Email" bind:value={email} />
+    <input type="password" placeholder="Password" bind:value={password} />
+    <button type="submit" on:click={onClickSubmit}>Submit</button>
   </div>
 </div>
 

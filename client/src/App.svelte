@@ -23,7 +23,7 @@
 
     try {
       console.log("Submitting token:", token);
-      await post<undefined, VerifyTokenApiArgs>("verifyToken", { token });
+      await post<VerifyTokenApiArgs, undefined>("verifyToken", { token });
       return true;
     } catch (e) {
       console.log("Error verifying token:", e);
