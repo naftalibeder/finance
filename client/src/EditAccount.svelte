@@ -1,9 +1,12 @@
 <script lang="ts">
-  import { Account } from "shared";
+  import { Account, Bank } from "shared";
   import { titleCase } from "../utils";
 
   export let account: Account;
+  export let banks: Bank[];
   export let onSubmit: (account: Account) => void;
+
+  $: currentBank = banks.find((o) => o.id === account.bankId);
 
   const onChangeProperty = (key: keyof Account, value: string) => {
     const updated: Account = {
@@ -56,31 +59,32 @@
       }}
     />
     <label for={elemId("bankId")}>Bank</label>
-    <input
+    <select
       id={elemId("bankId")}
-      placeholder={"Enter bank identifier"}
-      value={account.bankId}
+      value={currentBank.id}
       on:change={(evt) => {
         onChangeProperty("bankId", evt.target["value"]);
       }}
-    />
+    >
+      {#each banks as bank}
+        <option value={bank.id}>{bank.displayName}</option>
+      {/each}
+    </select>
     <label for={elemId("kind")}>Kind</label>
     <select
       id={elemId("kind")}
-      placeholder={"Enter account kind"}
       value={account.kind}
       on:change={(evt) => {
         onChangeProperty("kind", evt.target["value"]);
       }}
     >
-      {#each kinds as kind}
+      {#each currentBank.supportedAccountKinds as kind}
         <option value={kind}>{titleCase(kind)}</option>
       {/each}
     </select>
     <label for={elemId("type")}>Type</label>
     <select
       id={elemId("type")}
-      placeholder={"Enter account type"}
       value={account.type}
       on:change={(evt) => {
         onChangeProperty("type", evt.target["value"]);

@@ -6,6 +6,7 @@ import {
   CreateAccountApiPayload,
   ExtractApiArgs,
   GetAccountsApiPayload,
+  GetBanksApiPayload,
   GetTransactionsApiArgs,
   GetTransactionsApiPayload,
   SignInApiArgs,
@@ -67,6 +68,15 @@ const main = async () => {
     await extractor.runAccounts(accountIds);
 
     res.status(200).send({ message: "ok" });
+  });
+
+  app.post("/banks", async (req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+
+    const data = extractor.getBanks();
+
+    const payload: GetBanksApiPayload = { data };
+    res.status(200).send(payload);
   });
 
   app.post("/accounts", async (req, res) => {

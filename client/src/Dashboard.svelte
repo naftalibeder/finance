@@ -13,6 +13,8 @@
     UpdateAccountApiArgs,
     UpdateAccountApiPayload,
     ExtractApiArgs,
+    GetBanksApiPayload,
+    Bank,
     // TODO: Fix this error if possible.
     // @ts-ignore
   } from "shared";
@@ -30,6 +32,7 @@
     currency: "USD",
   };
 
+  let banks: Bank[] = [];
   let accounts: Account[] = [];
   let accountsSum: Price = zeroPrice;
   $: accountsDict = ((_accounts: Account[]): Record<UUID, Account> => {
@@ -103,12 +106,23 @@
   });
 
   const fetchAll = async () => {
+    await fetchBanks();
     await fetchAccounts();
     await fetchTransactions(query);
     await fetchExtractionStatus();
 
     if (Object.keys(extractionStatus.accounts).length > 0) {
       pollExtractionStatus();
+    }
+  };
+
+  const fetchBanks = async () => {
+    try {
+      const payload = await post<undefined, GetBanksApiPayload>("banks");
+      banks = payload.data.banks;
+      console.log(`Fetched ${accounts.length} banks`);
+    } catch (e) {
+      console.log("Error fetching banks:", e);
     }
   };
 
@@ -287,7 +301,11 @@
         accountIdShowingDetail = undefined;
       }}
     >
-      <EditAccount account={accountShowingDetail} onSubmit={updateAccount} />
+      <EditAccount
+        account={accountShowingDetail}
+        {banks}
+        onSubmit={updateAccount}
+      />
     </Lightbox>
   {/if}
 </div>

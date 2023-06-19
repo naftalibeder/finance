@@ -14,6 +14,29 @@ class ChaseBankExtractor implements Extractor {
   bankId = "chase-bank";
   bankDisplayName = "Chase Bank";
   bankDisplayNameShort = "Chase";
+  supportedAccountKinds: Account["kind"][] = ["credit"];
+
+  getColumnMap = (
+    accountKind: Account["kind"]
+  ): ExtractorColumnMap | undefined => {
+    switch (accountKind) {
+      case "credit":
+        return {
+          date: 0,
+          postDate: 1,
+          payee: 2,
+          price: undefined,
+          priceWithdrawal: undefined,
+          priceDeposit: 5,
+          type: 4,
+          description: undefined,
+        };
+    }
+  };
+
+  getMaxDateRangeMonths = (accountKind: Account["kind"]): number => {
+    return 6;
+  };
 
   loadStartPage = async (args: ExtractorFuncArgs) => {
     const { extractor, account, bankCreds, page } = args;
@@ -187,27 +210,6 @@ class ChaseBankExtractor implements Extractor {
     } catch (e) {
       return false;
     }
-  };
-
-  getColumnMap = (
-    accountKind: Account["kind"]
-  ): ExtractorColumnMap | undefined => {
-    if (accountKind === "credit") {
-      return {
-        date: 0,
-        postDate: 1,
-        payee: 2,
-        price: undefined,
-        priceWithdrawal: undefined,
-        priceDeposit: 5,
-        type: 4,
-        description: undefined,
-      };
-    }
-  };
-
-  getMaxDateRangeMonths = (accountKind: Account["kind"]): number => {
-    return 6;
   };
 }
 

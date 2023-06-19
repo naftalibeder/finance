@@ -14,6 +14,40 @@ class CharlesSchwabBankExtractor implements Extractor {
   bankId = "charles-schwab-bank";
   bankDisplayName = "Charles Schwab Bank";
   bankDisplayNameShort = "Schwab";
+  supportedAccountKinds: Account["kind"][] = ["checking", "brokerage"];
+
+  getColumnMap = (
+    accountKind: Account["kind"]
+  ): ExtractorColumnMap | undefined => {
+    switch (accountKind) {
+      case "checking":
+        return {
+          date: 0,
+          postDate: undefined,
+          payee: 3,
+          price: undefined,
+          priceWithdrawal: 4,
+          priceDeposit: 5,
+          type: 1,
+          description: undefined,
+        };
+      case "brokerage":
+        return {
+          date: 0,
+          postDate: undefined,
+          payee: 2,
+          price: 7,
+          priceWithdrawal: undefined,
+          priceDeposit: undefined,
+          type: 1,
+          description: 3,
+        };
+    }
+  };
+
+  getMaxDateRangeMonths = (accountKind: Account["kind"]): number => {
+    return 12;
+  };
 
   loadStartPage = async (args: ExtractorFuncArgs) => {
     const { extractor, account, bankCreds, page } = args;
@@ -188,38 +222,6 @@ class CharlesSchwabBankExtractor implements Extractor {
     } catch (e) {
       return false;
     }
-  };
-
-  getColumnMap = (
-    accountKind: Account["kind"]
-  ): ExtractorColumnMap | undefined => {
-    if (accountKind === "checking") {
-      return {
-        date: 0,
-        postDate: undefined,
-        payee: 3,
-        price: undefined,
-        priceWithdrawal: 4,
-        priceDeposit: 5,
-        type: 1,
-        description: undefined,
-      };
-    } else if (accountKind === "brokerage") {
-      return {
-        date: 0,
-        postDate: undefined,
-        payee: 2,
-        price: 7,
-        priceWithdrawal: undefined,
-        priceDeposit: undefined,
-        type: 1,
-        description: 3,
-      };
-    }
-  };
-
-  getMaxDateRangeMonths = (accountKind: Account["kind"]): number => {
-    return 12;
   };
 }
 

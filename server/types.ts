@@ -48,16 +48,17 @@ export interface Extractor {
   bankId: string;
   bankDisplayName: string;
   bankDisplayNameShort: string;
+  supportedAccountKinds: Account["kind"][];
+  getColumnMap: (
+    accountKind: Account["kind"]
+  ) => ExtractorColumnMap | undefined;
+  getMaxDateRangeMonths: (accountKind: Account["kind"]) => number;
   loadStartPage: (args: ExtractorFuncArgs) => Promise<void>;
   enterCredentials: (args: ExtractorFuncArgs) => Promise<void>;
   enterMfaCode: (args: ExtractorFuncArgs) => Promise<void>;
   scrapeAccountValue: (args: ExtractorFuncArgs) => Promise<Price>;
   scrapeTransactionData: (args: ExtractorRangeFuncArgs) => Promise<string>;
   getDashboardExists: (args: ExtractorFuncArgs) => Promise<boolean>;
-  getColumnMap: (
-    accountKind: Account["kind"]
-  ) => ExtractorColumnMap | undefined;
-  getMaxDateRangeMonths: (accountKind: Account["kind"]) => number;
 }
 
 export type ExtractorDateRange = {

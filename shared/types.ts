@@ -1,5 +1,13 @@
 import { UUID } from "crypto";
 
+/** A bank. */
+export type Bank = {
+  id: string;
+  displayName: string;
+  displayNameShort: string;
+  supportedAccountKinds: Account["kind"][];
+};
+
 /** A specific account at a bank. */
 export type Account = {
   /** A globally unique id representing the account internally. */
@@ -92,6 +100,12 @@ export type VerifyTokenApiArgs = {
 
 export type ExtractApiArgs = {
   accountIds?: UUID[];
+};
+
+export type GetBanksApiPayload = {
+  data: {
+    banks: Bank[];
+  };
 };
 
 export type GetAccountsApiPayload = {

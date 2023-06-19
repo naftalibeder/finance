@@ -8,7 +8,7 @@ import {
   Page,
   firefox,
 } from "playwright-core";
-import { Account, Price, Transaction } from "shared";
+import { Account, Bank, Price, Transaction } from "shared";
 import { EXTRACTIONS_PATH, TMP_DIR } from "../constants";
 import db from "../db";
 import { delay, prettyAccount, prettyDate, prettyDuration } from "../utils";
@@ -330,4 +330,19 @@ const takeErrorScreenshot = async (browserPage: Page, tmpRunDir: string) => {
   });
 };
 
-export default { runAccounts };
+const getBanks = (): { banks: Bank[] } => {
+  const banks = extractors.map((o) => {
+    return {
+      id: o.bankId,
+      displayName: o.bankDisplayName,
+      displayNameShort: o.bankDisplayNameShort,
+      supportedAccountKinds: o.supportedAccountKinds,
+    };
+  });
+  return { banks };
+};
+
+export default {
+  runAccounts,
+  getBanks,
+};
