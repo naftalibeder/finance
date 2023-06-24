@@ -197,10 +197,11 @@
   const fetchExtractionStatus = async () => {
     try {
       extractionStatus = await post<undefined, ExtractionStatus>("status");
-      console.log(
-        "Extraction status:",
-        Object.values(extractionStatus.accounts).join(",")
-      );
+      const display: Record<string, string> = {};
+      for (const [k, v] of Object.entries(extractionStatus.accounts)) {
+        display[accountsDict[k].display] = v;
+      }
+      console.log("Extraction status:", JSON.stringify(display, undefined, 2));
 
       const remainingCt = Object.keys(extractionStatus.accounts).length;
 
