@@ -50,7 +50,10 @@ const setUp = async (): Promise<[Browser, BrowserContext]> => {
  * Extracts the current account value and all available transactions for every
  * provided account and writes that info to the database.
  */
-const runAccounts = async (accountIds?: UUID[]) => {
+const runAccounts = async (
+  accountIds: UUID[] | undefined,
+  onFinishPrepare: () => void
+) => {
   const tmpRunDir = `${EXTRACTIONS_PATH}/${new Date().toISOString()}`;
   fs.mkdirSync(tmpRunDir, { recursive: true });
 
@@ -72,6 +75,7 @@ const runAccounts = async (accountIds?: UUID[]) => {
     accounts.map((o) => o._id),
     "pending"
   );
+  onFinishPrepare();
 
   const [browser, browserContext] = await setUp();
   for (const account of accounts) {
@@ -107,9 +111,10 @@ const runAccount = async (
   log(`Starting extraction`);
   db.setExtractionStatus([account._id], "in-progress");
 
+  const userPassword = process.env.USER_PASSWORD as string;
   const extractor = extractorsDict[account.bankId];
-  const bankCredsDict = db.getBankCreds();
-  const bankCreds = bankCredsDict[account.bankId];
+  const bankCredsMap = db.getBankCredsMap(userPassword);
+  const bankCreds = bankCredsMap[account.bankId];
 
   let accountValue: Price | undefined;
   let transactions: Transaction[] = [];

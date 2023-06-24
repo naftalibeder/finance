@@ -15,6 +15,8 @@
     ExtractApiArgs,
     GetBanksApiPayload,
     Bank,
+    BankCreds,
+    UpdateBankCredsApiArgs,
     // TODO: Fix this error if possible.
     // @ts-ignore
   } from "shared";
@@ -26,6 +28,7 @@
   import Lightbox from "./Lightbox.svelte";
   import EditAccount from "./EditAccount.svelte";
   import { TransactionDateGroup } from "../types";
+  import { delay } from "../utils";
 
   const zeroPrice: Price = {
     amount: 0,
@@ -57,14 +60,7 @@
     accounts: {},
     mfaInfos: [],
   };
-  $: extractionStatusKey = Object.keys(extractionStatus.accounts)
-    .sort()
-    .map((k) => extractionStatus.accounts[k])
-    .join(",");
-  $: {
-    extractionStatusKey;
-    fetchAccounts();
-  }
+  let extractionAccountsRemainingCt = 0;
 
   let searchTimer: NodeJS.Timer | undefined;
   let searchInputFieldRef;
@@ -92,7 +88,6 @@
   }
 
   let hoverGroup: TransactionDateGroup | undefined;
-  let extractionStatusPollInterval: NodeJS.Timer | undefined;
 
   let accountIdShowingDetail: UUID | undefined = undefined;
   $: accountShowingDetail = accounts.find(
@@ -110,17 +105,13 @@
     await fetchAccounts();
     await fetchTransactions(query);
     await fetchExtractionStatus();
-
-    if (Object.keys(extractionStatus.accounts).length > 0) {
-      pollExtractionStatus();
-    }
   };
 
   const fetchBanks = async () => {
     try {
       const payload = await post<undefined, GetBanksApiPayload>("banks");
       banks = payload.data.banks;
-      console.log(`Fetched ${accounts.length} banks`);
+      console.log(`Fetched ${banks.length} banks`);
     } catch (e) {
       console.log("Error fetching banks:", e);
     }
@@ -167,6 +158,21 @@
     }
   };
 
+  const updateBankCreds = async (bankId: string, creds: BankCreds) => {
+    try {
+      const payload = await post<UpdateBankCredsApiArgs, undefined>(
+        "banks/updateCredentials",
+        {
+          bankId,
+          username: creds.username,
+          password: creds.password,
+        }
+      );
+    } catch (e) {
+      console.log("Error updating bank creds:", e);
+    }
+  };
+
   const fetchTransactions = async (q: string) => {
     try {
       const payload = await post<
@@ -191,21 +197,27 @@
   const fetchExtractionStatus = async () => {
     try {
       extractionStatus = await post<undefined, ExtractionStatus>("status");
+      console.log(
+        "Extraction status:",
+        Object.values(extractionStatus.accounts).join(",")
+      );
+
+      const remainingCt = Object.keys(extractionStatus.accounts).length;
+
+      if (remainingCt !== extractionAccountsRemainingCt) {
+        await fetchAccounts();
+        await fetchTransactions(query);
+      }
+
+      extractionAccountsRemainingCt = remainingCt;
+
+      if (remainingCt > 0) {
+        await delay(1000);
+        await fetchExtractionStatus();
+      }
     } catch (e) {
       console.log("Error fetching extraction status:", e);
     }
-  };
-
-  const pollExtractionStatus = () => {
-    extractionStatusPollInterval = setInterval(async () => {
-      await fetchExtractionStatus();
-      console.log("Extraction status:", extractionStatus);
-
-      if (Object.keys(extractionStatus.accounts).length === 0) {
-        clearInterval(extractionStatusPollInterval);
-        await fetchAll();
-      }
-    }, 1000);
   };
 
   const onClickSendMfaCode = async (bankId: string, code: string) => {
@@ -216,8 +228,8 @@
     }
   };
   const onClickExtract = async (accountIds?: UUID[]) => {
-    pollExtractionStatus();
     await post<ExtractApiArgs, undefined>("extract", { accountIds });
+    await fetchExtractionStatus();
   };
 
   const onChangeQuery = async (q: string) => {
@@ -276,6 +288,7 @@
     <AccountsList
       {accounts}
       {accountsSum}
+      {banks}
       {extractionStatus}
       onClickCreate={createAccount}
       onClickAccount={(id) => {
@@ -304,7 +317,8 @@
       <EditAccount
         account={accountShowingDetail}
         {banks}
-        onSubmit={updateAccount}
+        onSubmitAccount={updateAccount}
+        onSubmitBankCreds={updateBankCreds}
       />
     </Lightbox>
   {/if}

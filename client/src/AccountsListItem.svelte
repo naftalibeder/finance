@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { UUID } from "crypto";
-  import { Account, ExtractionStatus } from "shared";
+  import { Account, Bank, ExtractionStatus } from "shared";
   import { prettyCurrency, prettyTimeAgo } from "../utils";
 
   export let account: Account;
+  export let bank: Bank | undefined;
   export let extractionStatus:
     | ExtractionStatus["accounts"][string]
     | undefined = undefined;
@@ -23,15 +23,16 @@
 </script>
 
 <div class="grid contents">
-  <button class="cell account name" on:click={() => onClickAccount()}>
+  <button class="cell name" on:click={() => onClickAccount()}>
     {displayName}
   </button>
-  <div class={`cell account price ${account.price.amount < 0 ? "neg" : ""}`}>
+  <button class="cell bank" on:click={() => onClickAccount()}>
+    {bank?.displayName ?? ""}
+  </button>
+  <div class={`cell price ${account.price.amount < 0 ? "neg" : ""}`}>
     {prettyCurrency(account.price)}
   </div>
-  <div
-    class={`cell account gutter-r ${allowHideExtractionStatus ? "hidden" : ""}`}
-  >
+  <div class={`cell gutter-r ${allowHideExtractionStatus ? "hidden" : ""}`}>
     {#if account._pending}
       <div style="color: var(--text-red)">•</div>
     {:else if extractionStatus === "pending"}
@@ -48,6 +49,10 @@
 <style>
   .name {
     grid-column-start: name;
+  }
+
+  .bank {
+    grid-column-start: bank;
   }
 
   .price {

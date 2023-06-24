@@ -9,18 +9,14 @@
 </script>
 
 <div class={"grid contents"}>
-  <div class="cell transaction date">
+  <div class="cell date">
     {prettyDate(transaction.date, { includeTime: false })}
   </div>
-  <div class="cell transaction account">{account.display}</div>
-  <div class="cell transaction payee">{transaction.payee}</div>
-  <div class="cell transaction description">{transaction.description}</div>
-  <div class="cell transaction type">{transaction.type}</div>
-  <div
-    class={`cell transaction price ${
-      transaction.price.amount < 0 ? "neg" : ""
-    }`}
-  >
+  <div class="cell account">{account.display}</div>
+  <div class="cell payee">{transaction.payee}</div>
+  <div class="cell description">{transaction.description}</div>
+  <div class="cell type">{transaction.type}</div>
+  <div class={`cell price ${transaction.price.amount < 0 ? "neg" : ""}`}>
     {prettyCurrency(transaction.price)}
   </div>
   {#if isRecent}

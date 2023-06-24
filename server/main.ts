@@ -1,4 +1,5 @@
 import express from "express";
+import crypto from "crypto";
 import bcrypt from "bcrypt";
 import extractor from "./extractor";
 import db from "./db";
@@ -9,6 +10,7 @@ import {
   GetBanksApiPayload,
   GetTransactionsApiArgs,
   GetTransactionsApiPayload,
+  UpdateBankCredsApiArgs,
   SignInApiArgs,
   SignInApiPayload,
   UpdateAccountApiArgs,
@@ -40,6 +42,8 @@ const main = async () => {
     const token = await bcrypt.hash(password, 10);
     db.setUserToken(token);
 
+    process.env.USER_PASSWORD = password;
+
     const payload: SignInApiPayload = { token };
     res.status(200).send(payload);
   });
@@ -65,9 +69,9 @@ const main = async () => {
 
     const args = req.body as ExtractApiArgs;
     const { accountIds } = args;
-    await extractor.runAccounts(accountIds);
-
-    res.status(200).send({ message: "ok" });
+    extractor.runAccounts(accountIds, () => {
+      res.status(200).send({ message: "ok" });
+    });
   });
 
   app.post("/banks", async (req, res) => {
@@ -77,6 +81,26 @@ const main = async () => {
 
     const payload: GetBanksApiPayload = { data };
     res.status(200).send(payload);
+  });
+
+  app.post("/banks/updateCredentials", async (req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+
+    try {
+      const args = req.body as UpdateBankCredsApiArgs;
+      const { bankId, username, password } = args;
+      const userPassword = process.env.USER_PASSWORD as string;
+      db.setBankCreds(userPassword, bankId, {
+        username,
+        password,
+      });
+    } catch (e) {
+      console.log("Error updating bank creds:", e);
+      res.status(501).send(e);
+      return;
+    }
+
+    res.status(200).send({ message: "ok" });
   });
 
   app.post("/accounts", async (req, res) => {
@@ -143,6 +167,10 @@ const main = async () => {
 
   const server = app.listen(port, () => {
     console.log(`Server started on port ${port}`);
+
+    const userPassword = process.env.USER_PASSWORD as string;
+    const credsMap = db.getBankCredsMap(userPassword);
+    console.log("Creds:", userPassword, JSON.stringify(credsMap, undefined, 2));
   });
 };
 

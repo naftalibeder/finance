@@ -6,8 +6,10 @@ import {
   Price,
   Transaction,
   GetTransactionsApiPayload,
+  BankCreds,
+  BankCredsMap,
 } from "shared";
-import { BankCreds, Database, User } from "types";
+import { Database, User } from "types";
 import { DB_PATH } from "./constants";
 import {
   buildFiltersFromQuery,
@@ -15,13 +17,14 @@ import {
   transactionsMaxPrice,
   transactionsSumPrice,
 } from "./utils";
+import { encrypt, decrypt } from "./utils/crypto";
 
 const initial: Database = {
   user: {
     email: "",
     password: "",
   },
-  bankCredentials: {},
+  bankCredentials: "",
   accounts: [],
   transactions: [],
   extractionStatus: {
@@ -43,6 +46,35 @@ const readDatabase = (): Database => {
 const writeDatabase = (db: Database) => {
   const dbStrUpdated = JSON.stringify(db, undefined, 2);
   fs.writeFileSync(DB_PATH, dbStrUpdated, { encoding: "utf-8" });
+};
+
+export const getBankCredsMap = (encryptionPassword: string): BankCredsMap => {
+  const db = readDatabase();
+
+  const encryptedCreds = db.bankCredentials;
+  try {
+    const credsStr = decrypt(encryptedCreds, encryptionPassword);
+    const credsMap = JSON.parse(credsStr) as BankCredsMap;
+    return credsMap;
+  } catch (e) {
+    return {};
+  }
+};
+
+export const setBankCreds = (
+  encryptionPassword: string,
+  bankId: string,
+  creds: BankCreds
+) => {
+  const db = readDatabase();
+
+  const credsMap = getBankCredsMap(encryptionPassword);
+  credsMap[bankId] = creds;
+  const credsStr = JSON.stringify(credsMap);
+  const encryptedCreds = encrypt(credsStr, encryptionPassword);
+  db.bankCredentials = encryptedCreds;
+
+  writeDatabase(db);
 };
 
 export const getAccounts = (): { accounts: Account[]; sum: Price } => {
@@ -258,12 +290,9 @@ export const setUserToken = (token: string) => {
   writeDatabase(db);
 };
 
-export const getBankCreds = (): Record<string, BankCreds> => {
-  const db = readDatabase();
-  return db.bankCredentials;
-};
-
 export default {
+  getBankCredsMap,
+  setBankCreds,
   getAccounts,
   getAccount,
   createAccount,
@@ -277,5 +306,4 @@ export default {
   clearExtractionStatus,
   getUser,
   setUserToken,
-  getBankCreds,
 };

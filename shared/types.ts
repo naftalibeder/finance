@@ -8,6 +8,15 @@ export type Bank = {
   supportedAccountKinds: Account["kind"][];
 };
 
+/** A dictionary mapping bank id to bank credentials. */
+export type BankCredsMap = Record<string, BankCreds>;
+
+/** Credentials for authenticating with a bank. */
+export type BankCreds = {
+  username: string;
+  password: string;
+};
+
 /** A specific account at a bank. */
 export type Account = {
   /** A globally unique id representing the account internally. */
@@ -106,6 +115,10 @@ export type GetBanksApiPayload = {
   data: {
     banks: Bank[];
   };
+};
+
+export type UpdateBankCredsApiArgs = BankCreds & {
+  bankId: string;
 };
 
 export type GetAccountsApiPayload = {

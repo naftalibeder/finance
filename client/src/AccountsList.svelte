@@ -1,11 +1,12 @@
 <script lang="ts">
   import { UUID } from "crypto";
-  import { Account, ExtractionStatus, Price } from "shared";
+  import { Account, Bank, ExtractionStatus, Price } from "shared";
   import { prettyCurrency } from "../utils";
   import AccountsListItem from "./AccountsListItem.svelte";
 
   export let accounts: Account[];
   export let accountsSum: Price;
+  export let banks: Bank[];
   export let extractionStatus: ExtractionStatus;
   export let onClickCreate: () => void;
   export let onClickAccount: (accountId: UUID) => void;
@@ -38,6 +39,7 @@
     {#each accounts as a}
       <AccountsListItem
         account={a}
+        bank={banks.find((o) => o.id === a.bankId)}
         extractionStatus={extractionStatus.accounts[a._id]}
         onClickAccount={() => onClickAccount(a._id)}
         onClickExtract={() => onClickExtract([a._id])}
@@ -48,12 +50,12 @@
 
 <style>
   .grid.accounts {
-    grid-template-areas: "gutter-l name status price gutter-r";
+    grid-template-areas: "gutter-l name bank price gutter-r";
     grid-template-columns: var(--gutter) 1fr 2fr auto var(--gutter);
   }
 
   .cell.account-section.title {
-    grid-column: name / status;
+    grid-column: name / bank;
   }
 
   .cell.account-section.action {

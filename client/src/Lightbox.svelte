@@ -34,5 +34,6 @@
     grid-column: 2;
     grid-row: 2;
     background-color: var(--text-gray-800);
+    cursor: default;
   }
 </style>

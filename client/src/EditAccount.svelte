@@ -1,32 +1,31 @@
 <script lang="ts">
-  import { Account, Bank } from "shared";
+  import { Account, Bank, BankCreds } from "shared";
   import { titleCase } from "../utils";
 
   export let account: Account;
   export let banks: Bank[];
-  export let onSubmit: (account: Account) => void;
+  export let onSubmitAccount: (account: Account) => Promise<void>;
+  export let onSubmitBankCreds: (
+    bankId: string,
+    creds: BankCreds
+  ) => Promise<void>;
 
   $: currentBank = banks.find((o) => o.id === account.bankId);
+
+  let bankUsername = "";
+  let bankPassword = "";
+
+  const elemId = (key: keyof Account) => {
+    return `${account._id}-${key}`;
+  };
 
   const onChangeProperty = (key: keyof Account, value: string) => {
     const updated: Account = {
       ...account,
       [key]: value,
     };
-    onSubmit(updated);
+    onSubmitAccount(updated);
   };
-
-  const elemId = (key: keyof Account) => {
-    return `${account._id}-${key}`;
-  };
-
-  const kinds: Account["kind"][] = [
-    "checking",
-    "savings",
-    "brokerage",
-    "credit",
-    "debit",
-  ];
 
   const types: Account["type"][] = [
     "assets",
@@ -38,7 +37,9 @@
 </script>
 
 <div class="container">
-  <h1 class="title">{account.display}</h1>
+  <h2>{account.display}</h2>
+
+  <h3>Account info</h3>
   <div class="inputs">
     <label for={elemId("display")}>Display</label>
     <input
@@ -95,6 +96,36 @@
       {/each}
     </select>
   </div>
+
+  <div class="section">
+    <h3>{currentBank?.displayNameShort ?? "Bank"} credentials</h3>
+    <button
+      on:click={async () => {
+        await onSubmitBankCreds(account.bankId, {
+          username: bankUsername,
+          password: bankPassword,
+        });
+        bankUsername = "";
+        bankPassword = "";
+      }}>Save</button
+    >
+  </div>
+  <div class="inputs">
+    <label for="bank-username">Username</label>
+    <input
+      type="email"
+      id={"bank-username"}
+      placeholder={"************"}
+      bind:value={bankUsername}
+    />
+    <label for="bank-password">Password</label>
+    <input
+      type="password"
+      id={"bank-password"}
+      placeholder={"************"}
+      bind:value={bankPassword}
+    />
+  </div>
 </div>
 
 <style>
@@ -105,8 +136,9 @@
     padding: 36px;
   }
 
-  .title {
-    text-align: left;
+  .section {
+    display: grid;
+    grid-template-columns: 1fr auto;
   }
 
   .inputs {

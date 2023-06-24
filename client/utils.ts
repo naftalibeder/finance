@@ -131,3 +131,7 @@ export const prettyCurrency = (a: Price) => {
 export const titleCase = (s: string): string => {
   return s.slice(0, 1).toUpperCase() + s.slice(1).toLowerCase();
 };
+
+export const delay = (ms: number) => {
+  return new Promise((res) => setTimeout(res, ms));
+};
