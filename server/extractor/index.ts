@@ -295,7 +295,7 @@ const waitForMfaCode = async (
   log: ExtractorFuncArgs["log"]
 ): Promise<string> => {
   db.setMfaInfo(bankId);
-  let maxSec = 60 * 2;
+  let maxSec = 60 * 4;
 
   for (let i = 0; i < maxSec; i++) {
     const status = db.getExtractionStatus();
