@@ -40,7 +40,7 @@ class ChaseBankExtractor implements Extractor {
 
   loadStartPage = async (args: ExtractorFuncArgs) => {
     const { extractor, account, bankCreds, page } = args;
-    await page.goto("https://chase.com", { timeout: 12000 });
+    await page.goto("https://chase.com", { waitUntil: "domcontentloaded" });
   };
 
   enterCredentials = async (args: ExtractorFuncArgs) => {
@@ -48,7 +48,7 @@ class ChaseBankExtractor implements Extractor {
 
     let loc: Locator;
 
-    const loginFrame = page.frameLocator("#actual-login-iframe");
+    const loginFrame = page.frameLocator("#logonbox");
 
     // Sometimes instead of a login form, the page loads a button leading to the
     // login form. This button is inaccessible (?) programmatically, but reloading
@@ -127,11 +127,11 @@ class ChaseBankExtractor implements Extractor {
     const dashboardFrame = page.frames()[0];
 
     loc = dashboardFrame
-      .locator(".accounts-blade")
+      .locator(".accountTileComponent")
       .filter({
         has: dashboardFrame.locator(`[text*="${account.number.slice(-4)}"]`),
       })
-      .locator(".primary-value");
+      .locator(".primary-value.text-primary");
     const text = await loc.innerText();
 
     const price = toPrice(text);
