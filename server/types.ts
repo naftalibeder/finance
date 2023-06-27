@@ -1,3 +1,4 @@
+import { UUID } from "crypto";
 import { Page } from "playwright-core";
 import {
   Account,
@@ -66,3 +67,13 @@ export type ExtractorDateRange = {
   start: Date;
   end: Date;
 };
+
+export type ExtractionMetrics = Record<
+  UUID,
+  {
+    startTime: Date;
+    endTime?: Date;
+    foundCt: number;
+    addCt: number;
+  }
+>;

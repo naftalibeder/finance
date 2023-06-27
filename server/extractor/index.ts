@@ -14,7 +14,8 @@ import db from "../db";
 import { delay, prettyAccount, prettyDate, prettyDuration } from "../utils";
 import { CharlesSchwabBankExtractor, ChaseBankExtractor } from "./extractors";
 import { parseTransactions } from "./utils";
-import { Extractor, ExtractorFuncArgs } from "types";
+import { ExtractionMetrics, Extractor, ExtractorFuncArgs } from "types";
+import env from "../env";
 
 const BROWSER_CONTEXT_PATH = `${TMP_DIR}/browser-context.json`;
 const HEADLESS = true;
@@ -57,9 +58,7 @@ const runAccounts = async (
   const tmpRunDir = `${EXTRACTIONS_PATH}/${new Date().toISOString()}`;
   fs.mkdirSync(tmpRunDir, { recursive: true });
 
-  let totalFoundCt = 0;
-  let totalAddCt = 0;
-  let startTime = new Date();
+  const metrics: ExtractionMetrics = {};
 
   const allAccounts = db.getAccounts();
   let accounts: Account[];
@@ -79,20 +78,31 @@ const runAccounts = async (
 
   const [browser, browserContext] = await setUp();
   for (const account of accounts) {
+    const startTime = new Date();
     const { foundCt, addCt } = await runAccount(
       account,
       tmpRunDir,
       browserContext
     );
-    totalFoundCt += foundCt;
-    totalAddCt += addCt;
+    metrics[account._id] = {
+      startTime,
+      endTime: new Date(),
+      foundCt,
+      addCt,
+    };
   }
   await tearDown(browser, browserContext);
 
-  const deltaTime = Date.now() - startTime.valueOf();
   console.log(`Completed extraction across ${accounts.length} accounts`);
-  console.log(`Found ${totalFoundCt} transactions; added ${totalAddCt} new`);
-  console.log(`Finished in ${prettyDuration(deltaTime)}`);
+  for (const [accountId, iterMetrics] of Object.entries(metrics)) {
+    const account = accounts.find((o) => o._id === accountId);
+    const { foundCt, addCt, startTime, endTime } = iterMetrics;
+    const deltaTime = endTime!.valueOf() - startTime.valueOf();
+    const dur = prettyDuration(deltaTime);
+    console.log(
+      `${account?.display}: ${foundCt} total; ${addCt} new; took ${dur}`
+    );
+  }
 };
 
 const runAccount = async (
@@ -111,9 +121,17 @@ const runAccount = async (
   log(`Starting extraction`);
   db.setExtractionStatus([account._id], "in-progress");
 
-  const userPassword = process.env.USER_PASSWORD as string;
+  const userPassword = env.get("USER_PASSWORD");
+  if (!userPassword) {
+    throw "No user password stored";
+  }
+
   const extractor = extractorsDict[account.bankId];
   const bankCredsMap = db.getBankCredsMap(userPassword);
+  if (!userPassword) {
+    throw "Invalid password for decrypting bank credentials";
+  }
+
   const bankCreds = bankCredsMap[account.bankId];
 
   let accountValue: Price | undefined;

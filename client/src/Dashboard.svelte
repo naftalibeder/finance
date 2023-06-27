@@ -169,7 +169,7 @@
         }
       );
     } catch (e) {
-      console.log("Error updating bank creds:", e);
+      console.log("Error updating bank credentials:", e);
     }
   };
 
