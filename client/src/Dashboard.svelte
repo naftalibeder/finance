@@ -164,6 +164,7 @@
       await post<DeleteAccountApiArgs, undefined>("accounts/delete", {
         accountId,
       });
+      accountIdShowingDetail = undefined;
       await fetchAccounts();
     } catch (e) {
       console.log("Error deleting account:", e);

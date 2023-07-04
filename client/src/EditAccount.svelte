@@ -17,6 +17,9 @@
   let bankUsername = "";
   let bankPassword = "";
 
+  let deleteClickCt = 0;
+  const deleteConfirmClickCt = 5;
+
   const elemId = (key: keyof Account) => {
     return `${account._id}-${key}`;
   };
@@ -146,10 +149,17 @@
       <button
         class="destructive"
         on:click={async () => {
-          await onSelectDeleteAccount(account._id);
+          deleteClickCt += 1;
+          if (deleteClickCt === deleteConfirmClickCt) {
+            await onSelectDeleteAccount(account._id);
+          }
         }}
       >
-        Delete account
+        {#if deleteClickCt > 0}
+          Delete account ({deleteClickCt}/{deleteConfirmClickCt})
+        {:else}
+          Delete account
+        {/if}
       </button>
     </div>
   </div>
