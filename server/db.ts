@@ -149,6 +149,18 @@ export const updateAccount = (
   return { account: next };
 };
 
+export const deleteAccount = (id: UUID) => {
+  const db = readDatabase();
+
+  const index = db.accounts.findIndex((o) => o._id === id);
+  if (index === -1) {
+    return;
+  }
+
+  db.accounts.splice(index, 1);
+  writeDatabase(db);
+};
+
 export const getTransactions = (
   query: string
 ): GetTransactionsApiPayload["data"] => {
@@ -297,6 +309,7 @@ export default {
   getAccount,
   createAccount,
   updateAccount,
+  deleteAccount,
   getTransactions,
   addTransactions,
   getExtractionStatus,

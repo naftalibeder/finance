@@ -15,6 +15,7 @@ import {
   UpdateAccountApiArgs,
   UpdateAccountApiPayload,
   VerifyTokenApiArgs,
+  DeleteAccountApiArgs,
 } from "shared";
 import env from "./env";
 
@@ -122,6 +123,14 @@ const start = async () => {
 
     const payload: UpdateAccountApiPayload = { data };
     res.status(200).send(payload);
+  });
+
+  app.post("/accounts/delete", async (req, res) => {
+    const args = req.body as DeleteAccountApiArgs;
+    const { accountId } = args;
+    const data = db.deleteAccount(accountId);
+
+    res.status(200).send({ message: "ok" });
   });
 
   app.post("/transactions", async (req, res) => {

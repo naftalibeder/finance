@@ -67,6 +67,7 @@ textarea:disabled {
 }
 
 button {
+  display: flex;
   font-family: "PT Mono", monospace;
   color: white;
   background-color: transparent;
@@ -99,6 +100,10 @@ button.text:hover {
   text-decoration-line: underline;
   text-underline-offset: 6px;
   text-decoration-style: solid;
+}
+
+button.destructive {
+  color: var(--text-red);
 }
 
 .faded {

@@ -1,8 +1,8 @@
 {
   "name": "server",
   "scripts": {
-    "build": "npx tsc",
-    "start": "set -a && source ../.env && set +a && npm run build && node dist/main.js",
+    "build": "rm -rf dist && npx tsc",
+    "start": "set -a && source ../.env && set +a && npm run build && node dist/router.js",
     "test": "npm run build && mocha dist/**/*_test.js"
   },
   "devDependencies": {

@@ -17,6 +17,7 @@
     Bank,
     BankCreds,
     UpdateBankCredsApiArgs,
+    DeleteAccountApiArgs,
     // TODO: Fix this error if possible.
     // @ts-ignore
   } from "shared";
@@ -141,7 +142,7 @@
 
   const updateAccount = async (account: Account) => {
     try {
-      const payload = await post<UpdateAccountApiArgs, UpdateAccountApiPayload>(
+      await post<UpdateAccountApiArgs, UpdateAccountApiPayload>(
         "accounts/update",
         {
           _id: account._id,
@@ -158,16 +159,24 @@
     }
   };
 
+  const deleteAccount = async (accountId: UUID) => {
+    try {
+      await post<DeleteAccountApiArgs, undefined>("accounts/delete", {
+        accountId,
+      });
+      await fetchAccounts();
+    } catch (e) {
+      console.log("Error deleting account:", e);
+    }
+  };
+
   const updateBankCreds = async (bankId: string, creds: BankCreds) => {
     try {
-      const payload = await post<UpdateBankCredsApiArgs, undefined>(
-        "banks/updateCredentials",
-        {
-          bankId,
-          username: creds.username,
-          password: creds.password,
-        }
-      );
+      await post<UpdateBankCredsApiArgs, undefined>("banks/updateCredentials", {
+        bankId,
+        username: creds.username,
+        password: creds.password,
+      });
     } catch (e) {
       console.log("Error updating bank credentials:", e);
     }
@@ -320,6 +329,7 @@
         {banks}
         onSubmitAccount={updateAccount}
         onSubmitBankCreds={updateBankCreds}
+        onSelectDeleteAccount={deleteAccount}
       />
     </Lightbox>
   {/if}

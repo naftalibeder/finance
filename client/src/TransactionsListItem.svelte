@@ -3,7 +3,7 @@
   import { prettyCurrency, prettyDate, secAgo } from "../utils";
 
   export let transaction: Transaction;
-  export let account: Account;
+  export let account: Account | undefined;
 
   $: isRecent = secAgo(transaction._createdAt) < 60 * 60;
 </script>
@@ -12,7 +12,7 @@
   <div class="cell date">
     {prettyDate(transaction.date, { includeTime: false })}
   </div>
-  <div class="cell account">{account.display}</div>
+  <div class="cell account">{account?.display ?? ""}</div>
   <div class="cell payee">{transaction.payee}</div>
   <div class="cell description">{transaction.description}</div>
   <div class="cell type">{transaction.type}</div>

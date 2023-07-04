@@ -1,7 +1,7 @@
 <script lang="ts">
   export let onPressDismiss: () => void;
 
-  let containerRef;
+  let containerRef: HTMLDivElement;
 
   const onClickBg = (evt: MouseEvent) => {
     if (evt.target === containerRef) {
@@ -10,11 +10,16 @@
   };
 </script>
 
-<button class="container" on:click={onClickBg} bind:this={containerRef}>
+<div
+  class="container"
+  on:click={onClickBg}
+  on:keypress={() => {}}
+  bind:this={containerRef}
+>
   <div class="box">
     <slot />
   </div>
-</button>
+</div>
 
 <style>
   .container {

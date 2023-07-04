@@ -145,6 +145,10 @@ export type UpdateAccountApiPayload = {
   };
 };
 
+export type DeleteAccountApiArgs = {
+  accountId: UUID;
+};
+
 export type GetTransactionsApiArgs = {
   query: string;
 };
