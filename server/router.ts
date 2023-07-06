@@ -1,4 +1,5 @@
 import express from "express";
+import bodyParser from "body-parser";
 import bcrypt from "bcrypt";
 import extractor from "./extractor";
 import db from "./db";
@@ -23,8 +24,9 @@ const start = async () => {
   const port = env.get("SERVER_PORT");
 
   const app = express();
-  app.use(express.urlencoded({ extended: true }));
+  app.use(bodyParser.json());
   app.use((req, res, next) => {
+    res.setHeader("Access-Control-Allow-Headers", "*");
     res.setHeader("Access-Control-Allow-Origin", "*");
     next();
   });
@@ -84,15 +86,8 @@ const start = async () => {
     try {
       const args = req.body as UpdateBankCredsApiArgs;
       const { bankId, username, password } = args;
-      const userPassword = env.get("USER_PASSWORD");
-      if (!userPassword) {
-        throw "Invalid user password";
-      }
 
-      db.setBankCreds(userPassword, bankId, {
-        username,
-        password,
-      });
+      db.setBankCreds(bankId, { username, password });
     } catch (e) {
       console.log("Error updating bank credentials:", e);
       res.status(501).send(e);
@@ -118,7 +113,7 @@ const start = async () => {
 
   app.post("/accounts/update", async (req, res) => {
     const args = req.body as UpdateAccountApiArgs;
-    const account = args;
+    const { account } = args;
     const data = db.updateAccount(account._id, account);
 
     const payload: UpdateAccountApiPayload = { data };

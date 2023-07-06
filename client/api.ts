@@ -8,27 +8,20 @@ export const post = async <
   path: string,
   args?: Args
 ): Promise<Payload> => {
-  const body = new URLSearchParams();
-  if (args) {
-    Object.entries(args).forEach(([k, v]) => {
-      if (v !== undefined && v !== null) {
-        body.set(k, v);
-      }
-    });
-  }
+  const body: Record<string, any> = { ...args };
   const token = localStorage.getItem("token");
   if (token) {
-    body.set("token", token);
+    body.token = token;
   }
 
   const url = `${serverUrl}/${path}`;
-  console.log("Request:", url, body.toString());
+  console.log("Request:", url, JSON.stringify(body));
   const res = await fetch(url, {
     method: "POST",
     headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
+      "Content-Type": "application/json",
     },
-    body: body.toString(),
+    body: JSON.stringify(body),
   });
 
   const payload = (await res.json()) as Payload;

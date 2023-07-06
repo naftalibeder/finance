@@ -10,30 +10,26 @@
   export let onClickAccount: () => void;
   export let onClickExtract: () => void;
 
-  $: displayName = ((a: Account) => {
-    if (a._pending) {
-      return a.display.length > 0 ? a.display : "New Account";
-    } else {
-      return a.display;
-    }
-  })(account);
-
-  $: allowHideExtractionStatus =
-    !account._pending && extractionStatus === undefined;
+  $: displayName = account.display.length > 0 ? account.display : "New Account";
+  $: bankDisplayName = bank?.displayName ?? "No bank selected";
+  $: allowHideExtractionStatus = account.bankHasCreds && !extractionStatus;
 </script>
 
 <div class="grid contents">
   <button class="cell name" on:click={() => onClickAccount()}>
     {displayName}
   </button>
-  <button class="cell bank" on:click={() => onClickAccount()}>
-    {bank?.displayName ?? ""}
+  <button
+    class={`cell bank ${account.bankHasCreds ? "" : "faded"}`}
+    on:click={() => onClickAccount()}
+  >
+    {bankDisplayName}
   </button>
   <div class={`cell price ${account.price.amount < 0 ? "neg" : ""}`}>
     {prettyCurrency(account.price)}
   </div>
   <div class={`cell gutter-r ${allowHideExtractionStatus ? "hidden" : ""}`}>
-    {#if account._pending}
+    {#if !account.bankHasCreds}
       <div style="color: var(--text-red)">•</div>
     {:else if extractionStatus === "pending"}
       <div>•</div>

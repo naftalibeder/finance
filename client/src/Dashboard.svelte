@@ -145,12 +145,14 @@
       await post<UpdateAccountApiArgs, UpdateAccountApiPayload>(
         "accounts/update",
         {
-          _id: account._id,
-          bankId: account.bankId,
-          display: account.display,
-          number: account.number,
-          kind: account.kind,
-          type: account.type,
+          account: {
+            _id: account._id,
+            bankId: account.bankId,
+            display: account.display,
+            number: account.number,
+            kind: account.kind,
+            type: account.type,
+          },
         }
       );
       await fetchAccounts();

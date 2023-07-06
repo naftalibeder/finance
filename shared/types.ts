@@ -1,6 +1,6 @@
 import { UUID } from "crypto";
 
-/** A bank. */
+/** A universal description of a bank, unrelated to any particular user. */
 export type Bank = {
   id: string;
   displayName: string;
@@ -17,22 +17,28 @@ export type BankCreds = {
   password: string;
 };
 
-/** A specific account at a bank. */
+/** An account for a specific user at a bank. */
 export type Account = {
   /** A globally unique id representing the account internally. */
   _id: UUID;
-  /** If true, the account has been initialized but not confirmed by the user. */
-  _pending?: boolean;
   _createdAt: string;
   _updatedAt: string;
   /** A unique id that matches one of the available extractors. */
   bankId: string;
+  /** Whether the user has saved login credentials for the bank. */
+  bankHasCreds: boolean;
   /** The display name or nickname of the account. */
   display: string;
   /** The account number. */
   number: string;
   /** The purpose of the account, e.g. checking, brokerage, etc. */
-  kind: "checking" | "savings" | "brokerage" | "credit" | "debit";
+  kind:
+    | "checking"
+    | "savings"
+    | "brokerage"
+    | "credit"
+    | "debit"
+    | "unselected";
   /** The type of resource stored in the account. */
   type: "assets" | "liabilities" | "equity" | "revenue" | "expenses";
   /** The current value of the account's assets. */
@@ -41,7 +47,7 @@ export type Account = {
 
 /** A unique transaction. */
 export type Transaction = {
-  /** A globally unique id representing the account internally. */
+  /** A globally unique id representing the transaction internally. */
   _id: UUID;
   _createdAt: string;
   _updatedAt: string;
@@ -134,10 +140,12 @@ export type CreateAccountApiPayload = {
   };
 };
 
-export type UpdateAccountApiArgs = Omit<
-  Account,
-  "_pending" | "_createdAt" | "_updatedAt" | "price"
-> & {};
+export type UpdateAccountApiArgs = {
+  account: Omit<
+    Account,
+    "_pending" | "_createdAt" | "_updatedAt" | "bankHasCreds" | "price"
+  >;
+};
 
 export type UpdateAccountApiPayload = {
   data: {

@@ -18,6 +18,7 @@ import {
   transactionsSumPrice,
 } from "./utils";
 import { encrypt, decrypt } from "./utils/crypto";
+import env from "./env";
 
 const initial: Database = {
   user: {
@@ -48,12 +49,17 @@ const writeDatabase = (db: Database) => {
   fs.writeFileSync(DB_PATH, dbStrUpdated, { encoding: "utf-8" });
 };
 
-export const getBankCredsMap = (encryptionPassword: string): BankCredsMap => {
+export const getBankCredsMap = (): BankCredsMap => {
   const db = readDatabase();
+
+  const userPassword = env.get("USER_PASSWORD");
+  if (!userPassword) {
+    throw "Invalid user password";
+  }
 
   const encryptedCreds = db.bankCredentials;
   try {
-    const credsStr = decrypt(encryptedCreds, encryptionPassword);
+    const credsStr = decrypt(encryptedCreds, userPassword);
     const credsMap = JSON.parse(credsStr) as BankCredsMap;
     return credsMap;
   } catch (e) {
@@ -61,17 +67,19 @@ export const getBankCredsMap = (encryptionPassword: string): BankCredsMap => {
   }
 };
 
-export const setBankCreds = (
-  encryptionPassword: string,
-  bankId: string,
-  creds: BankCreds
-) => {
+export const setBankCreds = (bankId: string, creds: BankCreds) => {
   const db = readDatabase();
 
-  const credsMap = getBankCredsMap(encryptionPassword);
+  const credsMap = getBankCredsMap();
   credsMap[bankId] = creds;
   const credsStr = JSON.stringify(credsMap);
-  const encryptedCreds = encrypt(credsStr, encryptionPassword);
+
+  const userPassword = env.get("USER_PASSWORD");
+  if (!userPassword) {
+    throw "Invalid user password";
+  }
+
+  const encryptedCreds = encrypt(credsStr, userPassword);
   db.bankCredentials = encryptedCreds;
 
   writeDatabase(db);
@@ -96,8 +104,8 @@ export const getAccounts = (): { accounts: Account[]; sum: Price } => {
 };
 
 export const getAccount = (id: string): Account | undefined => {
-  const db = readDatabase();
-  const account = db.accounts.find((o) => o._id === id);
+  const { accounts } = getAccounts();
+  const account = accounts.find((o) => o._id === id);
   return account;
 };
 
@@ -106,13 +114,13 @@ export const createAccount = (): { account: Account } => {
 
   const account: Account = {
     _id: randomUUID(),
-    _pending: true,
     _createdAt: new Date().toISOString(),
     _updatedAt: new Date().toISOString(),
     bankId: "",
+    bankHasCreds: false,
     display: "",
     number: "",
-    kind: "checking",
+    kind: "unselected",
     type: "assets",
     price: {
       amount: 0,
@@ -127,7 +135,7 @@ export const createAccount = (): { account: Account } => {
 
 export const updateAccount = (
   id: UUID,
-  update: Partial<Omit<Account, "_createdAt" | "_updatedAt">>
+  update: Partial<Account>
 ): { account?: Account } => {
   const db = readDatabase();
 
@@ -137,12 +145,17 @@ export const updateAccount = (
   }
 
   const existing = db.accounts[index];
-  const next = {
+  const next: Account = {
     ...existing,
     ...update,
     _createdAt: existing._createdAt,
     _updatedAt: update.price ? new Date().toISOString() : existing._updatedAt,
   };
+
+  const credsMap = getBankCredsMap();
+  const creds = credsMap[next.bankId];
+  next.bankHasCreds = !!creds;
+
   db.accounts[index] = next;
 
   writeDatabase(db);

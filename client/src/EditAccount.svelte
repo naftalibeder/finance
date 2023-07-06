@@ -13,6 +13,8 @@
   export let onSelectDeleteAccount: (accountId: UUID) => Promise<void>;
 
   $: currentBank = banks.find((o) => o.id === account.bankId);
+  $: kindIsDisabled =
+    !currentBank || currentBank.supportedAccountKinds.length === 0;
 
   let bankUsername = "";
   let bankPassword = "";
@@ -69,12 +71,13 @@
         <label for={elemId("bankId")}>Bank</label>
         <select
           id={elemId("bankId")}
-          value={currentBank?.id}
-          placeholder={"Select one"}
+          class={!currentBank ? "faded-text" : ""}
+          value={currentBank?.id ?? ""}
           on:change={(evt) => {
             onChangeProperty("bankId", evt.target["value"]);
           }}
         >
+          <option value="">Select one</option>
           {#each banks as bank}
             <option value={bank.id}>{bank.displayName}</option>
           {/each}
@@ -82,14 +85,18 @@
         <label for={elemId("kind")}>Kind</label>
         <select
           id={elemId("kind")}
-          value={account.kind}
-          placeholder={currentBank ? "Select one" : "No bank selected"}
-          disabled={!currentBank ||
-            currentBank.supportedAccountKinds.length === 0}
+          class={kindIsDisabled || account.kind === "unselected"
+            ? "faded-text"
+            : ""}
+          value={kindIsDisabled ? "unselected" : account.kind}
+          disabled={kindIsDisabled}
           on:change={(evt) => {
             onChangeProperty("kind", evt.target["value"]);
           }}
         >
+          <option value="unselected">
+            {currentBank ? "Select one" : "No bank selected"}
+          </option>
           {#if currentBank}
             {#each currentBank.supportedAccountKinds as kind}
               <option value={kind}>{titleCase(kind)}</option>
@@ -132,14 +139,14 @@
         <input
           type="email"
           id={"bank-username"}
-          placeholder={"************"}
+          placeholder={account.bankHasCreds ? "************" : "Enter email"}
           bind:value={bankUsername}
         />
         <label for="bank-password">Password</label>
         <input
           type="password"
           id={"bank-password"}
-          placeholder={"************"}
+          placeholder={account.bankHasCreds ? "************" : "Enter password"}
           bind:value={bankPassword}
         />
       </div>
@@ -156,7 +163,7 @@
         }}
       >
         {#if deleteClickCt > 0}
-          Delete account ({deleteClickCt}/{deleteConfirmClickCt})
+          Delete account (Clicked {deleteClickCt}/{deleteConfirmClickCt})
         {:else}
           Delete account
         {/if}
@@ -201,5 +208,9 @@
     display: grid;
     align-items: start;
     margin-top: 16px;
+  }
+
+  select.faded-text {
+    color: var(--text-gray-500);
   }
 </style>

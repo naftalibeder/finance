@@ -64,7 +64,7 @@ const runAccounts = async (
   let accounts: Account[];
   if (accountIds && accountIds.length > 0) {
     accounts = allAccounts.accounts.filter((o) => {
-      return accountIds.includes(o._id) && !o._pending;
+      return accountIds.includes(o._id);
     });
   } else {
     accounts = allAccounts.accounts;
@@ -121,17 +121,8 @@ const runAccount = async (
   log(`Starting extraction`);
   db.setExtractionStatus([account._id], "in-progress");
 
-  const userPassword = env.get("USER_PASSWORD");
-  if (!userPassword) {
-    throw "No user password stored";
-  }
-
   const extractor = extractorsDict[account.bankId];
-  const bankCredsMap = db.getBankCredsMap(userPassword);
-  if (!userPassword) {
-    throw "Invalid password for decrypting bank credentials";
-  }
-
+  const bankCredsMap = db.getBankCredsMap();
   const bankCreds = bankCredsMap[account.bankId];
 
   let accountValue: Price | undefined;
