@@ -10,6 +10,7 @@ export const parseTransactions = async (
   account: Account,
   extractor: Extractor
 ): Promise<{ transactions: Transaction[]; skipCt: number }> => {
+  let transactions: Transaction[] = [];
   let skipCt = 0;
 
   const columnMap = extractor.getColumnMap(account.kind);
@@ -17,7 +18,7 @@ export const parseTransactions = async (
     throw `Column map not provided for account kind ${account.kind}`;
   }
 
-  const transactions = await new Promise<Transaction[]>((res, rej) => {
+  transactions = await new Promise<Transaction[]>((res, rej) => {
     const ts: Transaction[] = [];
     const parser = parse({
       delimiter: ",",
@@ -26,12 +27,17 @@ export const parseTransactions = async (
     parser.on("readable", () => {
       let row: string[];
       while ((row = parser.read()) !== null) {
-        const t = buildTransaction(row, account, columnMap);
-        if (!t) {
+        try {
+          const t = buildTransaction(row, account, columnMap);
+          if (!t) {
+            skipCt += 1;
+            continue;
+          }
+          ts.push(t);
+        } catch (e) {
           skipCt += 1;
           continue;
         }
-        ts.push(t);
       }
     });
     parser.on("error", (e) => {
