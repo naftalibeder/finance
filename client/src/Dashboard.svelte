@@ -22,12 +22,14 @@
     // @ts-ignore
   } from "shared";
   import { post } from "../api";
-  import TimeChart from "./TimeChart.svelte";
-  import AccountsList from "./AccountsList.svelte";
-  import TransactionsList from "./TransactionsList.svelte";
-  import MfaInputList from "./MfaInputList.svelte";
-  import Lightbox from "./Lightbox.svelte";
-  import EditAccount from "./EditAccount.svelte";
+  import {
+    TimeChart,
+    AccountsList,
+    TransactionsList,
+    EditAccount,
+    MfaInputList,
+    Lightbox,
+  } from ".";
   import { TransactionDateGroup } from "../types";
   import { delay } from "../utils";
 

@@ -2,8 +2,8 @@
   import { UUID } from "crypto";
   import { Transaction, Price, Account } from "shared";
   import { prettyCurrency } from "../utils";
-  import TransactionsListItem from "./TransactionsListItem.svelte";
   import { TransactionDateGroup } from "../types";
+  import { TransactionsListItem } from ".";
 
   export let transactions: Transaction[];
   export let transactionsSumPrice: Price;

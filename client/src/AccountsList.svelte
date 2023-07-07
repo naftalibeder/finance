@@ -2,7 +2,7 @@
   import { UUID } from "crypto";
   import { Account, Bank, ExtractionStatus, Price } from "shared";
   import { prettyCurrency } from "../utils";
-  import AccountsListItem from "./AccountsListItem.svelte";
+  import { AccountsListItem } from ".";
 
   export let accounts: Account[];
   export let accountsSum: Price;

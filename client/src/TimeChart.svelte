@@ -2,8 +2,7 @@
   import { Price, Transaction } from "shared";
   import { TransactionDateGroup } from "../types";
   import { buildTransactionsDateGroups, prettyDate } from "../utils";
-  import TimeChartBar from "./TimeChartBar.svelte";
-  import TimeChartInfo from "./TimeChartInfo.svelte";
+  import { TimeChartBar, TimeChartInfo } from ".";
 
   export let transactions: Transaction[];
   export let transactionsOverallMaxPrice: Price;

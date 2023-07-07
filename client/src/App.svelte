@@ -1,9 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { post } from "../api";
-  import Auth from "./Auth.svelte";
-  import Dashboard from "./Dashboard.svelte";
   import { VerifyTokenApiArgs } from "shared";
+  import { Auth, Dashboard } from ".";
 
   let isLoading = true;
   let isAuthenticated = false;
