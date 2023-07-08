@@ -2,13 +2,13 @@
 
 ## About
 
-A private, self-hostable transactions extractor that doesn't require trusting anyone else with your financial data or credentials.
+A private, self-hosted personal finance app that pulls new transactions automatically and doesn't require trusting anyone else with your financial data or credentials.
 
 ## Instructions
 
 Run the following:
 
-```
+```sh
 npm install
 npm run start
 ```
@@ -17,7 +17,7 @@ npm run start
 
 - Data is stored in a human-readable format
 - Transaction scraping happens automatically
-- All passwords are stored locally
+- All passwords are encrypted and stored locally
 
 ## Roadmap
 
