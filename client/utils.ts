@@ -1,4 +1,3 @@
-// TODO: Fix this error if possible.
 // @ts-ignore
 import { Price, Transaction } from "shared";
 import { TransactionDateGroup } from "types";

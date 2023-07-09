@@ -1,6 +1,5 @@
 import mocha from "mocha";
 import { buildFiltersFromQuery, transactionMatchesFilters } from "./query";
-// TODO: Fix this error if possible.
 // @ts-ignore
 import { Transaction } from "shared";
 import { randomUUID } from "crypto";

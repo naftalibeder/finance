@@ -18,7 +18,6 @@
     BankCreds,
     UpdateBankCredsApiArgs,
     DeleteAccountApiArgs,
-    // TODO: Fix this error if possible.
     // @ts-ignore
   } from "shared";
   import { post } from "../api";
