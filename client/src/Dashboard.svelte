@@ -270,7 +270,7 @@
   <div class="content">
     <div class="header">
       <div class="row">
-        <h1 style={"flex: 2"}>Transactions</h1>
+        <h1 style={"flex: 2"}>Finance</h1>
         <input
           id={"search-input"}
           style={"flex: 1"}
