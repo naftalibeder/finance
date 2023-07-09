@@ -37,10 +37,10 @@ const start = async () => {
     const { email, password } = args;
 
     const userCreds = db.getUser();
-    const passwordIsValid = await bcrypt.compare(password, userCreds.password);
-    const isValid = email === userCreds.email && passwordIsValid;
-    if (!isValid) {
-      res.status(401).send({ error: "Unauthorized" });
+    const emailMatches = email === userCreds.email;
+    const passwordMatches = await bcrypt.compare(password, userCreds.password);
+    if (!emailMatches || !passwordMatches) {
+      res.status(401).send({ error: "Invalid email or password" });
       return;
     }
 
