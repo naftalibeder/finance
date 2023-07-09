@@ -1,5 +1,5 @@
 {
-  "name": "transactions",
+  "name": "finance",
   "version": "1",
   "scripts": {
     "postinstall": "(cd client && npm i) && (cd server && npm i)",
