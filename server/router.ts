@@ -15,10 +15,11 @@ import {
   SignInApiPayload,
   UpdateAccountApiArgs,
   UpdateAccountApiPayload,
-  VerifyTokenApiArgs,
+  VerifyDeviceApiArgs,
   DeleteAccountApiArgs,
 } from "shared";
 import env from "./env";
+import { randomUUID } from "crypto";
 
 const start = async () => {
   const port = env.get("SERVER_PORT");
@@ -43,24 +44,30 @@ const start = async () => {
       return;
     }
 
-    // TODO: Generate a JWT instead.
+    const name = randomUUID();
     const token = await bcrypt.hash(password, 10);
-    db.setUserToken(token);
+    db.setDevice(name, token);
     env.set("USER_PASSWORD", password);
 
-    const payload: SignInApiPayload = { token };
+    const payload: SignInApiPayload = { name, token };
     res.status(200).send(payload);
   });
 
-  app.post("/verifyToken", async (req, res) => {
-    const args = req.body as VerifyTokenApiArgs;
-    const { token } = args;
+  app.post("/verifyDevice", async (req, res) => {
+    const args = req.body as VerifyDeviceApiArgs;
+    const { name, token } = args;
+
+    const userPassword = env.get("USER_PASSWORD");
+    if (!userPassword) {
+      res.status(401).send({ error: "No password stored in memory" });
+      return;
+    }
 
     const userCreds = db.getUser();
-    const userPassword = env.get("USER_PASSWORD");
-    const isValid = token === userCreds.token && userPassword;
+    const storedDevice = userCreds.devices[name];
+    const isValid = storedDevice && token === storedDevice.token;
     if (!isValid) {
-      res.status(401).send({ error: "Unauthorized" });
+      res.status(401).send({ error: "Invalid token" });
       return;
     }
 

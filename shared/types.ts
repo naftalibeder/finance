@@ -106,10 +106,12 @@ export type SignInApiArgs = {
 };
 
 export type SignInApiPayload = {
+  name: string;
   token: string;
 };
 
-export type VerifyTokenApiArgs = {
+export type VerifyDeviceApiArgs = {
+  name: string;
   token: string;
 };
 

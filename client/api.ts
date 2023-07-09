@@ -9,8 +9,10 @@ export const post = async <
   args?: Args
 ): Promise<Payload> => {
   const body: Record<string, any> = { ...args };
+  const name = localStorage.getItem("name");
   const token = localStorage.getItem("token");
-  if (token) {
+  if (name && token) {
+    body.name = name;
     body.token = token;
   }
 

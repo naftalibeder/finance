@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { post } from "../api";
-  import { VerifyTokenApiArgs } from "shared";
+  import { VerifyDeviceApiArgs } from "shared";
   import { Auth, Dashboard } from ".";
 
   let isLoading = true;
@@ -9,20 +9,24 @@
 
   onMount(async () => {
     isLoading = true;
-    isAuthenticated = await checkToken();
+    isAuthenticated = await checkDevice();
     isLoading = false;
   });
 
-  const checkToken = async (): Promise<boolean> => {
+  const checkDevice = async (): Promise<boolean> => {
+    const name = localStorage.getItem("name");
     const token = localStorage.getItem("token");
-    if (!token) {
+    if (!name || !token) {
       console.log("No token stored locally");
       return false;
     }
 
     try {
       console.log("Submitting token:", token);
-      await post<VerifyTokenApiArgs, undefined>("verifyToken", { token });
+      await post<VerifyDeviceApiArgs, undefined>("verifyDevice", {
+        name,
+        token,
+      });
       return true;
     } catch (e) {
       console.log("Error verifying token:", e);

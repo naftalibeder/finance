@@ -19,7 +19,12 @@ export type Database = {
 export type User = {
   email: string;
   password: string;
-  token?: string;
+  devices: {
+    [name: string]: {
+      token: string;
+      createdAt: string;
+    };
+  };
 };
 
 export interface ExtractorFuncArgs {

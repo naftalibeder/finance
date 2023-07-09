@@ -24,6 +24,7 @@ const initial: Database = {
   user: {
     email: "",
     password: "",
+    devices: {},
   },
   bankCredentials: "",
   accounts: [],
@@ -309,9 +310,12 @@ export const getUser = (): User => {
   return db.user;
 };
 
-export const setUserToken = (token: string) => {
+export const setDevice = (name: string, token: string) => {
   const db = readDatabase();
-  db.user.token = token;
+  db.user.devices[name] = {
+    token,
+    createdAt: new Date().toISOString(),
+  };
   writeDatabase(db);
 };
 
@@ -331,5 +335,5 @@ export default {
   deleteMfaInfo,
   clearExtractionStatus,
   getUser,
-  setUserToken,
+  setDevice,
 };
