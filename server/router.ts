@@ -157,10 +157,13 @@ const start = async () => {
     res.status(200).send({ message: "ok" });
   });
 
-  process.on("SIGINT", () => {
+  const stop = () => {
     db.clearExtractionStatus();
     server.close();
-  });
+  };
+
+  process.on("SIGINT", stop);
+  process.on("SIGTERM", stop);
 
   const server = app.listen(port, () => {
     console.log(`Server started on port ${port}`);
