@@ -1,6 +1,6 @@
 import { parse } from "csv-parse";
 import { Account, Transaction } from "shared/types";
-import { Frame, FrameLocator } from "playwright-core";
+import { Frame, FrameLocator } from "@playwright/test";
 import { toDate, toPrice } from "../utils";
 import { Extractor, ExtractorColumnMap, ExtractorColumnMapKey } from "types";
 import { randomUUID } from "crypto";

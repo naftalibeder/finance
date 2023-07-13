@@ -1,5 +1,5 @@
 import { UUID } from "crypto";
-import { Page } from "playwright-core";
+import { Page } from "@playwright/test";
 import {
   Account,
   Transaction,
@@ -56,6 +56,12 @@ export interface Extractor {
   bankDisplayName: string;
   bankDisplayNameShort: string;
   supportedAccountKinds: Account["kind"][];
+  /**
+   * Used for date formatting; necessary to prevent e.g. requesting transactions for the next day.
+   * See [this list](https://source.chromium.org/chromium/chromium/deps/icu.git/+/faee8bc70570192d82d2978a71e2a615788597d1:source/data/misc/metaZones.txt)
+   * of identifiers.
+   */
+  timeZone: Intl.DateTimeFormatOptions["timeZone"];
   getColumnMap: (
     accountKind: Account["kind"]
   ) => ExtractorColumnMap | undefined;

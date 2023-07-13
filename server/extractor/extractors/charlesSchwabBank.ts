@@ -1,5 +1,5 @@
 import fs from "fs";
-import { Locator } from "playwright-core";
+import { Locator } from "@playwright/test";
 import { Account, Price } from "shared";
 import {
   Extractor,
@@ -15,6 +15,7 @@ class CharlesSchwabBankExtractor implements Extractor {
   bankDisplayName = "Charles Schwab Bank";
   bankDisplayNameShort = "Schwab";
   supportedAccountKinds: Account["kind"][] = ["checking", "brokerage"];
+  timeZone = "America/Chicago";
 
   getColumnMap = (
     accountKind: Account["kind"]
@@ -164,11 +165,15 @@ class CharlesSchwabBankExtractor implements Extractor {
     await page.waitForTimeout(1000);
 
     loc = dateRangeFrame.locator("#calendar-FromDate");
-    await loc.fill(range.start.toLocaleDateString("en-US"));
+    await loc.fill(
+      range.start.toLocaleDateString("en-US", { timeZone: this.timeZone })
+    );
     await loc.blur();
 
     loc = dateRangeFrame.locator("#calendar-ToDate");
-    await loc.fill(range.end.toLocaleDateString("en-US"));
+    await loc.fill(
+      range.end.toLocaleDateString("en-US", { timeZone: this.timeZone })
+    );
     await loc.blur();
 
     loc = dateRangeFrame.getByRole("button", { name: "search" });

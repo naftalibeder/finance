@@ -7,7 +7,7 @@ import {
   LaunchOptions,
   Page,
   firefox,
-} from "playwright-core";
+} from "@playwright/test";
 import { Account, Bank, Price, Transaction } from "shared";
 import { EXTRACTIONS_PATH, TMP_DIR } from "../constants";
 import db from "../db";
@@ -30,9 +30,11 @@ for (const extractor of extractors) {
 }
 
 const setUp = async (): Promise<[Browser, BrowserContext]> => {
+  console.log("Launching browser at", firefox.executablePath());
   const launchOptions: LaunchOptions = {
     headless: HEADLESS,
     timeout: 0,
+    executablePath: env.get("BROWSER_EXECUTABLE"),
   };
   const browser = await firefox.launch(launchOptions);
 

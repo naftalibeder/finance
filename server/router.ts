@@ -165,6 +165,8 @@ const start = async () => {
   process.on("SIGINT", stop);
   process.on("SIGTERM", stop);
 
+  db.clearExtractionStatus();
+
   const server = app.listen(port, () => {
     console.log(`Server started on port ${port}`);
   });
