@@ -123,6 +123,7 @@ export const createAccount = (): { account: Account } => {
     number: "",
     kind: "unselected",
     type: "assets",
+    timeZoneId: "America/Chicago",
     price: {
       amount: 0,
       currency: "USD",

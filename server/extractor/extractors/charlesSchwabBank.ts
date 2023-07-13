@@ -15,7 +15,6 @@ class CharlesSchwabBankExtractor implements Extractor {
   bankDisplayName = "Charles Schwab Bank";
   bankDisplayNameShort = "Schwab";
   supportedAccountKinds: Account["kind"][] = ["checking", "brokerage"];
-  timeZone = "America/Chicago";
 
   getColumnMap = (
     accountKind: Account["kind"]
@@ -166,13 +165,13 @@ class CharlesSchwabBankExtractor implements Extractor {
 
     loc = dateRangeFrame.locator("#calendar-FromDate");
     await loc.fill(
-      range.start.toLocaleDateString("en-US", { timeZone: this.timeZone })
+      range.start.toLocaleDateString("en-US", { timeZone: account.timeZoneId })
     );
     await loc.blur();
 
     loc = dateRangeFrame.locator("#calendar-ToDate");
     await loc.fill(
-      range.end.toLocaleDateString("en-US", { timeZone: this.timeZone })
+      range.end.toLocaleDateString("en-US", { timeZone: account.timeZoneId })
     );
     await loc.blur();
 

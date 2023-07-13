@@ -15,7 +15,6 @@ class ChaseBankExtractor implements Extractor {
   bankDisplayName = "Chase Bank";
   bankDisplayNameShort = "Chase";
   supportedAccountKinds: Account["kind"][] = ["credit"];
-  timeZone = "America/Chicago";
 
   getColumnMap = (
     accountKind: Account["kind"]
@@ -170,13 +169,13 @@ class ChaseBankExtractor implements Extractor {
 
     loc = dashboardFrame.locator("#accountActivityFromDate-input-input");
     await loc.fill(
-      range.start.toLocaleDateString("en-US", { timeZone: this.timeZone })
+      range.start.toLocaleDateString("en-US", { timeZone: account.timeZoneId })
     );
     await loc.blur();
 
     loc = dashboardFrame.locator("#accountActivityToDate-input-input");
     await loc.fill(
-      range.end.toLocaleDateString("en-US", { timeZone: this.timeZone })
+      range.end.toLocaleDateString("en-US", { timeZone: account.timeZoneId })
     );
     await loc.blur();
 

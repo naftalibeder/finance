@@ -41,6 +41,15 @@ export type Account = {
     | "unselected";
   /** The type of resource stored in the account. */
   type: "assets" | "liabilities" | "equity" | "revenue" | "expenses";
+  /**
+   * The time zone of the account. This is used for date formatting and is
+   * necessary to prevent issues like requesting transactions for the following
+   * day, which can happen if the system zone differs from the account zone.
+   *
+   * See [this list](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)
+   * for all available identifiers.
+   */
+  timeZoneId: Intl.DateTimeFormatOptions["timeZone"];
   /** The current value of the account's assets. */
   price: Price;
 };
