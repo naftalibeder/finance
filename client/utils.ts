@@ -120,11 +120,15 @@ export const buildTransactionsDateGroups = (
   return list;
 };
 
-export const prettyCurrency = (a: Price) => {
+export const prettyCurrency = (p: Price) => {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: a.currency,
-  }).format(a.amount);
+    currency: p.currency,
+  }).format(p.amount);
+};
+
+export const prettyNumber = (n: number) => {
+  return new Intl.NumberFormat("en-US").format(n);
 };
 
 export const titleCase = (s: string): string => {

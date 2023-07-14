@@ -2,7 +2,7 @@
   import { UUID } from "crypto";
   import { Account, Bank, ExtractionStatus, Price } from "shared";
   import { prettyCurrency } from "../utils";
-  import { AccountsListItem } from ".";
+  import { AccountsListItem, Icon } from ".";
 
   export let accounts: Account[];
   export let accountsSum: Price;
@@ -22,8 +22,8 @@
         <div>
           {accounts.length} accounts
         </div>
-        <button style="margin-left: 8px" on:click={(evt) => onClickCreate()}>
-          +
+        <button class="add hover-fade" on:click={(evt) => onClickCreate()}>
+          <Icon kind="plus" />
         </button>
       </div>
       <div class="cell account-section action">
@@ -31,7 +31,9 @@
       </div>
       <div class="cell account gutter-r">
         {#if !anyIsExtracting}
-          <button on:click={() => onClickExtract()}>↻</button>
+          <button class="hover-fade" on:click={() => onClickExtract()}>
+            <Icon kind="reload" size="small" />
+          </button>
         {/if}
       </div>
     </div>
@@ -69,5 +71,9 @@
 
   .grid.contents:hover .gutter-r {
     opacity: 0.5;
+  }
+
+  button.add {
+    margin-left: 8px;
   }
 </style>

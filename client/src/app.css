@@ -67,6 +67,10 @@ textarea:disabled {
   opacity: 0.5;
 }
 
+.hover-fade:hover {
+  opacity: 0.5;
+}
+
 button {
   display: flex;
   font-family: "PT Mono", monospace;

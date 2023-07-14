@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Account, Transaction } from "shared";
   import { prettyCurrency, prettyDate, secAgo } from "../utils";
+  import { Icon } from ".";
 
   export let transaction: Transaction;
   export let account: Account | undefined;
@@ -20,7 +21,9 @@
     {prettyCurrency(transaction.price)}
   </div>
   {#if isRecent}
-    <div class="cell gutter-r">•</div>
+    <div class="cell gutter-r">
+      <Icon kind="dot" />
+    </div>
   {/if}
 </div>
 

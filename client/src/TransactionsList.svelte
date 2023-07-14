@@ -1,7 +1,7 @@
 <script lang="ts">
   import { UUID } from "crypto";
   import { Transaction, Price, Account } from "shared";
-  import { prettyCurrency } from "../utils";
+  import { prettyCurrency, prettyNumber } from "../utils";
   import { TransactionDateGroup } from "../types";
   import { TransactionsListItem } from ".";
 
@@ -33,9 +33,9 @@
     } else {
       let base: string;
       if (ct === overallCt) {
-        base = `${overallCt} transactions`;
+        base = `${prettyNumber(overallCt)} transactions`;
       } else {
-        base = `${ct} of ${overallCt} transactions`;
+        base = `${prettyNumber(ct)} of ${prettyNumber(overallCt)} transactions`;
       }
 
       if (query.length > 0) {

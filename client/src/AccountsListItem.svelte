@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Account, Bank, ExtractionStatus } from "shared";
   import { prettyCurrency, prettyTimeAgo } from "../utils";
+  import { Icon } from ".";
 
   export let account: Account;
   export let bank: Bank | undefined;
@@ -30,13 +31,21 @@
   </div>
   <div class={`cell gutter-r ${allowHideExtractionStatus ? "hidden" : ""}`}>
     {#if !account.bankHasCreds}
-      <div style="color: var(--text-red)">•</div>
+      <div style="color: var(--text-red)">
+        <Icon kind="dot" />
+      </div>
     {:else if extractionStatus === "pending"}
-      <div>•</div>
+      <div>
+        <Icon kind="dot" />
+      </div>
     {:else if extractionStatus === "in-progress"}
-      <div class="pulse">•</div>
+      <div class="spin">
+        <Icon kind="reload" size="small" />
+      </div>
     {:else}
-      <button class="refresh" on:click={() => onClickExtract()}> ↻ </button>
+      <button class="refresh hover-fade" on:click={() => onClickExtract()}>
+        <Icon kind="reload" size="small" />
+      </button>
       <div class="timestamp">{prettyTimeAgo(account._updatedAt)}</div>
     {/if}
   </div>
@@ -76,17 +85,13 @@
     margin-left: 6px;
   }
 
-  .pulsing {
-    transition: opacity 0.5 repeat;
-  }
-
-  @keyframes fade-in {
+  @keyframes rotate {
     from {
-      opacity: 0;
+      rotate: 360deg;
     }
   }
 
-  .pulse {
-    animation: fade-in 1s infinite alternate;
+  .spin {
+    animation: rotate 1s infinite linear reverse;
   }
 </style>
