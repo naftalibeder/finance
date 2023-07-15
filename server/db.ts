@@ -1,4 +1,4 @@
-import fs from "fs";
+import fs, { write } from "fs";
 import { UUID, randomUUID } from "crypto";
 import {
   Account,
@@ -311,6 +311,12 @@ export const getUser = (): User => {
   return db.user;
 };
 
+export const setUser = (user: User) => {
+  const db = readDatabase();
+  db.user = user;
+  writeDatabase(db);
+}
+
 export const setDevice = (name: string, token: string) => {
   const db = readDatabase();
   db.user.devices[name] = {
@@ -336,5 +342,6 @@ export default {
   deleteMfaInfo,
   clearExtractionStatus,
   getUser,
+  setUser,
   setDevice,
 };

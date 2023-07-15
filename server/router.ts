@@ -35,17 +35,32 @@ const start = async () => {
   app.post("/signIn", async (req, res) => {
     const args = req.body as SignInApiArgs;
     const { email, password } = args;
+    const saltRounds = 10;
 
-    const userCreds = db.getUser();
-    const emailMatches = email === userCreds.email;
-    const passwordMatches = await bcrypt.compare(password, userCreds.password);
-    if (!emailMatches || !passwordMatches) {
-      res.status(401).send({ error: "Invalid email or password" });
+    if (email === "") {
+      res.status(400).send({error: "Missing email"});
+      return;
+    }
+    if (password === "") {
+      res.status(400).send({error: "Missing password"});
       return;
     }
 
+    const userCreds = db.getUser();
+    if (userCreds.email === "") {
+      const hash = await bcrypt.hash(password, saltRounds);
+      db.setUser({email: email, password: hash, devices: {}});
+    } else {
+      const emailMatches = email === userCreds.email;
+      const passwordMatches = await bcrypt.compare(password, userCreds.password);
+      if (!emailMatches || !passwordMatches) {
+        res.status(401).send({ error: "Invalid email or password" });
+        return;
+      }
+    }
+
     const name = randomUUID();
-    const token = await bcrypt.hash(password, 10);
+    const token = await bcrypt.hash(password, saltRounds);
     db.setDevice(name, token);
     env.set("USER_PASSWORD", password);
 
