@@ -6,15 +6,18 @@
 
   export let transactions: Transaction[];
   export let transactionsOverallMaxPrice: Price;
-  export let transactionsOverallEarliestDate: string;
+  export let transactionsOverallEarliestDate: string | undefined;
   export let onHoverGroup: (group?: TransactionDateGroup) => void;
 
   let transactionDateGroups: TransactionDateGroup[] = [];
   $: {
-    transactionDateGroups = buildTransactionsDateGroups(
-      transactions,
-      transactionsOverallEarliestDate
-    );
+    transactionDateGroups =
+      transactions.length > 0
+        ? buildTransactionsDateGroups(
+            transactions,
+            transactionsOverallEarliestDate
+          )
+        : [];
   }
 
   $: earliestDate = transactionsOverallEarliestDate;
@@ -27,6 +30,10 @@
   const onHoverMove = (evt: MouseEvent) => {
     const target = evt.target as HTMLElement;
     if (!target || target.tagName !== "svg") {
+      onHoverGroup(undefined);
+      return;
+    }
+    if (transactionDateGroups.length === 0) {
       onHoverGroup(undefined);
       return;
     }

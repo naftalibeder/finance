@@ -16,6 +16,7 @@ import {
   transactionMatchesFilters,
   transactionsMaxPrice,
   transactionsSumPrice,
+  transactionsEarliestDate,
 } from "./utils";
 import { encrypt, decrypt } from "./utils/crypto";
 import env from "./env";
@@ -191,7 +192,7 @@ export const getTransactions = (
     overallCt: db.transactions.length,
     overallSumPrice: transactionsSumPrice(db.transactions),
     overallMaxPrice: transactionsMaxPrice(db.transactions),
-    overallEarliestDate: db.transactions[db.transactions.length - 1].date,
+    overallEarliestDate: transactionsEarliestDate(db.transactions),
   };
 
   if (query.length > 0) {

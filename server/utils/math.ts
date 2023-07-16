@@ -36,3 +36,7 @@ export const transactionsMaxPrice = (transactions: Transaction[]): Price => {
     currency,
   };
 };
+
+export const transactionsEarliestDate = (transactions: Transaction[]): string | undefined => {
+  return transactions.length > 0 ? transactions[transactions.length - 1].date : undefined;
+}
