@@ -180,6 +180,6 @@ export type GetTransactionsApiPayload = {
     overallCt: number;
     overallSumPrice: Price;
     overallMaxPrice: Price;
-    overallEarliestDate: string | undefined;
+    overallEarliestDate?: string;
   };
 };
