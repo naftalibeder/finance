@@ -6,25 +6,11 @@ A private, self-hosted personal finance app that pulls new transactions automati
 
 ## Instructions
 
-Create a file `.env` in the main directory with the following environment variables set:
+1. Copy the file `.env.sample` to `.env` in the main directory and update the values accordingly.
 
-```
-- SERVER_URL
-- CLIENT_PORT
-- SERVER_PORT
-```
+2. Create an empty folder named `data` in the main directory.
 
-For example:
-
-```
-SERVER_URL=http://localhost:8001
-CLIENT_PORT=8000
-SERVER_PORT=8001
-```
-
-Create an empty folder `data` in the main directory.
-
-Run the following:
+3. Run the following:
 
 ```sh
 npm install
