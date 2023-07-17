@@ -16,9 +16,10 @@
 - Create an extractions list in the database that assigns a unique ID to each extraction attempt and a timestamp and metrics about it
 - Allow creating an account in a dedicated flow
 - Enable logging out from the UI
-- Improve mobile layout and hover-buttons to make mobile friendly
 
 ## In progress
+
+- Improve mobile layout and hover-buttons to make mobile friendly @naftalibeder
 
 ## Done
 
