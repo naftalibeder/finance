@@ -7,6 +7,7 @@
 - Allow browser installation in `node_modules`: https://playwright.dev/docs/browsers#hermetic-install
 - Implement rules for transforming transactions
 - Make the horizontal time chart more useful by (allowing) zooming in or dragging to select
+- It's currently possible for a transaction to be scraped on (say) June 20, then scraped again and marked June 21 (?)
 
 ## To do
 
