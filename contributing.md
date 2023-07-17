@@ -5,13 +5,18 @@
 - Enable saved queries/filters that update and are always visible
 - Speed up extraction by skipping authentication after each transaction scrape
 - Allow browser installation in `node_modules`: https://playwright.dev/docs/browsers#hermetic-install
+- Implement rules for transforming transactions
+- Make the horizontal time chart more useful by (allowing) zooming in or dragging to select
 
 ## To do
 
-- Before running extraction check db to ensure no other extraction is running
+- Before running extraction, check db to ensure no other extraction is running
 - Set up a timer to automatically extract every day
+- Paginated infinite scroll on transactions list
 - Create an extractions list in the database that assigns a unique ID to each extraction attempt and a timestamp and metrics about it
-- Implement rules for transforming transactions
+- Allow creating an account in a dedicated flow
+- Enable logging out from the UI
+- Improve mobile layout and hover-buttons to make mobile friendly
 
 ## In progress
 
