@@ -6,14 +6,24 @@ A private, self-hosted personal finance app that pulls new transactions automati
 
 ## Instructions
 
-1. Copy the file `.env.sample` to `.env` in the main directory and update the values accordingly.
-
-2. Create an empty folder named `data` in the main directory.
-
-3. Run the following:
+1. Set up the project and install dependencies:
 
 ```sh
+npm run setup
 npm install
+```
+
+2. Install dependencies for the headless browser. (May require sudo.)
+
+```sh
+cd server && npx playwright install firefox --with-deps
+```
+
+3. Update `.env` with a value for `BROWSER_EXECUTABLE` output by the previous command, and change any other variables as needed.
+
+4. Run the client and server:
+
+```sh
 npm run start
 ```
 
