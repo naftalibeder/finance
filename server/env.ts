@@ -1,4 +1,4 @@
-type EnvKey = "USER_PASSWORD" | "SERVER_PORT" | "BROWSER_EXECUTABLE";
+type EnvKey = "USER_PASSWORD" | "SERVER_PORT" ;
 
 const get = (key: EnvKey): string | undefined => {
   const value = process.env[key] as string;

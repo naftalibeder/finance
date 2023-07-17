@@ -19,9 +19,7 @@ npm install
 cd server && npx playwright install firefox --with-deps
 ```
 
-3. Update `.env` with a value for `BROWSER_EXECUTABLE` output by the previous command, and change any other variables as needed.
-
-4. Run the client and server:
+3. Run the client and server:
 
 ```sh
 npm run start
