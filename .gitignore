@@ -5,4 +5,3 @@ tmp/
 node_modules/
 dist/
 .env
-scripts
