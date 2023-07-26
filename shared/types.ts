@@ -77,6 +77,8 @@ export type Price = {
 
 export type MfaInfo = {
   bankId: string;
+  options?: string[];
+  option?: number;
   code?: string;
   requestedAt: string;
 };

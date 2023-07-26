@@ -164,10 +164,18 @@ const start = async () => {
     res.send(status);
   });
 
+  app.post("/mfa/option", async (req, res) => {
+    const args = req.body as { bankId: string; option: number };
+    const { bankId, option } = args;
+    db.setMfaInfo({bankId, option});
+
+    res.status(200).send({ message: "ok" });
+  });
+
   app.post("/mfa", async (req, res) => {
     const args = req.body as { bankId: string; code: string };
     const { bankId, code } = args;
-    db.setMfaInfo(bankId, code);
+    db.setMfaInfo({bankId, code});
 
     res.status(200).send({ message: "ok" });
   });

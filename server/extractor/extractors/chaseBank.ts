@@ -80,7 +80,7 @@ class ChaseBankExtractor implements Extractor {
   };
 
   enterMfaCode = async (args: ExtractorFuncArgs) => {
-    const { extractor, account, bankCreds, page } = args;
+    const { extractor, account, bankCreds, page, log } = args;
 
     let loc: Locator;
 
@@ -97,10 +97,12 @@ class ChaseBankExtractor implements Extractor {
     loc = mfaFrame.locator("#header-simplerAuth-dropdownoptions-styledselect");
     await loc.click();
 
-    loc = mfaFrame.locator(
-      "#container-1-simplerAuth-dropdownoptions-styledselect"
-    );
-    await loc.click();
+    loc = mfaFrame.locator("#simplerAuth-dropdownoptions-styledselect").getByRole("option");
+    const rows = await loc.all();
+    const options = await Promise.all(rows.map(async row => await row.textContent() ?? ""));
+    const option = await args.getMfaOption(options);
+
+    await rows[option].click();
 
     loc = mfaFrame.locator("button[type=submit]").first();
     await loc.click();
