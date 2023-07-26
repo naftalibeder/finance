@@ -33,6 +33,7 @@ export interface ExtractorFuncArgs {
   bankCreds: BankCreds;
   page: Page;
   tmpRunDir: string;
+  getMfaOption: (options: string[]) => Promise<number>;
   getMfaCode: () => Promise<string>;
   log: (message?: any, ...params: any[]) => void;
 }

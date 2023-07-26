@@ -266,21 +266,25 @@ export const setExtractionStatus = (
   writeDatabase(db);
 };
 
-export const setMfaInfo = (bankId: string, code?: string) => {
+export const setMfaInfo = (info: {bankId: string, options?: string[], option?: number, code?: string}) => {
   const db = readDatabase();
   const infos = db.extractionStatus.mfaInfos;
-  const index = infos.findIndex((o) => o.bankId === bankId);
+  const index = infos.findIndex((o) => o.bankId === info.bankId);
 
   if (index > -1) {
     const existing = infos[index];
     infos[index] = {
       ...existing,
-      code,
+      options: info.options,
+      option: info.option,
+      code: info.code,
     };
   } else {
     infos.push({
-      bankId,
-      code,
+      bankId: info.bankId,
+      options: info.options,
+      option: info.option,
+      code: info.code,
       requestedAt: new Date().toISOString(),
     });
   }

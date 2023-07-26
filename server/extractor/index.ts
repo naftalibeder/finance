@@ -139,6 +139,10 @@ const runAccount = async (
       bankCreds,
       page,
       tmpRunDir,
+      getMfaOption: async (options: string[]): Promise<number> => {
+        const option = await waitForMfaOption(account.bankId, options, () => {}, log); // ???
+        return option;
+      },
       getMfaCode: async (): Promise<string> => {
         const code = await waitForMfaCode(account.bankId, () => {}, log);
         return code;
@@ -300,12 +304,43 @@ export const getAccountData = async (
   };
 };
 
+const waitForMfaOption = async (
+  bankId: string,
+  options: string[],
+  onChange: () => void,
+  log: ExtractorFuncArgs["log"]
+): Promise<number> => {
+  db.setMfaInfo({bankId, options});
+  let maxSec = 60 * 4;
+
+  for (let i = 0; i < maxSec; i++) {
+    const status = db.getExtractionStatus();
+    const info = status.mfaInfos.find((o) => o.bankId === bankId);
+
+    if (info?.option) {
+      log(`Requesting two-factor option ${info.option} for ${bankId}`);
+      db.setMfaInfo({bankId})
+      onChange();
+      return info.option;
+    }
+
+    log(`No two-factor option found yet (${i}/${maxSec}s)...`);
+    await delay(1000);
+  }
+
+  log(`No two-factor option found in ${maxSec}s`);
+  db.deleteMfaInfo(bankId);
+  onChange();
+
+  throw `No two-factor option found in ${maxSec}s`;
+};
+
 const waitForMfaCode = async (
   bankId: string,
   onChange: () => void,
   log: ExtractorFuncArgs["log"]
 ): Promise<string> => {
-  db.setMfaInfo(bankId);
+  db.setMfaInfo({bankId});
   let maxSec = 60 * 4;
 
   for (let i = 0; i < maxSec; i++) {

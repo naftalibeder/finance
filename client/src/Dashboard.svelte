@@ -235,6 +235,14 @@
     }
   };
 
+  const onClickMfaOption = async (bankId: string, option: number) => {
+    try {
+      await post("mfa/option", { bankId, option });
+    } catch (e) {
+      console.log("Error sending mfa option:", e);
+    }
+  };
+
   const onClickSendMfaCode = async (bankId: string, code: string) => {
     try {
       await post("mfa", { bankId, code });
@@ -287,6 +295,7 @@
     {#if extractionStatus.mfaInfos.length > 0}
       <MfaInputList
         mfaInfos={extractionStatus.mfaInfos}
+        onClickOption={onClickMfaOption}
         onClickSend={onClickSendMfaCode}
       />
     {/if}
