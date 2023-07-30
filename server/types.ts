@@ -4,8 +4,9 @@ import {
   Account,
   Transaction,
   Price,
-  ExtractionStatus,
   BankCreds,
+  ExtractionStatus,
+  Extraction,
 } from "shared";
 
 export type Database = {
@@ -13,6 +14,7 @@ export type Database = {
   bankCredentials: string;
   accounts: Account[];
   transactions: Transaction[];
+  extractions: Extraction[];
   extractionStatus: ExtractionStatus;
 };
 
@@ -73,13 +75,3 @@ export type ExtractorDateRange = {
   start: Date;
   end: Date;
 };
-
-export type ExtractionMetrics = Record<
-  UUID,
-  {
-    startTime: Date;
-    endTime?: Date;
-    foundCt: number;
-    addCt: number;
-  }
->;
