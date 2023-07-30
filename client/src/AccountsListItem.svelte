@@ -32,11 +32,11 @@
   <div class={`cell gutter-r ${allowHideExtractionStatus ? "hidden" : ""}`}>
     {#if !account.bankHasCreds}
       <div style="color: var(--text-red)">
-        <Icon kind="dot" />
+        <Icon kind="dot" size="small" />
       </div>
     {:else if extractionStatus === "pending"}
       <div>
-        <Icon kind="dot" />
+        <Icon kind="dot" size="small" />
       </div>
     {:else if extractionStatus === "in-progress"}
       <div class="spin">
