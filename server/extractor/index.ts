@@ -1,5 +1,5 @@
 import fs from "fs";
-import { UUID } from "crypto";
+import { UUID, randomUUID } from "crypto";
 import {
   Browser,
   BrowserContext,
@@ -8,13 +8,13 @@ import {
   Page,
   firefox,
 } from "@playwright/test";
-import { Account, Bank, Price, Transaction } from "shared";
+import { Account, Bank, Price, Transaction, Extraction } from "shared";
 import { EXTRACTIONS_PATH, TMP_DIR } from "../constants";
 import db from "../db";
 import { delay, prettyAccount, prettyDate, prettyDuration } from "../utils";
 import { CharlesSchwabBankExtractor, ChaseBankExtractor } from "./extractors";
 import { parseTransactions } from "./utils";
-import { ExtractionMetrics, Extractor, ExtractorFuncArgs } from "types";
+import { Extractor, ExtractorFuncArgs } from "types";
 import env from "../env";
 
 const BROWSER_CONTEXT_PATH = `${TMP_DIR}/browser-context.json`;
@@ -60,7 +60,12 @@ const runAccounts = async (
   const tmpRunDir = `${EXTRACTIONS_PATH}/${new Date().toISOString()}`;
   fs.mkdirSync(tmpRunDir, { recursive: true });
 
-  const metrics: ExtractionMetrics = {};
+  const extractionMetrics: Extraction = {
+    _id: randomUUID(),
+    startedAt: new Date().toISOString(),
+    finishedAt: new Date().toISOString(),
+    accounts: {},
+  };
 
   const allAccounts = db.getAccounts();
   let accounts: Account[];
@@ -72,37 +77,58 @@ const runAccounts = async (
     accounts = allAccounts.accounts;
   }
   console.log(`Preparing extraction for ${accounts.length} accounts`);
-  db.setExtractionStatus(
-    accounts.map((o) => o._id),
-    "pending"
-  );
+  for (const account of accounts) {
+    db.setExtractionStatus(account._id, "pending");
+  }
   onFinishPrepare();
 
   const [browser, browserContext] = await setUp();
+
   for (const account of accounts) {
+    db.setExtractionStatus(account._id, "in-progress");
+
     const startTime = new Date();
-    const { foundCt, addCt } = await runAccount(
-      account,
-      tmpRunDir,
-      browserContext
-    );
-    metrics[account._id] = {
-      startTime,
-      endTime: new Date(),
-      foundCt,
-      addCt,
+    let accountMetrics: Extraction["accounts"][UUID] = {
+      accountId: account._id,
+      startedAt: startTime.toISOString(),
+      finishedAt: new Date().toISOString(),
+      foundCt: 0,
+      addCt: 0,
+      error: undefined,
     };
+
+    try {
+      const { foundCt, addCt } = await runAccount(
+        account,
+        tmpRunDir,
+        browserContext
+      );
+      accountMetrics.foundCt = foundCt;
+      accountMetrics.addCt = addCt;
+    } catch (e) {
+      accountMetrics.error = `${e}`;
+    }
+    accountMetrics.finishedAt = new Date().toISOString();
+    extractionMetrics.accounts[account._id] = accountMetrics;
+
+    db.clearExtractionStatus(account._id);
+    db.deleteMfaInfo(account.bankId);
   }
+  extractionMetrics.finishedAt = new Date().toISOString();
+  db.addExtraction(extractionMetrics);
+
   await tearDown(browser, browserContext);
 
-  console.log(`Completed extraction across ${accounts.length} accounts`);
-  for (const [accountId, iterMetrics] of Object.entries(metrics)) {
-    const account = accounts.find((o) => o._id === accountId);
-    const { foundCt, addCt, startTime, endTime } = iterMetrics;
-    const deltaTime = endTime!.valueOf() - startTime.valueOf();
-    const dur = prettyDuration(deltaTime);
+  console.log(`Completed extraction across ${accounts.length} accounts:`);
+  for (const [accountId, iterMetrics] of Object.entries(
+    extractionMetrics.accounts
+  )) {
+    const account = accounts.find((o) => o._id === accountId)!;
+    const { foundCt, addCt, startedAt, finishedAt } = iterMetrics;
+    const ms = new Date(finishedAt).valueOf() - new Date(startedAt).valueOf();
+    const duration = prettyDuration(ms)!;
     console.log(
-      `${account?.display}: ${foundCt} total; ${addCt} new; took ${dur}`
+      `  - ${account.display}: ${foundCt} total; ${addCt} new; took ${duration}`
     );
   }
 };
@@ -121,7 +147,6 @@ const runAccount = async (
   page.setViewportSize({ width: 1948, height: 955 });
 
   log(`Starting extraction`);
-  db.setExtractionStatus([account._id], "in-progress");
 
   const extractor = extractorsDict[account.bankId];
   const bankCredsMap = db.getBankCredsMap();
@@ -140,7 +165,12 @@ const runAccount = async (
       page,
       tmpRunDir,
       getMfaOption: async (options: string[]): Promise<number> => {
-        const option = await waitForMfaOption(account.bankId, options, () => {}, log); // ???
+        const option = await waitForMfaOption(
+          account.bankId,
+          options,
+          () => {},
+          log
+        ); // ???
         return option;
       },
       getMfaCode: async (): Promise<string> => {
@@ -152,8 +182,8 @@ const runAccount = async (
     accountValue = resp.accountValue;
     transactions = resp.transactions;
   } catch (e) {
-    log(`Error running extractor: ${e}`);
     await takeErrorScreenshot(page, tmpRunDir);
+    throw e;
   }
 
   if (accountValue !== undefined) {
@@ -171,8 +201,6 @@ const runAccount = async (
     log(`Added ${addCt} new of ${singleIterFoundCt} found transactions`);
   }
 
-  db.deleteMfaInfo(account.bankId);
-  db.setExtractionStatus([account._id], undefined);
   await browserContext.storageState({ path: BROWSER_CONTEXT_PATH });
   await page.close();
 
@@ -310,7 +338,7 @@ const waitForMfaOption = async (
   onChange: () => void,
   log: ExtractorFuncArgs["log"]
 ): Promise<number> => {
-  db.setMfaInfo({bankId, options});
+  db.setMfaInfo({ bankId, options });
   let maxSec = 60 * 4;
 
   for (let i = 0; i < maxSec; i++) {
@@ -319,7 +347,7 @@ const waitForMfaOption = async (
 
     if (info?.option) {
       log(`Requesting two-factor option ${info.option} for ${bankId}`);
-      db.setMfaInfo({bankId})
+      db.setMfaInfo({ bankId });
       onChange();
       return info.option;
     }
@@ -340,7 +368,7 @@ const waitForMfaCode = async (
   onChange: () => void,
   log: ExtractorFuncArgs["log"]
 ): Promise<string> => {
-  db.setMfaInfo({bankId});
+  db.setMfaInfo({ bankId });
   let maxSec = 60 * 4;
 
   for (let i = 0; i < maxSec; i++) {

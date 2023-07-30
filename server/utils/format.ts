@@ -45,7 +45,7 @@ export const prettyDate = (
   }
 };
 
-export const prettyDuration = (ms: number): string | undefined => {
+export const prettyDuration = (ms: number): string => {
   const sec = Math.round(ms / 1000);
   const min = sec / 60;
   const hr = min / 60;
@@ -54,6 +54,8 @@ export const prettyDuration = (ms: number): string | undefined => {
     return `${sec}s`;
   } else if (min < 60) {
     return `${Math.floor(min)}m${sec % 60}s`;
+  } else {
+    return `${Math.floor(hr)}hr${min % 60}m`;
   }
 };
 
