@@ -22,7 +22,7 @@
   </div>
   {#if isRecent}
     <div class="cell gutter-r">
-      <Icon kind="dot" />
+      <Icon kind="dot" size="small" />
     </div>
   {/if}
 </div>

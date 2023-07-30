@@ -1,5 +1,6 @@
 <script lang="ts">
   import { UUID } from "crypto";
+  // @ts-ignore
   import { Account, Bank, ExtractionStatus, Price } from "shared";
   import { prettyCurrency } from "../utils";
   import { AccountsListItem, Icon } from ".";

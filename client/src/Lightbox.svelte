@@ -39,6 +39,8 @@
     grid-column: 2;
     grid-row: 2;
     background-color: var(--text-gray-800);
+    overflow-y: scroll;
+    max-height: 500px;
     cursor: default;
   }
 </style>

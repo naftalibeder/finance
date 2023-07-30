@@ -18,6 +18,8 @@
     BankCreds,
     UpdateBankCredsApiArgs,
     DeleteAccountApiArgs,
+    GetExtractionsApiPayload,
+    Extraction,
     // @ts-ignore
   } from "shared";
   import { post } from "../api";
@@ -28,9 +30,11 @@
     EditAccount,
     MfaInputList,
     Lightbox,
+    Extractions,
   } from ".";
   import { TransactionDateGroup } from "../types";
   import { delay } from "../utils";
+  import Icon from "./Icon.svelte";
 
   const zeroPrice: Price = {
     amount: 0,
@@ -58,6 +62,7 @@
 
   let isLoading = false;
 
+  let extractions: Extraction[] = [];
   let extractionStatus: ExtractionStatus = {
     accounts: {},
     mfaInfos: [],
@@ -88,6 +93,8 @@
   $: {
     onChangeQuery(query);
   }
+
+  let isShowingExtractionsHistory = false;
 
   let hoverGroup: TransactionDateGroup | undefined;
 
@@ -235,6 +242,19 @@
     }
   };
 
+  const onClickExtractionsHistory = async () => {
+    isShowingExtractionsHistory = true;
+
+    try {
+      const payload = await post<undefined, GetExtractionsApiPayload>(
+        "extractions"
+      );
+      extractions = payload.data.extractions;
+    } catch (e) {
+      console.log("Error getting extractions:", e);
+    }
+  };
+
   const onClickMfaOption = async (bankId: string, option: number) => {
     try {
       await post("mfa/option", { bankId, option });
@@ -250,6 +270,7 @@
       console.log("Error sending mfa code:", e);
     }
   };
+
   const onClickExtract = async (accountIds?: UUID[]) => {
     await post<ExtractApiArgs, undefined>("extract", { accountIds });
     await fetchExtractionStatus();
@@ -289,6 +310,9 @@
           bind:value={query}
           bind:this={searchInputFieldRef}
         />
+        <button on:click={() => onClickExtractionsHistory()}>
+          <Icon kind={"clock"} />
+        </button>
       </div>
     </div>
 
@@ -345,6 +369,16 @@
         onSubmitBankCreds={updateBankCreds}
         onSelectDeleteAccount={deleteAccount}
       />
+    </Lightbox>
+  {/if}
+
+  {#if isShowingExtractionsHistory}
+    <Lightbox
+      onPressDismiss={() => {
+        isShowingExtractionsHistory = false;
+      }}
+    >
+      <Extractions {extractions} {accounts} />
     </Lightbox>
   {/if}
 </div>
