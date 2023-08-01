@@ -258,6 +258,18 @@ export const addExtraction = (extraction: Extraction) => {
   writeDatabase(db);
 };
 
+export const updateExtraction = (id: UUID, extraction: Extraction) => {
+  const db = readDatabase();
+
+  const index = db.extractions.findIndex((o) => o._id === id);
+  if (index === -1) {
+    return;
+  }
+
+  db.extractions[index] = extraction;
+  writeDatabase(db);
+};
+
 export const getExtractionStatus = (): ExtractionStatus => {
   const db = readDatabase();
   const status = db.extractionStatus;
@@ -361,6 +373,7 @@ export default {
   addTransactions,
   getExtractions,
   addExtraction,
+  updateExtraction,
   getExtractionStatus,
   setExtractionStatus,
   clearExtractionStatus,

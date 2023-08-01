@@ -60,13 +60,6 @@ const runAccounts = async (
   const tmpRunDir = `${EXTRACTIONS_PATH}/${new Date().toISOString()}`;
   fs.mkdirSync(tmpRunDir, { recursive: true });
 
-  const extractionMetrics: Extraction = {
-    _id: randomUUID(),
-    startedAt: new Date().toISOString(),
-    finishedAt: new Date().toISOString(),
-    accounts: {},
-  };
-
   const allAccounts = db.getAccounts();
   let accounts: Account[];
   if (accountIds && accountIds.length > 0) {
@@ -76,6 +69,26 @@ const runAccounts = async (
   } else {
     accounts = allAccounts.accounts;
   }
+
+  const extractionMetrics: Extraction = {
+    _id: randomUUID(),
+    startedAt: new Date().toISOString(),
+    finishedAt: undefined,
+    accounts: {},
+  };
+  for (const account of accounts) {
+    extractionMetrics.accounts[account._id] = {
+      accountId: account._id,
+      queuedAt: new Date().toISOString(),
+      startedAt: undefined,
+      finishedAt: undefined,
+      foundCt: 0,
+      addCt: 0,
+      error: undefined,
+    };
+  }
+  db.addExtraction(extractionMetrics);
+
   console.log(`Preparing extraction for ${accounts.length} accounts`);
   for (const account of accounts) {
     db.setExtractionStatus(account._id, "pending");
@@ -86,16 +99,9 @@ const runAccounts = async (
 
   for (const account of accounts) {
     db.setExtractionStatus(account._id, "in-progress");
-
-    const startTime = new Date();
-    let accountMetrics: Extraction["accounts"][UUID] = {
-      accountId: account._id,
-      startedAt: startTime.toISOString(),
-      finishedAt: new Date().toISOString(),
-      foundCt: 0,
-      addCt: 0,
-      error: undefined,
-    };
+    extractionMetrics.accounts[account._id].startedAt =
+      new Date().toISOString();
+    db.updateExtraction(extractionMetrics._id, extractionMetrics);
 
     try {
       const { foundCt, addCt } = await runAccount(
@@ -103,29 +109,29 @@ const runAccounts = async (
         tmpRunDir,
         browserContext
       );
-      accountMetrics.foundCt = foundCt;
-      accountMetrics.addCt = addCt;
+      extractionMetrics.accounts[account._id].foundCt = foundCt;
+      extractionMetrics.accounts[account._id].addCt = addCt;
     } catch (e) {
-      accountMetrics.error = `${e}`;
+      extractionMetrics.accounts[account._id].error = `${e}`;
     }
-    accountMetrics.finishedAt = new Date().toISOString();
-    extractionMetrics.accounts[account._id] = accountMetrics;
+    extractionMetrics.accounts[account._id].finishedAt =
+      new Date().toISOString();
+    db.updateExtraction(extractionMetrics._id, extractionMetrics);
 
     db.clearExtractionStatus(account._id);
     db.deleteMfaInfo(account.bankId);
   }
   extractionMetrics.finishedAt = new Date().toISOString();
-  db.addExtraction(extractionMetrics);
+  db.updateExtraction(extractionMetrics._id, extractionMetrics);
 
   await tearDown(browser, browserContext);
 
   console.log(`Completed extraction across ${accounts.length} accounts:`);
-  for (const [accountId, iterMetrics] of Object.entries(
-    extractionMetrics.accounts
-  )) {
+  const entries = Object.entries(extractionMetrics.accounts);
+  for (const [accountId, accountMetrics] of entries) {
     const account = accounts.find((o) => o._id === accountId)!;
-    const { foundCt, addCt, startedAt, finishedAt } = iterMetrics;
-    const ms = new Date(finishedAt).valueOf() - new Date(startedAt).valueOf();
+    const { foundCt, addCt, startedAt, finishedAt } = accountMetrics;
+    const ms = new Date(finishedAt!).valueOf() - new Date(startedAt!).valueOf();
     const duration = prettyDuration(ms)!;
     console.log(
       `  - ${account.display}: ${foundCt} total; ${addCt} new; took ${duration}`
