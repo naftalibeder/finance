@@ -87,15 +87,16 @@ export type MfaInfo = {
 export type Extraction = {
   _id: UUID;
   startedAt: string;
-  finishedAt: string;
+  finishedAt?: string;
   accounts: Record<UUID, ExtractionAccount>;
 };
 
 /** Information about the extraction for a single account. */
 export type ExtractionAccount = {
   accountId: UUID;
-  startedAt: string;
-  finishedAt: string;
+  queuedAt: string;
+  startedAt?: string;
+  finishedAt?: string;
   foundCt: number;
   addCt: number;
   error?: string;
