@@ -3,6 +3,7 @@ export { default as AccountsListItem } from "./AccountsListItem.svelte";
 export { default as Auth } from "./Auth.svelte";
 export { default as Dashboard } from "./Dashboard.svelte";
 export { default as EditAccount } from "./EditAccount.svelte";
+export { default as ExtractionItem } from "./ExtractionItem.svelte";
 export { default as Extractions } from "./Extractions.svelte";
 export { default as Icon } from "./Icon.svelte";
 export { default as Lightbox } from "./Lightbox.svelte";

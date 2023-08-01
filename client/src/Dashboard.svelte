@@ -31,10 +31,10 @@
     MfaInputList,
     Lightbox,
     Extractions,
+    Icon,
   } from ".";
   import { TransactionDateGroup } from "../types";
   import { delay } from "../utils";
-  import Icon from "./Icon.svelte";
 
   const zeroPrice: Price = {
     amount: 0,
@@ -100,7 +100,7 @@
 
   let accountIdShowingDetail: UUID | undefined = undefined;
   $: accountShowingDetail = accounts.find(
-    (o) => o._id === accountIdShowingDetail
+    (o) => o._id === accountIdShowingDetail,
   );
 
   onMount(async () => {
@@ -140,7 +140,7 @@
   const createAccount = async () => {
     try {
       const payload = await post<undefined, CreateAccountApiPayload>(
-        "accounts/create"
+        "accounts/create",
       );
       accounts = [...accounts, payload.data.account];
     } catch (e) {
@@ -162,7 +162,7 @@
             type: account.type,
             timeZoneId: account.timeZoneId,
           },
-        }
+        },
       );
       await fetchAccounts();
     } catch (e) {
@@ -208,7 +208,7 @@
       transactionsOverallMaxPrice = payload.data.overallMaxPrice;
       transactionsOverallEarliestDate = payload.data.overallEarliestDate;
       console.log(
-        `Fetched ${transactionsFiltered.length} transactions with a sum of ${transactionsFilteredSumPrice.amount}`
+        `Fetched ${transactionsFiltered.length} transactions with a sum of ${transactionsFilteredSumPrice.amount}`,
       );
     } catch (e) {
       console.log("Error fetching transactions:", e);
@@ -247,7 +247,7 @@
 
     try {
       const payload = await post<undefined, GetExtractionsApiPayload>(
-        "extractions"
+        "extractions",
       );
       extractions = payload.data.extractions;
     } catch (e) {
