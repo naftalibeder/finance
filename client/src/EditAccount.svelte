@@ -200,6 +200,8 @@
     display: grid;
     grid-template-columns: 1fr;
     padding: 36px;
+    height: 500px;
+    overflow-y: scroll;
   }
 
   .sections {
