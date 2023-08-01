@@ -30,10 +30,16 @@
         <div class="cell">{account.foundCt}</div>
         <div class="cell">{account.addCt}</div>
         <div class="cell">
-          {prettyDuration(
-            new Date(account.finishedAt).valueOf() -
-              new Date(account.startedAt).valueOf(),
-          )}
+          {#if account.finishedAt}
+            {prettyDuration(
+              new Date(account.finishedAt).valueOf() -
+                new Date(account.startedAt).valueOf()
+            )}
+          {:else if account.startedAt}
+            In progress
+          {:else}
+            Pending
+          {/if}
         </div>
         <div class="cell error">{account.error ?? ""}</div>
       {/each}
