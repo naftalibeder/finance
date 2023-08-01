@@ -9,6 +9,7 @@ import {
   BankCreds,
   BankCredsMap,
   Extraction,
+  MfaInfo,
 } from "shared";
 import { Database, User } from "types";
 import { DB_PATH } from "./constants";
@@ -33,7 +34,6 @@ const initial: Database = {
   transactions: [],
   extractions: [],
   extractionStatus: {
-    accounts: {},
     mfaInfos: [],
   },
 };
@@ -270,31 +270,21 @@ export const updateExtraction = (id: UUID, extraction: Extraction) => {
   writeDatabase(db);
 };
 
-export const getExtractionStatus = (): ExtractionStatus => {
+/** Sets end timestamps on any in-progress extractions. */
+export const closeExtraction = () => {
   const db = readDatabase();
-  const status = db.extractionStatus;
-  return status;
-};
 
-export const setExtractionStatus = (
-  accountId: UUID,
-  status: ExtractionStatus["accounts"][UUID]
-) => {
-  const db = readDatabase();
-  db.extractionStatus.accounts[accountId] = status;
+  const extraction = db.extractions[db.extractions.length - 1];
+  if (!extraction.finishedAt) {
+    extraction.finishedAt = new Date().toISOString();
+  }
+
   writeDatabase(db);
 };
 
-export const clearExtractionStatus = (accountId: UUID) => {
+export const getMfaInfos = (): MfaInfo[] => {
   const db = readDatabase();
-  delete db.extractionStatus.accounts[accountId];
-  writeDatabase(db);
-};
-
-export const clearAllExtractionStatuses = () => {
-  const db = readDatabase();
-  db.extractionStatus = initial.extractionStatus;
-  writeDatabase(db);
+  return db.extractionStatus.mfaInfos;
 };
 
 export const setMfaInfo = (info: {
@@ -374,10 +364,8 @@ export default {
   getExtractions,
   addExtraction,
   updateExtraction,
-  getExtractionStatus,
-  setExtractionStatus,
-  clearExtractionStatus,
-  clearAllExtractionStatuses,
+  closeExtraction,
+  getMfaInfos,
   setMfaInfo,
   deleteMfaInfo,
   getUser,

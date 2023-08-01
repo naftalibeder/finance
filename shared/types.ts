@@ -104,7 +104,6 @@ export type ExtractionAccount = {
 
 /** The state of an extraction process for one or more accounts. */
 export type ExtractionStatus = {
-  accounts: Record<string, "pending" | "in-progress">;
   mfaInfos: MfaInfo[];
 };
 
@@ -209,5 +208,12 @@ export type GetTransactionsApiPayload = {
 export type GetExtractionsApiPayload = {
   data: {
     extractions: Extraction[];
+  };
+};
+
+export type GetExtractionStatusApiPayload = {
+  data: {
+    extraction?: Extraction;
+    mfaInfos: MfaInfo[];
   };
 };

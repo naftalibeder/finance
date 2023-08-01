@@ -18,6 +18,7 @@ import {
   VerifyDeviceApiArgs,
   DeleteAccountApiArgs,
   GetExtractionsApiPayload,
+  GetExtractionStatusApiPayload,
 } from "shared";
 import env from "./env";
 import { randomUUID } from "crypto";
@@ -170,8 +171,16 @@ const start = async () => {
   });
 
   app.post("/status", async (req, res) => {
-    const status = db.getExtractionStatus();
-    res.send(status);
+    const extractions = db.getExtractions();
+    const extraction = extractions[extractions.length - 1];
+    const mfaInfos = db.getMfaInfos();
+    const payload: GetExtractionStatusApiPayload = {
+      data: {
+        extraction: !extraction.finishedAt ? extraction : undefined,
+        mfaInfos,
+      },
+    };
+    res.send(payload);
   });
 
   app.post("/mfa/option", async (req, res) => {
@@ -191,14 +200,14 @@ const start = async () => {
   });
 
   const stop = () => {
-    db.clearAllExtractionStatuses();
+    db.closeExtraction();
     server.close();
   };
 
   process.on("SIGINT", stop);
   process.on("SIGTERM", stop);
 
-  db.clearAllExtractionStatuses();
+  db.closeExtraction();
 
   const server = app.listen(port, () => {
     console.log(`Server started on port ${port}`);

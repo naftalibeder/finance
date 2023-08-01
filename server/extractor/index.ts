@@ -90,15 +90,11 @@ const runAccounts = async (
   db.addExtraction(extractionMetrics);
 
   console.log(`Preparing extraction for ${accounts.length} accounts`);
-  for (const account of accounts) {
-    db.setExtractionStatus(account._id, "pending");
-  }
   onFinishPrepare();
 
   const [browser, browserContext] = await setUp();
 
   for (const account of accounts) {
-    db.setExtractionStatus(account._id, "in-progress");
     extractionMetrics.accounts[account._id].startedAt =
       new Date().toISOString();
     db.updateExtraction(extractionMetrics._id, extractionMetrics);
@@ -118,7 +114,6 @@ const runAccounts = async (
       new Date().toISOString();
     db.updateExtraction(extractionMetrics._id, extractionMetrics);
 
-    db.clearExtractionStatus(account._id);
     db.deleteMfaInfo(account.bankId);
   }
   extractionMetrics.finishedAt = new Date().toISOString();
@@ -348,8 +343,8 @@ const waitForMfaOption = async (
   let maxSec = 60 * 4;
 
   for (let i = 0; i < maxSec; i++) {
-    const status = db.getExtractionStatus();
-    const info = status.mfaInfos.find((o) => o.bankId === bankId);
+    const mfaInfos = db.getMfaInfos();
+    const info = mfaInfos.find((o) => o.bankId === bankId);
 
     if (info?.option) {
       log(`Requesting two-factor option ${info.option} for ${bankId}`);
@@ -378,8 +373,8 @@ const waitForMfaCode = async (
   let maxSec = 60 * 4;
 
   for (let i = 0; i < maxSec; i++) {
-    const status = db.getExtractionStatus();
-    const info = status.mfaInfos.find((o) => o.bankId === bankId);
+    const mfaInfos = db.getMfaInfos();
+    const info = mfaInfos.find((o) => o.bankId === bankId);
 
     if (info?.code) {
       log(`Clearing two-factor info for ${bankId}`);

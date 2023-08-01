@@ -4,7 +4,6 @@
   import {
     Account,
     Transaction,
-    ExtractionStatus,
     Price,
     GetTransactionsApiArgs,
     GetTransactionsApiPayload,
@@ -20,6 +19,8 @@
     DeleteAccountApiArgs,
     GetExtractionsApiPayload,
     Extraction,
+    GetExtractionStatusApiPayload,
+    MfaInfo,
     // @ts-ignore
   } from "shared";
   import { post } from "../api";
@@ -62,15 +63,17 @@
 
   let isLoading = false;
 
+  /** A list of all extractions ever completed or in progress. */
   let extractions: Extraction[] = [];
-  let extractionStatus: ExtractionStatus = {
-    accounts: {},
-    mfaInfos: [],
-  };
+  /** An extraction currently in progress. */
+  let extraction: Extraction | undefined;
+  /** Multi-factor request information for an extraction currently in progress. */
+  let extractionMfaInfos: MfaInfo[] = [];
+  /** The number of unfinished accounts in the extraction currently in progress. */
   let extractionAccountsRemainingCt = 0;
 
   let searchTimer: NodeJS.Timer | undefined;
-  let searchInputFieldRef;
+  let searchInputFieldRef: HTMLInputElement;
   let isSearchFocused = false;
   let searchPlaceholderText: string;
   $: {
@@ -100,7 +103,7 @@
 
   let accountIdShowingDetail: UUID | undefined = undefined;
   $: accountShowingDetail = accounts.find(
-    (o) => o._id === accountIdShowingDetail,
+    (o) => o._id === accountIdShowingDetail
   );
 
   onMount(async () => {
@@ -140,7 +143,7 @@
   const createAccount = async () => {
     try {
       const payload = await post<undefined, CreateAccountApiPayload>(
-        "accounts/create",
+        "accounts/create"
       );
       accounts = [...accounts, payload.data.account];
     } catch (e) {
@@ -162,7 +165,7 @@
             type: account.type,
             timeZoneId: account.timeZoneId,
           },
-        },
+        }
       );
       await fetchAccounts();
     } catch (e) {
@@ -208,7 +211,7 @@
       transactionsOverallMaxPrice = payload.data.overallMaxPrice;
       transactionsOverallEarliestDate = payload.data.overallEarliestDate;
       console.log(
-        `Fetched ${transactionsFiltered.length} transactions with a sum of ${transactionsFilteredSumPrice.amount}`,
+        `Fetched ${transactionsFiltered.length} transactions with a sum of ${transactionsFilteredSumPrice.amount}`
       );
     } catch (e) {
       console.log("Error fetching transactions:", e);
@@ -217,22 +220,26 @@
 
   const fetchExtractionStatus = async () => {
     try {
-      extractionStatus = await post<undefined, ExtractionStatus>("status");
+      const payload = await post<undefined, GetExtractionStatusApiPayload>(
+        "status"
+      );
+      extraction = payload.data.extraction;
+      extractionMfaInfos = payload.data.mfaInfos;
+
       const display: Record<string, string> = {};
-      for (const [k, v] of Object.entries(extractionStatus.accounts)) {
-        display[accountsDict[k].display] = v;
+      for (const [k, v] of Object.entries(payload.data.extraction.accounts)) {
+        display[accountsDict[k].display] = JSON.stringify(v);
       }
       console.log("Extraction status:", JSON.stringify(display, undefined, 2));
 
-      const remainingCt = Object.keys(extractionStatus.accounts).length;
-
+      const remainingCt = Object.values(extraction.accounts).filter(
+        (o) => !o.finishedAt
+      ).length;
       if (remainingCt !== extractionAccountsRemainingCt) {
         await fetchAccounts();
         await fetchTransactions(query);
       }
-
       extractionAccountsRemainingCt = remainingCt;
-
       if (remainingCt > 0) {
         await delay(1000);
         await fetchExtractionStatus();
@@ -247,7 +254,7 @@
 
     try {
       const payload = await post<undefined, GetExtractionsApiPayload>(
-        "extractions",
+        "extractions"
       );
       extractions = payload.data.extractions;
     } catch (e) {
@@ -316,9 +323,9 @@
       </div>
     </div>
 
-    {#if extractionStatus.mfaInfos.length > 0}
+    {#if extractionMfaInfos.length > 0}
       <MfaInputList
-        mfaInfos={extractionStatus.mfaInfos}
+        mfaInfos={extractionMfaInfos}
         onClickOption={onClickMfaOption}
         onClickSend={onClickSendMfaCode}
       />
@@ -337,7 +344,7 @@
       {accounts}
       {accountsSum}
       {banks}
-      {extractionStatus}
+      {extraction}
       onClickCreate={createAccount}
       onClickAccount={(id) => {
         accountIdShowingDetail = id;
