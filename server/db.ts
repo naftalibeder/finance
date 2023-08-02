@@ -1,8 +1,7 @@
-import fs, { write } from "fs";
+import fs from "fs";
 import { UUID, randomUUID } from "crypto";
 import {
   Account,
-  ExtractionStatus,
   Price,
   Transaction,
   GetTransactionsApiPayload,
@@ -33,9 +32,7 @@ const initial: Database = {
   accounts: [],
   transactions: [],
   extractions: [],
-  extractionStatus: {
-    mfaInfos: [],
-  },
+  mfaInfos: [],
 };
 
 const readDatabase = (): Database => {
@@ -284,7 +281,7 @@ export const closeExtraction = () => {
 
 export const getMfaInfos = (): MfaInfo[] => {
   const db = readDatabase();
-  return db.extractionStatus.mfaInfos;
+  return db.mfaInfos;
 };
 
 export const setMfaInfo = (info: {
@@ -294,7 +291,7 @@ export const setMfaInfo = (info: {
   code?: string;
 }) => {
   const db = readDatabase();
-  const infos = db.extractionStatus.mfaInfos;
+  const infos = db.mfaInfos;
   const index = infos.findIndex((o) => o.bankId === info.bankId);
 
   if (index > -1) {
@@ -315,19 +312,19 @@ export const setMfaInfo = (info: {
     });
   }
 
-  db.extractionStatus.mfaInfos = infos;
+  db.mfaInfos = infos;
   writeDatabase(db);
 };
 
 export const deleteMfaInfo = (bankId: string) => {
   const db = readDatabase();
-  const infos = db.extractionStatus.mfaInfos;
+  const infos = db.mfaInfos;
   const index = infos.findIndex((o) => o.bankId === bankId);
   if (index === -1) {
     return;
   }
 
-  db.extractionStatus.mfaInfos.splice(index, 1);
+  db.mfaInfos.splice(index, 1);
   writeDatabase(db);
 };
 

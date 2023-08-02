@@ -102,11 +102,6 @@ export type ExtractionAccount = {
   error?: string;
 };
 
-/** The state of an extraction process for one or more accounts. */
-export type ExtractionStatus = {
-  mfaInfos: MfaInfo[];
-};
-
 export interface TextFilter {
   readonly type: "text";
   text: string;
