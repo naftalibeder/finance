@@ -83,9 +83,23 @@ export type MfaInfo = {
   requestedAt: string;
 };
 
-export type ExtractionStatus = {
-  accounts: Record<string, "pending" | "in-progress">;
-  mfaInfos: MfaInfo[];
+/** Information about a contiguous extraction attempt for one or more accounts. */
+export type Extraction = {
+  _id: UUID;
+  startedAt: string;
+  finishedAt?: string;
+  accounts: Record<UUID, ExtractionAccount>;
+};
+
+/** Information about the extraction for a single account. */
+export type ExtractionAccount = {
+  accountId: UUID;
+  queuedAt: string;
+  startedAt?: string;
+  finishedAt?: string;
+  foundCt: number;
+  addCt: number;
+  error?: string;
 };
 
 export interface TextFilter {
@@ -183,5 +197,18 @@ export type GetTransactionsApiPayload = {
     overallSumPrice: Price;
     overallMaxPrice: Price;
     overallEarliestDate?: string;
+  };
+};
+
+export type GetExtractionsApiPayload = {
+  data: {
+    extractions: Extraction[];
+  };
+};
+
+export type GetExtractionStatusApiPayload = {
+  data: {
+    extraction?: Extraction;
+    mfaInfos: MfaInfo[];
   };
 };

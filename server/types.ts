@@ -1,11 +1,11 @@
-import { UUID } from "crypto";
 import { Page } from "@playwright/test";
 import {
   Account,
   Transaction,
   Price,
-  ExtractionStatus,
   BankCreds,
+  Extraction,
+  MfaInfo,
 } from "shared";
 
 export type Database = {
@@ -13,7 +13,8 @@ export type Database = {
   bankCredentials: string;
   accounts: Account[];
   transactions: Transaction[];
-  extractionStatus: ExtractionStatus;
+  extractions: Extraction[];
+  mfaInfos: MfaInfo[];
 };
 
 export type User = {
@@ -73,13 +74,3 @@ export type ExtractorDateRange = {
   start: Date;
   end: Date;
 };
-
-export type ExtractionMetrics = Record<
-  UUID,
-  {
-    startTime: Date;
-    endTime?: Date;
-    foundCt: number;
-    addCt: number;
-  }
->;

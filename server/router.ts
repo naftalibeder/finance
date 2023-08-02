@@ -17,6 +17,8 @@ import {
   UpdateAccountApiPayload,
   VerifyDeviceApiArgs,
   DeleteAccountApiArgs,
+  GetExtractionsApiPayload,
+  GetExtractionStatusApiPayload,
 } from "shared";
 import env from "./env";
 import { randomUUID } from "crypto";
@@ -38,21 +40,24 @@ const start = async () => {
     const saltRounds = 10;
 
     if (email === "") {
-      res.status(400).send({error: "Missing email"});
+      res.status(400).send({ error: "Missing email" });
       return;
     }
     if (password === "") {
-      res.status(400).send({error: "Missing password"});
+      res.status(400).send({ error: "Missing password" });
       return;
     }
 
     const userCreds = db.getUser();
     if (userCreds.email === "") {
       const hash = await bcrypt.hash(password, saltRounds);
-      db.setUser({email: email, password: hash, devices: {}});
+      db.setUser({ email: email, password: hash, devices: {} });
     } else {
       const emailMatches = email === userCreds.email;
-      const passwordMatches = await bcrypt.compare(password, userCreds.password);
+      const passwordMatches = await bcrypt.compare(
+        password,
+        userCreds.password
+      );
       if (!emailMatches || !passwordMatches) {
         res.status(401).send({ error: "Invalid email or password" });
         return;
@@ -159,15 +164,40 @@ const start = async () => {
     res.status(200).send(payload);
   });
 
+  app.post("/extractions", async (req, res) => {
+    const extractions = db.getExtractions();
+    const payload: GetExtractionsApiPayload = { data: { extractions } };
+    res.send(payload);
+  });
+
   app.post("/status", async (req, res) => {
-    const status = db.getExtractionStatus();
-    res.send(status);
+    const extractions = db.getExtractions();
+    const extraction = extractions[extractions.length - 1];
+    if (!extraction || extraction.finishedAt) {
+      const payload: GetExtractionStatusApiPayload = {
+        data: {
+          extraction: undefined,
+          mfaInfos: [],
+        },
+      };
+      res.send(payload);
+      return;
+    }
+
+    const mfaInfos = db.getMfaInfos();
+    const payload: GetExtractionStatusApiPayload = {
+      data: {
+        extraction,
+        mfaInfos,
+      },
+    };
+    res.send(payload);
   });
 
   app.post("/mfa/option", async (req, res) => {
     const args = req.body as { bankId: string; option: number };
     const { bankId, option } = args;
-    db.setMfaInfo({bankId, option});
+    db.setMfaInfo({ bankId, option });
 
     res.status(200).send({ message: "ok" });
   });
@@ -175,20 +205,20 @@ const start = async () => {
   app.post("/mfa", async (req, res) => {
     const args = req.body as { bankId: string; code: string };
     const { bankId, code } = args;
-    db.setMfaInfo({bankId, code});
+    db.setMfaInfo({ bankId, code });
 
     res.status(200).send({ message: "ok" });
   });
 
   const stop = () => {
-    db.clearExtractionStatus();
+    db.closeExtraction();
     server.close();
   };
 
   process.on("SIGINT", stop);
   process.on("SIGTERM", stop);
 
-  db.clearExtractionStatus();
+  db.closeExtraction();
 
   const server = app.listen(port, () => {
     console.log(`Server started on port ${port}`);

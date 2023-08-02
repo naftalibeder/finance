@@ -1,19 +1,17 @@
 <script lang="ts">
-  import { Account, Bank, ExtractionStatus } from "shared";
+  import { Account, Bank, ExtractionAccount } from "shared";
   import { prettyCurrency, prettyTimeAgo } from "../utils";
   import { Icon } from ".";
 
   export let account: Account;
   export let bank: Bank | undefined;
-  export let extractionStatus:
-    | ExtractionStatus["accounts"][string]
-    | undefined = undefined;
+  export let extractionAccount: ExtractionAccount | undefined;
   export let onClickAccount: () => void;
   export let onClickExtract: () => void;
 
   $: displayName = account.display.length > 0 ? account.display : "New Account";
   $: bankDisplayName = bank?.displayName ?? "No bank selected";
-  $: allowHideExtractionStatus = account.bankHasCreds && !extractionStatus;
+  $: allowHideExtractionStatus = account.bankHasCreds && !extractionAccount;
 </script>
 
 <div class="grid contents">
@@ -32,13 +30,13 @@
   <div class={`cell gutter-r ${allowHideExtractionStatus ? "hidden" : ""}`}>
     {#if !account.bankHasCreds}
       <div style="color: var(--text-red)">
-        <Icon kind="dot" />
+        <Icon kind="dot" size="small" />
       </div>
-    {:else if extractionStatus === "pending"}
+    {:else if extractionAccount && !extractionAccount.startedAt}
       <div>
-        <Icon kind="dot" />
+        <Icon kind="dot" size="small" />
       </div>
-    {:else if extractionStatus === "in-progress"}
+    {:else if extractionAccount && !extractionAccount?.finishedAt}
       <div class="spin">
         <Icon kind="reload" size="small" />
       </div>

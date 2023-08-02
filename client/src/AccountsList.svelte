@@ -1,18 +1,20 @@
 <script lang="ts">
   import { UUID } from "crypto";
-  import { Account, Bank, ExtractionStatus, Price } from "shared";
+  // @ts-ignore
+  import { Account, Bank, Extraction, Price } from "shared";
   import { prettyCurrency } from "../utils";
   import { AccountsListItem, Icon } from ".";
 
   export let accounts: Account[];
   export let accountsSum: Price;
   export let banks: Bank[];
-  export let extractionStatus: ExtractionStatus;
+  export let extraction: Extraction | undefined;
   export let onClickCreate: () => void;
   export let onClickAccount: (accountId: UUID) => void;
   export let onClickExtract: (accountIds?: UUID[]) => void;
 
-  $: anyIsExtracting = Object.keys(extractionStatus.accounts).length > 0;
+  $: anyIsExtracting =
+    extraction && Object.keys(extraction.accounts).length > 0;
 </script>
 
 <div class="section">
@@ -42,7 +44,7 @@
       <AccountsListItem
         account={a}
         bank={banks.find((o) => o.id === a.bankId)}
-        extractionStatus={extractionStatus.accounts[a._id]}
+        extractionAccount={extraction?.accounts[a._id]}
         onClickAccount={() => onClickAccount(a._id)}
         onClickExtract={() => onClickExtract([a._id])}
       />

@@ -1,5 +1,5 @@
 import fs from "fs";
-import { UUID } from "crypto";
+import { UUID, randomUUID } from "crypto";
 import {
   Browser,
   BrowserContext,
@@ -8,13 +8,20 @@ import {
   Page,
   firefox,
 } from "@playwright/test";
-import { Account, Bank, Price, Transaction } from "shared";
+import {
+  Account,
+  Bank,
+  Price,
+  Transaction,
+  Extraction,
+  ExtractionAccount,
+} from "shared";
 import { EXTRACTIONS_PATH, TMP_DIR } from "../constants";
 import db from "../db";
 import { delay, prettyAccount, prettyDate, prettyDuration } from "../utils";
 import { CharlesSchwabBankExtractor, ChaseBankExtractor } from "./extractors";
 import { parseTransactions } from "./utils";
-import { ExtractionMetrics, Extractor, ExtractorFuncArgs } from "types";
+import { Extractor, ExtractorFuncArgs } from "types";
 import env from "../env";
 
 const BROWSER_CONTEXT_PATH = `${TMP_DIR}/browser-context.json`;
@@ -60,8 +67,6 @@ const runAccounts = async (
   const tmpRunDir = `${EXTRACTIONS_PATH}/${new Date().toISOString()}`;
   fs.mkdirSync(tmpRunDir, { recursive: true });
 
-  const metrics: ExtractionMetrics = {};
-
   const allAccounts = db.getAccounts();
   let accounts: Account[];
   if (accountIds && accountIds.length > 0) {
@@ -71,38 +76,67 @@ const runAccounts = async (
   } else {
     accounts = allAccounts.accounts;
   }
+
+  const extractionMetrics: Extraction = {
+    _id: randomUUID(),
+    startedAt: new Date().toISOString(),
+    finishedAt: undefined,
+    accounts: {},
+  };
+  for (const account of accounts) {
+    extractionMetrics.accounts[account._id] = {
+      accountId: account._id,
+      queuedAt: new Date().toISOString(),
+      startedAt: undefined,
+      finishedAt: undefined,
+      foundCt: 0,
+      addCt: 0,
+      error: undefined,
+    };
+  }
+  db.addExtraction(extractionMetrics);
+
   console.log(`Preparing extraction for ${accounts.length} accounts`);
-  db.setExtractionStatus(
-    accounts.map((o) => o._id),
-    "pending"
-  );
   onFinishPrepare();
 
   const [browser, browserContext] = await setUp();
+
   for (const account of accounts) {
-    const startTime = new Date();
-    const { foundCt, addCt } = await runAccount(
-      account,
-      tmpRunDir,
-      browserContext
-    );
-    metrics[account._id] = {
-      startTime,
-      endTime: new Date(),
-      foundCt,
-      addCt,
-    };
+    const extractionAccount = extractionMetrics.accounts[account._id];
+    extractionAccount.startedAt = new Date().toISOString();
+    db.updateExtraction(extractionMetrics._id, extractionMetrics);
+
+    try {
+      const { foundCt, addCt } = await runAccount(
+        account,
+        tmpRunDir,
+        browserContext
+      );
+      extractionAccount.foundCt = foundCt;
+      extractionAccount.addCt = addCt;
+    } catch (e) {
+      extractionAccount.error = `${e}`;
+    }
+    extractionAccount.finishedAt = new Date().toISOString();
+    extractionMetrics.accounts[account._id] = extractionAccount;
+    db.updateExtraction(extractionMetrics._id, extractionMetrics);
+
+    db.deleteMfaInfo(account.bankId);
   }
+  extractionMetrics.finishedAt = new Date().toISOString();
+  db.updateExtraction(extractionMetrics._id, extractionMetrics);
+
   await tearDown(browser, browserContext);
 
-  console.log(`Completed extraction across ${accounts.length} accounts`);
-  for (const [accountId, iterMetrics] of Object.entries(metrics)) {
-    const account = accounts.find((o) => o._id === accountId);
-    const { foundCt, addCt, startTime, endTime } = iterMetrics;
-    const deltaTime = endTime!.valueOf() - startTime.valueOf();
-    const dur = prettyDuration(deltaTime);
+  console.log(`Completed extraction across ${accounts.length} accounts:`);
+  const entries = Object.entries(extractionMetrics.accounts);
+  for (const [accountId, accountMetrics] of entries) {
+    const account = accounts.find((o) => o._id === accountId)!;
+    const { foundCt, addCt, startedAt, finishedAt } = accountMetrics;
+    const ms = new Date(finishedAt!).valueOf() - new Date(startedAt!).valueOf();
+    const duration = prettyDuration(ms)!;
     console.log(
-      `${account?.display}: ${foundCt} total; ${addCt} new; took ${dur}`
+      `  - ${account.display}: ${foundCt} total; ${addCt} new; took ${duration}`
     );
   }
 };
@@ -121,7 +155,6 @@ const runAccount = async (
   page.setViewportSize({ width: 1948, height: 955 });
 
   log(`Starting extraction`);
-  db.setExtractionStatus([account._id], "in-progress");
 
   const extractor = extractorsDict[account.bankId];
   const bankCredsMap = db.getBankCredsMap();
@@ -140,7 +173,12 @@ const runAccount = async (
       page,
       tmpRunDir,
       getMfaOption: async (options: string[]): Promise<number> => {
-        const option = await waitForMfaOption(account.bankId, options, () => {}, log); // ???
+        const option = await waitForMfaOption(
+          account.bankId,
+          options,
+          () => {},
+          log
+        ); // ???
         return option;
       },
       getMfaCode: async (): Promise<string> => {
@@ -152,8 +190,8 @@ const runAccount = async (
     accountValue = resp.accountValue;
     transactions = resp.transactions;
   } catch (e) {
-    log(`Error running extractor: ${e}`);
     await takeErrorScreenshot(page, tmpRunDir);
+    throw e;
   }
 
   if (accountValue !== undefined) {
@@ -171,8 +209,6 @@ const runAccount = async (
     log(`Added ${addCt} new of ${singleIterFoundCt} found transactions`);
   }
 
-  db.deleteMfaInfo(account.bankId);
-  db.setExtractionStatus([account._id], undefined);
   await browserContext.storageState({ path: BROWSER_CONTEXT_PATH });
   await page.close();
 
@@ -252,12 +288,18 @@ export const getAccountData = async (
         transactionsChunk = res.transactions;
         skipCt = res.skipCt;
       } catch (e) {
-        log(`Error getting transaction data for range ${prettyRange}:`, e);
-        break;
+        if (transactions.length === 0) {
+          throw `Error getting transaction data for range ${prettyRange}: ${e}`;
+        } else {
+          log(
+            `Passed earliest allowed transaction range with ${prettyRange}; stopping loop`
+          );
+          break;
+        }
       }
 
       if (transactionsChunk.length === 0) {
-        log(`No new transactions for range ${prettyRange}; stopping`);
+        log(`No new transactions for range ${prettyRange}; stopping loop`);
         break;
       }
 
@@ -310,16 +352,16 @@ const waitForMfaOption = async (
   onChange: () => void,
   log: ExtractorFuncArgs["log"]
 ): Promise<number> => {
-  db.setMfaInfo({bankId, options});
+  db.setMfaInfo({ bankId, options });
   let maxSec = 60 * 4;
 
   for (let i = 0; i < maxSec; i++) {
-    const status = db.getExtractionStatus();
-    const info = status.mfaInfos.find((o) => o.bankId === bankId);
+    const mfaInfos = db.getMfaInfos();
+    const info = mfaInfos.find((o) => o.bankId === bankId);
 
     if (info?.option) {
       log(`Requesting two-factor option ${info.option} for ${bankId}`);
-      db.setMfaInfo({bankId})
+      db.setMfaInfo({ bankId });
       onChange();
       return info.option;
     }
@@ -340,12 +382,12 @@ const waitForMfaCode = async (
   onChange: () => void,
   log: ExtractorFuncArgs["log"]
 ): Promise<string> => {
-  db.setMfaInfo({bankId});
+  db.setMfaInfo({ bankId });
   let maxSec = 60 * 4;
 
   for (let i = 0; i < maxSec; i++) {
-    const status = db.getExtractionStatus();
-    const info = status.mfaInfos.find((o) => o.bankId === bankId);
+    const mfaInfos = db.getMfaInfos();
+    const info = mfaInfos.find((o) => o.bankId === bankId);
 
     if (info?.code) {
       log(`Clearing two-factor info for ${bankId}`);

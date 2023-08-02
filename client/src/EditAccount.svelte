@@ -55,142 +55,146 @@
 </script>
 
 <div class="container">
-  <h2>{account.display.length > 0 ? account.display : "Edit account"}</h2>
+  <div class="scroll">
+    <h2>{account.display.length > 0 ? account.display : "Edit account"}</h2>
 
-  <div class="sections">
-    <div class="section-container">
-      <h3>Account info</h3>
-      <div class="inputs">
-        <label for={elemId("display")}>Display</label>
-        <input
-          id={elemId("display")}
-          placeholder={"Enter display name"}
-          value={account.display}
-          on:change={(evt) => {
-            onChangeProperty("display", evt.target["value"]);
-          }}
-        />
-        <label for={elemId("number")}>Number</label>
-        <input
-          id={elemId("number")}
-          placeholder={"Enter account number"}
-          value={account.number}
-          on:change={(evt) => {
-            onChangeProperty("number", evt.target["value"]);
-          }}
-        />
-        <label for={elemId("bankId")}>Bank</label>
-        <select
-          id={elemId("bankId")}
-          class={!currentBank ? "faded-text" : ""}
-          value={currentBank?.id ?? ""}
-          on:change={(evt) => {
-            onChangeProperty("bankId", evt.target["value"]);
-          }}
-        >
-          <option value="">Select one</option>
-          {#each banks as bank}
-            <option value={bank.id}>{bank.displayName}</option>
-          {/each}
-        </select>
-        <label for={elemId("kind")}>Kind</label>
-        <select
-          id={elemId("kind")}
-          class={kindIsDisabled || account.kind === "unselected"
-            ? "faded-text"
-            : ""}
-          value={kindIsDisabled ? "unselected" : account.kind}
-          disabled={kindIsDisabled}
-          on:change={(evt) => {
-            onChangeProperty("kind", evt.target["value"]);
-          }}
-        >
-          <option value="unselected">
-            {currentBank ? "Select one" : "No bank selected"}
-          </option>
-          {#if currentBank}
-            {#each currentBank.supportedAccountKinds as kind}
-              <option value={kind}>{titleCase(kind)}</option>
+    <div class="sections">
+      <div class="section-container">
+        <h3>Account info</h3>
+        <div class="inputs">
+          <label for={elemId("display")}>Display</label>
+          <input
+            id={elemId("display")}
+            placeholder={"Enter display name"}
+            value={account.display}
+            on:change={(evt) => {
+              onChangeProperty("display", evt.target["value"]);
+            }}
+          />
+          <label for={elemId("number")}>Number</label>
+          <input
+            id={elemId("number")}
+            placeholder={"Enter account number"}
+            value={account.number}
+            on:change={(evt) => {
+              onChangeProperty("number", evt.target["value"]);
+            }}
+          />
+          <label for={elemId("bankId")}>Bank</label>
+          <select
+            id={elemId("bankId")}
+            class={!currentBank ? "faded-text" : ""}
+            value={currentBank?.id ?? ""}
+            on:change={(evt) => {
+              onChangeProperty("bankId", evt.target["value"]);
+            }}
+          >
+            <option value="">Select one</option>
+            {#each banks as bank}
+              <option value={bank.id}>{bank.displayName}</option>
             {/each}
-          {/if}
-        </select>
-        <label for={elemId("type")}>Type</label>
-        <select
-          id={elemId("type")}
-          value={account.type}
-          on:change={(evt) => {
-            onChangeProperty("type", evt.target["value"]);
-          }}
-        >
-          {#each types as type}
-            <option value={type}>{titleCase(type)}</option>
-          {/each}
-        </select>
-        <label for={elemId("timeZoneId")}>Time zone</label>
-        <select
-          id={elemId("timeZoneId")}
-          value={timeZoneIds.length > 0 ? account.timeZoneId : ""}
-          on:change={(evt) => {
-            onChangeProperty("timeZoneId", evt.target["value"]);
-          }}
-        >
-          {#each timeZoneIds as id}
-            <option value={id}>{id}</option>
-          {/each}
-        </select>
+          </select>
+          <label for={elemId("kind")}>Kind</label>
+          <select
+            id={elemId("kind")}
+            class={kindIsDisabled || account.kind === "unselected"
+              ? "faded-text"
+              : ""}
+            value={kindIsDisabled ? "unselected" : account.kind}
+            disabled={kindIsDisabled}
+            on:change={(evt) => {
+              onChangeProperty("kind", evt.target["value"]);
+            }}
+          >
+            <option value="unselected">
+              {currentBank ? "Select one" : "No bank selected"}
+            </option>
+            {#if currentBank}
+              {#each currentBank.supportedAccountKinds as kind}
+                <option value={kind}>{titleCase(kind)}</option>
+              {/each}
+            {/if}
+          </select>
+          <label for={elemId("type")}>Type</label>
+          <select
+            id={elemId("type")}
+            value={account.type}
+            on:change={(evt) => {
+              onChangeProperty("type", evt.target["value"]);
+            }}
+          >
+            {#each types as type}
+              <option value={type}>{titleCase(type)}</option>
+            {/each}
+          </select>
+          <label for={elemId("timeZoneId")}>Time zone</label>
+          <select
+            id={elemId("timeZoneId")}
+            value={timeZoneIds.length > 0 ? account.timeZoneId : ""}
+            on:change={(evt) => {
+              onChangeProperty("timeZoneId", evt.target["value"]);
+            }}
+          >
+            {#each timeZoneIds as id}
+              <option value={id}>{id}</option>
+            {/each}
+          </select>
+        </div>
       </div>
-    </div>
 
-    <div class="section-container">
-      <div class="section-row">
-        <h3>{currentBank?.displayNameShort ?? "Bank"} credentials</h3>
+      <div class="section-container">
+        <div class="section-row">
+          <h3>{currentBank?.displayNameShort ?? "Bank"} credentials</h3>
+          <button
+            on:click={async () => {
+              await onSubmitBankCreds(account.bankId, {
+                username: bankUsername,
+                password: bankPassword,
+              });
+              bankUsername = "";
+              bankPassword = "";
+            }}
+          >
+            Save
+          </button>
+        </div>
+        <div class="inputs">
+          <label for="bank-username">Username</label>
+          <input
+            type="email"
+            id={"bank-username"}
+            placeholder={account.bankHasCreds ? "************" : "Enter email"}
+            bind:value={bankUsername}
+          />
+          <label for="bank-password">Password</label>
+          <input
+            type="password"
+            id={"bank-password"}
+            placeholder={account.bankHasCreds
+              ? "************"
+              : "Enter password"}
+            bind:value={bankPassword}
+          />
+        </div>
+      </div>
+
+      <div class="button-container">
         <button
+          class="destructive"
           on:click={async () => {
-            await onSubmitBankCreds(account.bankId, {
-              username: bankUsername,
-              password: bankPassword,
-            });
-            bankUsername = "";
-            bankPassword = "";
+            deleteClickCt += 1;
+            if (deleteClickCt === deleteConfirmClickCt) {
+              await onSelectDeleteAccount(account._id);
+            }
           }}
         >
-          Save
+          {#if deleteClickCt > 0}
+            Delete account (Clicked {deleteClickCt}/{deleteConfirmClickCt})
+          {:else}
+            Delete account
+          {/if}
         </button>
       </div>
-      <div class="inputs">
-        <label for="bank-username">Username</label>
-        <input
-          type="email"
-          id={"bank-username"}
-          placeholder={account.bankHasCreds ? "************" : "Enter email"}
-          bind:value={bankUsername}
-        />
-        <label for="bank-password">Password</label>
-        <input
-          type="password"
-          id={"bank-password"}
-          placeholder={account.bankHasCreds ? "************" : "Enter password"}
-          bind:value={bankPassword}
-        />
-      </div>
-    </div>
-
-    <div class="button-container">
-      <button
-        class="destructive"
-        on:click={async () => {
-          deleteClickCt += 1;
-          if (deleteClickCt === deleteConfirmClickCt) {
-            await onSelectDeleteAccount(account._id);
-          }
-        }}
-      >
-        {#if deleteClickCt > 0}
-          Delete account (Clicked {deleteClickCt}/{deleteConfirmClickCt})
-        {:else}
-          Delete account
-        {/if}
-      </button>
     </div>
   </div>
 </div>
@@ -199,7 +203,15 @@
   .container {
     display: grid;
     grid-template-columns: 1fr;
+    padding: 8px;
+  }
+
+  .scroll {
+    display: grid;
+    grid-template-columns: 1fr;
     padding: 36px;
+    height: 600px;
+    overflow-y: scroll;
   }
 
   .sections {

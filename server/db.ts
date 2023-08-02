@@ -1,13 +1,14 @@
-import fs, { write } from "fs";
+import fs from "fs";
 import { UUID, randomUUID } from "crypto";
 import {
   Account,
-  ExtractionStatus,
   Price,
   Transaction,
   GetTransactionsApiPayload,
   BankCreds,
   BankCredsMap,
+  Extraction,
+  MfaInfo,
 } from "shared";
 import { Database, User } from "types";
 import { DB_PATH } from "./constants";
@@ -30,10 +31,8 @@ const initial: Database = {
   bankCredentials: "",
   accounts: [],
   transactions: [],
-  extractionStatus: {
-    accounts: {},
-    mfaInfos: [],
-  },
+  extractions: [],
+  mfaInfos: [],
 };
 
 const readDatabase = (): Database => {
@@ -245,30 +244,54 @@ export const addTransactions = (newTransactions: Transaction[]): number => {
   return addCt;
 };
 
-export const getExtractionStatus = (): ExtractionStatus => {
+export const getExtractions = (): Extraction[] => {
   const db = readDatabase();
-  const status = db.extractionStatus;
-  return status;
+  return db.extractions;
 };
 
-export const setExtractionStatus = (
-  accountIds: string[],
-  status?: ExtractionStatus["accounts"][string]
-) => {
+export const addExtraction = (extraction: Extraction) => {
   const db = readDatabase();
-  for (const id of accountIds) {
-    if (status) {
-      db.extractionStatus.accounts[id] = status;
-    } else {
-      delete db.extractionStatus.accounts[id];
-    }
-  }
+  db.extractions.push(extraction);
   writeDatabase(db);
 };
 
-export const setMfaInfo = (info: {bankId: string, options?: string[], option?: number, code?: string}) => {
+export const updateExtraction = (id: UUID, extraction: Extraction) => {
   const db = readDatabase();
-  const infos = db.extractionStatus.mfaInfos;
+
+  const index = db.extractions.findIndex((o) => o._id === id);
+  if (index === -1) {
+    return;
+  }
+
+  db.extractions[index] = extraction;
+  writeDatabase(db);
+};
+
+/** Sets end timestamps on any in-progress extractions. */
+export const closeExtraction = () => {
+  const db = readDatabase();
+
+  const extraction = db.extractions[db.extractions.length - 1];
+  if (!extraction.finishedAt) {
+    extraction.finishedAt = new Date().toISOString();
+  }
+
+  writeDatabase(db);
+};
+
+export const getMfaInfos = (): MfaInfo[] => {
+  const db = readDatabase();
+  return db.mfaInfos;
+};
+
+export const setMfaInfo = (info: {
+  bankId: string;
+  options?: string[];
+  option?: number;
+  code?: string;
+}) => {
+  const db = readDatabase();
+  const infos = db.mfaInfos;
   const index = infos.findIndex((o) => o.bankId === info.bankId);
 
   if (index > -1) {
@@ -289,25 +312,19 @@ export const setMfaInfo = (info: {bankId: string, options?: string[], option?: n
     });
   }
 
-  db.extractionStatus.mfaInfos = infos;
+  db.mfaInfos = infos;
   writeDatabase(db);
 };
 
 export const deleteMfaInfo = (bankId: string) => {
   const db = readDatabase();
-  const infos = db.extractionStatus.mfaInfos;
+  const infos = db.mfaInfos;
   const index = infos.findIndex((o) => o.bankId === bankId);
   if (index === -1) {
     return;
   }
 
-  db.extractionStatus.mfaInfos.splice(index, 1);
-  writeDatabase(db);
-};
-
-export const clearExtractionStatus = () => {
-  const db = readDatabase();
-  db.extractionStatus = initial.extractionStatus;
+  db.mfaInfos.splice(index, 1);
   writeDatabase(db);
 };
 
@@ -320,7 +337,7 @@ export const setUser = (user: User) => {
   const db = readDatabase();
   db.user = user;
   writeDatabase(db);
-}
+};
 
 export const setDevice = (name: string, token: string) => {
   const db = readDatabase();
@@ -341,11 +358,13 @@ export default {
   deleteAccount,
   getTransactions,
   addTransactions,
-  getExtractionStatus,
-  setExtractionStatus,
+  getExtractions,
+  addExtraction,
+  updateExtraction,
+  closeExtraction,
+  getMfaInfos,
   setMfaInfo,
   deleteMfaInfo,
-  clearExtractionStatus,
   getUser,
   setUser,
   setDevice,

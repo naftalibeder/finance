@@ -4,7 +4,6 @@
   import {
     Account,
     Transaction,
-    ExtractionStatus,
     Price,
     GetTransactionsApiArgs,
     GetTransactionsApiPayload,
@@ -18,6 +17,10 @@
     BankCreds,
     UpdateBankCredsApiArgs,
     DeleteAccountApiArgs,
+    GetExtractionsApiPayload,
+    Extraction,
+    GetExtractionStatusApiPayload,
+    MfaInfo,
     // @ts-ignore
   } from "shared";
   import { post } from "../api";
@@ -28,6 +31,8 @@
     EditAccount,
     MfaInputList,
     Lightbox,
+    Extractions,
+    Icon,
   } from ".";
   import { TransactionDateGroup } from "../types";
   import { delay } from "../utils";
@@ -58,14 +63,17 @@
 
   let isLoading = false;
 
-  let extractionStatus: ExtractionStatus = {
-    accounts: {},
-    mfaInfos: [],
-  };
+  /** A list of all extractions ever completed or in progress. */
+  let extractions: Extraction[] = [];
+  /** An extraction currently in progress. */
+  let extraction: Extraction | undefined;
+  /** Multi-factor request information for an extraction currently in progress. */
+  let extractionMfaInfos: MfaInfo[] = [];
+  /** The number of unfinished accounts in the extraction currently in progress. */
   let extractionAccountsRemainingCt = 0;
 
   let searchTimer: NodeJS.Timer | undefined;
-  let searchInputFieldRef;
+  let searchInputFieldRef: HTMLInputElement;
   let isSearchFocused = false;
   let searchPlaceholderText: string;
   $: {
@@ -88,6 +96,8 @@
   $: {
     onChangeQuery(query);
   }
+
+  let isShowingExtractionsHistory = false;
 
   let hoverGroup: TransactionDateGroup | undefined;
 
@@ -208,24 +218,50 @@
     }
   };
 
+  const fetchExtractions = async () => {
+    try {
+      const payload = await post<undefined, GetExtractionsApiPayload>(
+        "extractions"
+      );
+      extractions = payload.data.extractions;
+    } catch (e) {
+      console.log("Error getting extractions:", e);
+    }
+  };
+
   const fetchExtractionStatus = async () => {
     try {
-      extractionStatus = await post<undefined, ExtractionStatus>("status");
-      const display: Record<string, string> = {};
-      for (const [k, v] of Object.entries(extractionStatus.accounts)) {
-        display[accountsDict[k].display] = v;
+      const payload = await post<undefined, GetExtractionStatusApiPayload>(
+        "status"
+      );
+      extraction = payload.data.extraction;
+      extractionMfaInfos = payload.data.mfaInfos;
+      if (!extraction) {
+        console.log("No in-progress extraction found");
+        return;
       }
-      console.log("Extraction status:", JSON.stringify(display, undefined, 2));
 
-      const remainingCt = Object.keys(extractionStatus.accounts).length;
+      const display: Record<string, string> = {};
+      for (const [k, v] of Object.entries(extraction.accounts)) {
+        const accountName = accountsDict[k].display;
+        const data = `${v.accountId}: ${v.foundCt} found, ${v.addCt} new`;
+        display[accountName] = data;
+      }
+      console.log(
+        "In-progress extraction:",
+        JSON.stringify(display, undefined, 2)
+      );
 
+      const remainingCt = Object.values(extraction.accounts).filter(
+        (o) => !o.finishedAt
+      ).length;
       if (remainingCt !== extractionAccountsRemainingCt) {
         await fetchAccounts();
         await fetchTransactions(query);
+        await fetchExtractions();
       }
 
       extractionAccountsRemainingCt = remainingCt;
-
       if (remainingCt > 0) {
         await delay(1000);
         await fetchExtractionStatus();
@@ -233,6 +269,11 @@
     } catch (e) {
       console.log("Error fetching extraction status:", e);
     }
+  };
+
+  const onClickExtractionsHistory = async () => {
+    isShowingExtractionsHistory = true;
+    await fetchExtractions();
   };
 
   const onClickMfaOption = async (bankId: string, option: number) => {
@@ -250,6 +291,7 @@
       console.log("Error sending mfa code:", e);
     }
   };
+
   const onClickExtract = async (accountIds?: UUID[]) => {
     await post<ExtractApiArgs, undefined>("extract", { accountIds });
     await fetchExtractionStatus();
@@ -289,12 +331,15 @@
           bind:value={query}
           bind:this={searchInputFieldRef}
         />
+        <button on:click={() => onClickExtractionsHistory()}>
+          <Icon kind={"clock"} />
+        </button>
       </div>
     </div>
 
-    {#if extractionStatus.mfaInfos.length > 0}
+    {#if extractionMfaInfos.length > 0}
       <MfaInputList
-        mfaInfos={extractionStatus.mfaInfos}
+        mfaInfos={extractionMfaInfos}
         onClickOption={onClickMfaOption}
         onClickSend={onClickSendMfaCode}
       />
@@ -313,7 +358,7 @@
       {accounts}
       {accountsSum}
       {banks}
-      {extractionStatus}
+      {extraction}
       onClickCreate={createAccount}
       onClickAccount={(id) => {
         accountIdShowingDetail = id;
@@ -345,6 +390,16 @@
         onSubmitBankCreds={updateBankCreds}
         onSelectDeleteAccount={deleteAccount}
       />
+    </Lightbox>
+  {/if}
+
+  {#if isShowingExtractionsHistory}
+    <Lightbox
+      onPressDismiss={() => {
+        isShowingExtractionsHistory = false;
+      }}
+    >
+      <Extractions {extractions} {accounts} />
     </Lightbox>
   {/if}
 </div>
