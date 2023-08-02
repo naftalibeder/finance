@@ -23,7 +23,7 @@ import {
 import env from "./env";
 import { randomUUID } from "crypto";
 
-const start = async () => {
+const start = () => {
   const port = env.get("SERVER_PORT");
 
   const app = express();
@@ -225,4 +225,6 @@ const start = async () => {
   });
 };
 
-start();
+export default {
+  start,
+};
