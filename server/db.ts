@@ -270,12 +270,18 @@ export const updateExtraction = (id: UUID, extraction: Extraction) => {
 /** Sets end timestamps on any in-progress extractions. */
 export const closeExtraction = () => {
   const db = readDatabase();
+  const { extractions } = db;
 
-  const extraction = db.extractions[db.extractions.length - 1];
+  const extraction = extractions[extractions.length - 1];
+  if (!extraction) {
+    return;
+  }
+
   if (!extraction.finishedAt) {
     extraction.finishedAt = new Date().toISOString();
   }
 
+  db.extractions[extractions.length - 1] = extraction;
   writeDatabase(db);
 };
 
