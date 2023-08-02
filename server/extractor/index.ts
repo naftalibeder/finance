@@ -8,7 +8,14 @@ import {
   Page,
   firefox,
 } from "@playwright/test";
-import { Account, Bank, Price, Transaction, Extraction } from "shared";
+import {
+  Account,
+  Bank,
+  Price,
+  Transaction,
+  Extraction,
+  ExtractionAccount,
+} from "shared";
 import { EXTRACTIONS_PATH, TMP_DIR } from "../constants";
 import db from "../db";
 import { delay, prettyAccount, prettyDate, prettyDuration } from "../utils";
@@ -95,8 +102,8 @@ const runAccounts = async (
   const [browser, browserContext] = await setUp();
 
   for (const account of accounts) {
-    extractionMetrics.accounts[account._id].startedAt =
-      new Date().toISOString();
+    const extractionAccount = extractionMetrics.accounts[account._id];
+    extractionAccount.startedAt = new Date().toISOString();
     db.updateExtraction(extractionMetrics._id, extractionMetrics);
 
     try {
@@ -105,13 +112,13 @@ const runAccounts = async (
         tmpRunDir,
         browserContext
       );
-      extractionMetrics.accounts[account._id].foundCt = foundCt;
-      extractionMetrics.accounts[account._id].addCt = addCt;
+      extractionAccount.foundCt = foundCt;
+      extractionAccount.addCt = addCt;
     } catch (e) {
-      extractionMetrics.accounts[account._id].error = `${e}`;
+      extractionAccount.error = `${e}`;
     }
-    extractionMetrics.accounts[account._id].finishedAt =
-      new Date().toISOString();
+    extractionAccount.finishedAt = new Date().toISOString();
+    extractionMetrics.accounts[account._id] = extractionAccount;
     db.updateExtraction(extractionMetrics._id, extractionMetrics);
 
     db.deleteMfaInfo(account.bankId);
@@ -281,12 +288,18 @@ export const getAccountData = async (
         transactionsChunk = res.transactions;
         skipCt = res.skipCt;
       } catch (e) {
-        log(`Error getting transaction data for range ${prettyRange}:`, e);
-        break;
+        if (transactions.length === 0) {
+          throw `Error getting transaction data for range ${prettyRange}: ${e}`;
+        } else {
+          log(
+            `Passed earliest allowed transaction range with ${prettyRange}; stopping loop`
+          );
+          break;
+        }
       }
 
       if (transactionsChunk.length === 0) {
-        log(`No new transactions for range ${prettyRange}; stopping`);
+        log(`No new transactions for range ${prettyRange}; stopping loop`);
         break;
       }
 

@@ -173,10 +173,21 @@ const start = async () => {
   app.post("/status", async (req, res) => {
     const extractions = db.getExtractions();
     const extraction = extractions[extractions.length - 1];
+    if (!extraction || extraction.finishedAt) {
+      const payload: GetExtractionStatusApiPayload = {
+        data: {
+          extraction: undefined,
+          mfaInfos: [],
+        },
+      };
+      res.send(payload);
+      return;
+    }
+
     const mfaInfos = db.getMfaInfos();
     const payload: GetExtractionStatusApiPayload = {
       data: {
-        extraction: !extraction.finishedAt ? extraction : undefined,
+        extraction,
         mfaInfos,
       },
     };

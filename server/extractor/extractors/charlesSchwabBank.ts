@@ -175,7 +175,7 @@ class CharlesSchwabBankExtractor implements Extractor {
     );
     await loc.blur();
 
-    loc = dateRangeFrame.getByRole("button", { name: "search" });
+    loc = dateRangeFrame.getByRole("button", { name: "search", exact: true });
     await loc.click();
     await page.waitForTimeout(3000);
 
