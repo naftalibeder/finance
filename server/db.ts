@@ -50,6 +50,20 @@ const writeDatabase = (db: Database) => {
   fs.writeFileSync(DB_PATH, dbStrUpdated, { encoding: "utf-8" });
 };
 
+export const migrate = () => {
+  const db = readDatabase();
+
+  if (!db.extractions) {
+    db.extractions = [];
+  }
+
+  if (!db.mfaInfos) {
+    db.mfaInfos = [];
+  }
+
+  writeDatabase(db);
+};
+
 export const getBankCredsMap = (): BankCredsMap => {
   const db = readDatabase();
 
@@ -355,6 +369,7 @@ export const setDevice = (name: string, token: string) => {
 };
 
 export default {
+  migrate,
   getBankCredsMap,
   setBankCreds,
   getAccounts,
