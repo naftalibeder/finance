@@ -218,6 +218,17 @@
     }
   };
 
+  const fetchExtractions = async () => {
+    try {
+      const payload = await post<undefined, GetExtractionsApiPayload>(
+        "extractions"
+      );
+      extractions = payload.data.extractions;
+    } catch (e) {
+      console.log("Error getting extractions:", e);
+    }
+  };
+
   const fetchExtractionStatus = async () => {
     try {
       const payload = await post<undefined, GetExtractionStatusApiPayload>(
@@ -225,12 +236,21 @@
       );
       extraction = payload.data.extraction;
       extractionMfaInfos = payload.data.mfaInfos;
+      if (!extraction) {
+        console.log("No in-progress extraction found");
+        return;
+      }
 
       const display: Record<string, string> = {};
-      for (const [k, v] of Object.entries(payload.data.extraction.accounts)) {
-        display[accountsDict[k].display] = JSON.stringify(v);
+      for (const [k, v] of Object.entries(extraction.accounts)) {
+        const accountName = accountsDict[k].display;
+        const data = `${v.accountId}: ${v.foundCt} found, ${v.addCt} new`;
+        display[accountName] = data;
       }
-      console.log("Extraction status:", JSON.stringify(display, undefined, 2));
+      console.log(
+        "In-progress extraction:",
+        JSON.stringify(display, undefined, 2)
+      );
 
       const remainingCt = Object.values(extraction.accounts).filter(
         (o) => !o.finishedAt
@@ -238,7 +258,9 @@
       if (remainingCt !== extractionAccountsRemainingCt) {
         await fetchAccounts();
         await fetchTransactions(query);
+        await fetchExtractions();
       }
+
       extractionAccountsRemainingCt = remainingCt;
       if (remainingCt > 0) {
         await delay(1000);
@@ -251,15 +273,7 @@
 
   const onClickExtractionsHistory = async () => {
     isShowingExtractionsHistory = true;
-
-    try {
-      const payload = await post<undefined, GetExtractionsApiPayload>(
-        "extractions"
-      );
-      extractions = payload.data.extractions;
-    } catch (e) {
-      console.log("Error getting extractions:", e);
-    }
+    await fetchExtractions();
   };
 
   const onClickMfaOption = async (bankId: string, option: number) => {

@@ -44,7 +44,7 @@
       <AccountsListItem
         account={a}
         bank={banks.find((o) => o.id === a.bankId)}
-        accountExtraction={extraction?.accounts[a._id]}
+        extractionAccount={extraction?.accounts[a._id]}
         onClickAccount={() => onClickAccount(a._id)}
         onClickExtract={() => onClickExtract([a._id])}
       />

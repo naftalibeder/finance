@@ -4,7 +4,7 @@ import { TransactionDateGroup } from "types";
 
 export const prettyDate = (
   o?: Date | string,
-  opts?: { includeTime?: boolean }
+  opts?: { includeTime?: "hr" | "hr:min" }
 ): string | undefined => {
   if (!o) {
     return undefined;
@@ -26,12 +26,17 @@ export const prettyDate = (
   const month = monthNum < 10 ? `0${monthNum}` : monthNum;
   const dateNum = d.getDate();
   const date = dateNum < 10 ? `0${dateNum}` : dateNum;
-  const hours = d.getHours();
-  const hours12 = hours % 12;
-  const period = hours < 12 ? "a" : "p";
+  const hr = d.getHours();
+  const hr12 = hr % 12;
+  const min = d.getMinutes();
+  const period = hr < 12 ? "a" : "p";
 
   if (opts?.includeTime) {
-    return `${year}.${month}.${date} ${hours12}${period}`;
+    const time =
+      opts.includeTime === "hr"
+        ? `${hr12}${period}`
+        : `${hr12}:${min}${period}`;
+    return `${year}.${month}.${date} ${time}`;
   } else {
     return `${year}.${month}.${date}`;
   }
