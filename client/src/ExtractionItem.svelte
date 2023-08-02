@@ -1,17 +1,30 @@
 <script lang="ts">
-  import { Account, Extraction } from "shared";
+  import { Account, Extraction, ExtractionAccount } from "shared";
   import { prettyDate, prettyDuration } from "../utils";
 
   export let extraction: Extraction;
   export let accounts: Account[];
   export let isExpanded = false;
   export let onClickToggleExpand: () => void;
+
+  const durationDisplay = (account: ExtractionAccount) => {
+    if (account.finishedAt) {
+      return prettyDuration(
+        new Date(account.finishedAt).valueOf() -
+          new Date(account.startedAt).valueOf()
+      );
+    } else if (account.startedAt) {
+      return extraction.finishedAt ? "Aborted" : "In progress";
+    } else {
+      return extraction.finishedAt ? "Cancelled" : "Pending";
+    }
+  };
 </script>
 
 <div>
   <button on:click={onClickToggleExpand}>
     <h3 class="section">
-      {prettyDate(extraction.startedAt, { includeTime: true })}
+      {prettyDate(extraction.startedAt, { includeTime: "hr:min" })}
     </h3>
   </button>
 
@@ -29,18 +42,7 @@
         </div>
         <div class="cell">{account.foundCt}</div>
         <div class="cell">{account.addCt}</div>
-        <div class="cell">
-          {#if account.finishedAt}
-            {prettyDuration(
-              new Date(account.finishedAt).valueOf() -
-                new Date(account.startedAt).valueOf()
-            )}
-          {:else if account.startedAt}
-            In progress
-          {:else}
-            Pending
-          {/if}
-        </div>
+        <div class="cell">{durationDisplay(account)}</div>
         <div class="cell error">{account.error ?? ""}</div>
       {/each}
     </div>
@@ -50,7 +52,7 @@
 <style>
   .list {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
     column-gap: 16px;
   }
 

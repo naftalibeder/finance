@@ -47,7 +47,7 @@
       />
     </svg>
   {:else if kind === "dot"}
-    <div style="text-align: center">•</div>
+    <div class="dot">•</div>
   {/if}
 </div>
 
@@ -60,5 +60,12 @@
   .size-small {
     width: 14px;
     height: 14px;
+  }
+
+  .dot {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
   }
 </style>

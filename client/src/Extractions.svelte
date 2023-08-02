@@ -7,26 +7,28 @@
 
   $: extractionsReversed = [...extractions].reverse();
 
-  let expandedIndex: number | undefined;
+  let expandedIndex: number | undefined = 0;
 </script>
 
 <div class="container">
-  <h2>Extraction history</h2>
-  <div class="list">
-    {#each extractionsReversed as extraction, i}
-      <ExtractionItem
-        {extraction}
-        {accounts}
-        isExpanded={i === expandedIndex}
-        onClickToggleExpand={() => {
-          if (i === expandedIndex) {
-            expandedIndex = undefined;
-          } else {
-            expandedIndex = i;
-          }
-        }}
-      />
-    {/each}
+  <div class="scroll">
+    <h2>Extraction history</h2>
+    <div class="list">
+      {#each extractionsReversed as extraction, i}
+        <ExtractionItem
+          {extraction}
+          {accounts}
+          isExpanded={i === expandedIndex}
+          onClickToggleExpand={() => {
+            if (i === expandedIndex) {
+              expandedIndex = undefined;
+            } else {
+              expandedIndex = i;
+            }
+          }}
+        />
+      {/each}
+    </div>
   </div>
 </div>
 
@@ -34,9 +36,15 @@
   .container {
     display: grid;
     grid-template-columns: 1fr;
+    padding: 8px;
+  }
+
+  .scroll {
+    display: grid;
+    grid-template-columns: 1fr;
     grid-template-rows: auto 1fr;
-    padding: 32px;
-    height: 500px;
+    padding: 36px;
+    height: 600px;
     overflow-y: scroll;
   }
 </style>
