@@ -4,10 +4,12 @@
   "scripts": {
     "setup": "cp -n .env.sample .env && mkdir data",
     "postinstall": "(cd client && npm i) && (cd server && npm i)",
-    "start": "npx concurrently \"npm:client:start\" \"npm:server:start\"",
-    "client:start": "cd client && npm run start",
-    "server:start": "cd server && npm run start",
-    "test": "(cd client && npm run test) && (cd server && npm run test)"
+    "start": "npx concurrently \"npm:start:client\" \"npm:start:server\"",
+    "start:client": "cd client && npm run start",
+    "start:server": "cd server && npm run start",
+    "test": "npm run test:client && npm run test:server",
+    "test:client": "cd client && npm run test",
+    "test:server": "cd server && npm run test"
   },
   "devDependencies": {
     "@types/mocha": "10.0.1",
