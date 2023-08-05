@@ -273,7 +273,8 @@
       }
     } catch (e) {
       console.log("Error fetching extraction status:", e);
-      extraction = undefined;
+      extraction.finishedAt = new Date().toISOString();
+      extractions[0] = extraction;
       extractionMfaInfos = [];
     }
   };
