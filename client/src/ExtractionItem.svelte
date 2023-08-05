@@ -1,19 +1,34 @@
 <script lang="ts">
   import { Account, Extraction, ExtractionAccount } from "shared";
-  import { prettyDate, prettyDuration } from "../utils";
+  import { prettyDate, prettyDurationBetweenDates } from "../utils";
 
   export let extraction: Extraction;
   export let accounts: Account[];
   export let isExpanded = false;
+  export let now: Date;
   export let onClickToggleExpand: () => void;
 
-  const durationDisplay = (account: ExtractionAccount) => {
-    if (account.finishedAt) {
-      return prettyDuration(
-        new Date(account.finishedAt).valueOf() -
-          new Date(account.startedAt).valueOf()
-      );
-    } else if (account.startedAt) {
+  const accountDisplay = (a: ExtractionAccount) => {
+    return accounts.find((o) => o._id === a.accountId)?.display;
+  };
+
+  const durationDisplay = (
+    a: ExtractionAccount,
+    now: Date
+  ): string | undefined => {
+    if (a.finishedAt) {
+      return prettyDurationBetweenDates(a.startedAt, a.finishedAt);
+    } else if (a.startedAt) {
+      return prettyDurationBetweenDates(a.startedAt, now);
+    } else {
+      return undefined;
+    }
+  };
+
+  const statusDisplay = (a: ExtractionAccount) => {
+    if (a.finishedAt) {
+      return a.error ? a.error : "Complete";
+    } else if (a.startedAt) {
       return extraction.finishedAt ? "Aborted" : "In progress";
     } else {
       return extraction.finishedAt ? "Cancelled" : "Pending";
@@ -31,23 +46,21 @@
   {#if isExpanded}
     <div class="list">
       <div class="cell">Account</div>
-      <div class="cell">Total found</div>
-      <div class="cell">Total new</div>
+      <div class="cell">Found</div>
+      <div class="cell">New</div>
       <div class="cell">Duration</div>
-      <div class="cell">Error</div>
+      <div class="cell">Status</div>
 
       {#each Object.values(extraction.accounts) as account}
-        <div class="cell">
-          {accounts.find((o) => o._id === account.accountId)?.display}
-        </div>
+        <div class="cell">{accountDisplay(account)}</div>
         <div class="cell">{account.foundCt}</div>
         <div class="cell">{account.addCt}</div>
-        <div class="cell">{durationDisplay(account)}</div>
-        {#if account.error}
-          <div class="cell error">{account.error}</div>
+        {#if account.startedAt}
+          <div class="cell">{durationDisplay(account, now)}</div>
         {:else}
-          <div class="cell faded">None</div>
+          <div class="cell faded">{"N/A"}</div>
         {/if}
+        <div class="cell h-scroll">{statusDisplay(account)}</div>
       {/each}
     </div>
   {/if}
@@ -67,7 +80,7 @@
     cursor: pointer;
   }
 
-  .error {
+  .h-scroll {
     overflow: scroll;
     white-space: nowrap;
   }

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Account, Extraction } from "shared";
   import { ExtractionItem } from ".";
+  import { onDestroy, onMount } from "svelte";
 
   export let extractions: Extraction[];
   export let accounts: Account[];
@@ -8,6 +9,19 @@
   $: extractionsReversed = [...extractions].reverse();
 
   let expandedIndex: number | undefined = 0;
+
+  let now = new Date();
+  let nowInterval: NodeJS.Timeout;
+
+  onMount(() => {
+    nowInterval = setInterval(() => {
+      now = new Date();
+    }, 1000);
+  });
+
+  onDestroy(() => {
+    clearInterval(nowInterval);
+  });
 </script>
 
 <div class="container">
@@ -20,6 +34,7 @@
             {extraction}
             {accounts}
             isExpanded={i === expandedIndex}
+            {now}
             onClickToggleExpand={() => {
               if (i === expandedIndex) {
                 expandedIndex = undefined;
