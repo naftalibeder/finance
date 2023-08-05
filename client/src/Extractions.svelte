@@ -13,22 +13,26 @@
 <div class="container">
   <div class="scroll">
     <h2>Extraction history</h2>
-    <div class="list">
-      {#each extractionsReversed as extraction, i}
-        <ExtractionItem
-          {extraction}
-          {accounts}
-          isExpanded={i === expandedIndex}
-          onClickToggleExpand={() => {
-            if (i === expandedIndex) {
-              expandedIndex = undefined;
-            } else {
-              expandedIndex = i;
-            }
-          }}
-        />
-      {/each}
-    </div>
+    {#if extractionsReversed.length > 0}
+      <div class="list">
+        {#each extractionsReversed as extraction, i}
+          <ExtractionItem
+            {extraction}
+            {accounts}
+            isExpanded={i === expandedIndex}
+            onClickToggleExpand={() => {
+              if (i === expandedIndex) {
+                expandedIndex = undefined;
+              } else {
+                expandedIndex = i;
+              }
+            }}
+          />
+        {/each}
+      </div>
+    {:else}
+      <div class="faded">No previous extractions.</div>
+    {/if}
   </div>
 </div>
 

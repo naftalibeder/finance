@@ -29,13 +29,14 @@ export const prettyDate = (
   const hr = d.getHours();
   const hr12 = hr % 12;
   const min = d.getMinutes();
+  const minStr = min < 10 ? `0${min}` : min;
   const period = hr < 12 ? "a" : "p";
 
   if (opts?.includeTime) {
     const time =
       opts.includeTime === "hr"
         ? `${hr12}${period}`
-        : `${hr12}:${min}${period}`;
+        : `${hr12}:${minStr}${period}`;
     return `${year}.${month}.${date} ${time}`;
   } else {
     return `${year}.${month}.${date}`;

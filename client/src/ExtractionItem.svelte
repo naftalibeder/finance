@@ -24,7 +24,7 @@
 <div>
   <button on:click={onClickToggleExpand}>
     <h3 class="section">
-      {prettyDate(extraction.startedAt, { includeTime: "hr:min" })}
+      {prettyDate(extraction.queuedAt, { includeTime: "hr:min" })}
     </h3>
   </button>
 
@@ -34,7 +34,7 @@
       <div class="cell">Total found</div>
       <div class="cell">Total new</div>
       <div class="cell">Duration</div>
-      <div class="cell error">Error</div>
+      <div class="cell">Error</div>
 
       {#each Object.values(extraction.accounts) as account}
         <div class="cell">
@@ -43,7 +43,11 @@
         <div class="cell">{account.foundCt}</div>
         <div class="cell">{account.addCt}</div>
         <div class="cell">{durationDisplay(account)}</div>
-        <div class="cell error">{account.error ?? ""}</div>
+        {#if account.error}
+          <div class="cell error">{account.error}</div>
+        {:else}
+          <div class="cell faded">None</div>
+        {/if}
       {/each}
     </div>
   {/if}

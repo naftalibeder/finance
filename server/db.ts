@@ -9,6 +9,7 @@ import {
   BankCredsMap,
   Extraction,
   MfaInfo,
+  ExtractionAccount,
 } from "shared";
 import { Database, User } from "types";
 import { DB_PATH } from "./constants";
@@ -263,13 +264,35 @@ export const getExtractions = (): Extraction[] => {
   return db.extractions;
 };
 
-export const addExtraction = (extraction: Extraction) => {
+export const getExtractionInProgress = (): Extraction | undefined => {
   const db = readDatabase();
-  db.extractions.push(extraction);
-  writeDatabase(db);
+
+  let latest = db.extractions[db.extractions.length - 1];
+  if (!latest || latest.finishedAt) {
+    return undefined;
+  }
+
+  return latest;
 };
 
-export const updateExtraction = (id: UUID, extraction: Extraction) => {
+export const getOrCreateExtractionInProgress = (): Extraction => {
+  const db = readDatabase();
+
+  let extraction = getExtractionInProgress();
+  if (!extraction) {
+    extraction = {
+      _id: randomUUID(),
+      accounts: {},
+      queuedAt: new Date().toISOString(),
+    };
+    db.extractions.push(extraction);
+  }
+
+  writeDatabase(db);
+  return extraction;
+};
+
+export const updateExtraction = (id: UUID, update: Partial<Extraction>) => {
   const db = readDatabase();
 
   const index = db.extractions.findIndex((o) => o._id === id);
@@ -277,26 +300,44 @@ export const updateExtraction = (id: UUID, extraction: Extraction) => {
     return;
   }
 
-  db.extractions[index] = extraction;
+  db.extractions[index] = {
+    ...db.extractions[index],
+    ...update,
+  };
   writeDatabase(db);
 };
 
-/** Sets end timestamps on any in-progress extractions. */
-export const closeExtraction = () => {
+export const updateExtractionAccount = (
+  extractionId: UUID,
+  accountId: UUID,
+  update: Partial<ExtractionAccount>
+) => {
   const db = readDatabase();
-  const { extractions } = db;
 
-  const extraction = extractions[extractions.length - 1];
+  const index = db.extractions.findIndex((o) => o._id === extractionId);
+  if (index === -1) {
+    return;
+  }
+
+  db.extractions[index].accounts[accountId] = {
+    ...db.extractions[index].accounts[accountId],
+    ...update,
+  };
+  writeDatabase(db);
+};
+
+/**
+ * Sets end timestamps on any in-progress extractions.
+ */
+export const closeExtractionInProgress = () => {
+  const extraction = getExtractionInProgress();
   if (!extraction) {
     return;
   }
 
-  if (!extraction.finishedAt) {
-    extraction.finishedAt = new Date().toISOString();
-  }
-
-  db.extractions[extractions.length - 1] = extraction;
-  writeDatabase(db);
+  updateExtraction(extraction._id, {
+    finishedAt: new Date().toISOString(),
+  });
 };
 
 export const getMfaInfos = (): MfaInfo[] => {
@@ -380,9 +421,11 @@ export default {
   getTransactions,
   addTransactions,
   getExtractions,
-  addExtraction,
+  getExtractionInProgress,
+  getOrCreateExtractionInProgress,
   updateExtraction,
-  closeExtraction,
+  updateExtractionAccount,
+  closeExtractionInProgress,
   getMfaInfos,
   setMfaInfo,
   deleteMfaInfo,

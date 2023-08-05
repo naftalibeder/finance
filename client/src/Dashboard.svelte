@@ -11,7 +11,6 @@
     CreateAccountApiPayload,
     UpdateAccountApiArgs,
     UpdateAccountApiPayload,
-    ExtractApiArgs,
     GetBanksApiPayload,
     Bank,
     BankCreds,
@@ -21,6 +20,7 @@
     Extraction,
     GetExtractionStatusApiPayload,
     MfaInfo,
+    AddExtractionAccountsApiArgs,
     // @ts-ignore
   } from "shared";
   import { post } from "../api";
@@ -69,8 +69,6 @@
   let extraction: Extraction | undefined;
   /** Multi-factor request information for an extraction currently in progress. */
   let extractionMfaInfos: MfaInfo[] = [];
-  /** The number of unfinished accounts in the extraction currently in progress. */
-  let extractionAccountsRemainingCt = 0;
 
   let searchTimer: NodeJS.Timer | undefined;
   let searchInputFieldRef: HTMLInputElement;
@@ -234,37 +232,30 @@
       const payload = await post<undefined, GetExtractionStatusApiPayload>(
         "status"
       );
+      const extractionPrev = extraction;
       extraction = payload.data.extraction;
       extractionMfaInfos = payload.data.mfaInfos;
-      if (!extraction) {
-        console.log("No in-progress extraction found");
-        return;
-      }
 
-      const display: Record<string, string> = {};
-      for (const [k, v] of Object.entries(extraction.accounts)) {
-        const accountName = accountsDict[k].display;
-        const data = `${v.accountId}: ${v.foundCt} found, ${v.addCt} new`;
-        display[accountName] = data;
-      }
-      console.log(
-        "In-progress extraction:",
-        JSON.stringify(display, undefined, 2)
-      );
+      const accountsPrev = Object.values(extractionPrev?.accounts ?? {});
+      const accounts = Object.values(extraction?.accounts ?? {});
 
-      const remainingCt = Object.values(extraction.accounts).filter(
-        (o) => !o.finishedAt
-      ).length;
-      if (remainingCt !== extractionAccountsRemainingCt) {
+      const pendingCtPrev = accountsPrev.filter((o) => !o.finishedAt).length;
+      const pendingCt = accounts.filter((o) => !o.finishedAt).length;
+
+      if (pendingCt !== pendingCtPrev) {
         await fetchAccounts();
         await fetchTransactions(query);
         await fetchExtractions();
       }
 
-      extractionAccountsRemainingCt = remainingCt;
-      if (remainingCt > 0) {
+      if (pendingCt > 0) {
+        console.log(`${pendingCt} of ${accounts.length} accounts remaining`);
         await delay(1000);
         await fetchExtractionStatus();
+      } else if (pendingCtPrev > 0) {
+        console.log("Extraction finished!");
+      } else {
+        console.log("No extraction is currently in progress");
       }
     } catch (e) {
       console.log("Error fetching extraction status:", e);
@@ -293,7 +284,13 @@
   };
 
   const onClickExtract = async (accountIds?: UUID[]) => {
-    await post<ExtractApiArgs, undefined>("extract", { accountIds });
+    if (!accountIds) {
+      accountIds = accounts.map((o) => o._id);
+    }
+    await post<AddExtractionAccountsApiArgs, undefined>("extractions/add", {
+      accountIds,
+    });
+    await post<undefined, undefined>("extract");
     await fetchExtractionStatus();
   };
 
