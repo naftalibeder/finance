@@ -307,6 +307,22 @@ export const updateExtraction = (id: UUID, update: Partial<Extraction>) => {
   writeDatabase(db);
 };
 
+export const updateExtractionWithPendingAccounts = (
+  id: UUID,
+  accountIds: UUID[]
+) => {
+  let accounts: Extraction["accounts"] = {};
+  for (const accountId of accountIds) {
+    accounts[accountId] = {
+      accountId,
+      queuedAt: new Date().toISOString(),
+      foundCt: 0,
+      addCt: 0,
+    };
+  }
+  updateExtraction(id, { accounts });
+};
+
 export const updateExtractionAccount = (
   extractionId: UUID,
   accountId: UUID,
@@ -424,6 +440,7 @@ export default {
   getExtractionInProgress,
   getOrCreateExtractionInProgress,
   updateExtraction,
+  updateExtractionWithPendingAccounts,
   updateExtractionAccount,
   closeExtractionInProgress,
   getMfaInfos,
