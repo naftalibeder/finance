@@ -3,23 +3,14 @@ import { Price, Transaction } from "shared";
 import { TransactionDateGroup } from "types";
 
 export const prettyDate = (
-  o?: Date | string,
+  d?: Date | string,
   opts?: { includeTime?: "hr" | "hr:min" }
 ): string | undefined => {
-  if (!o) {
+  if (!d) {
     return undefined;
   }
 
-  let d: Date;
-  if (typeof o === "string") {
-    try {
-      d = new Date(o);
-    } catch (e) {
-      return undefined;
-    }
-  } else {
-    d = o;
-  }
+  d = new Date(d);
 
   const year = d.getFullYear();
   const monthNum = d.getMonth() + 1;
@@ -76,6 +67,16 @@ export const prettyDuration = (ms: number): string => {
   } else {
     return `${Math.floor(hr)}hr${min % 60}m`;
   }
+};
+
+export const prettyDurationBetweenDates = (
+  start: Date | string,
+  end: Date | string
+): string => {
+  start = new Date(start);
+  end = new Date(end);
+  const ms = end.valueOf() - start.valueOf();
+  return prettyDuration(ms);
 };
 
 export const secAgo = (s: string): number | undefined => {
