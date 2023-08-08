@@ -234,6 +234,9 @@
       );
       const extractionPrev = extraction;
       extraction = payload.data.extraction;
+      if (extractions.length > 0) {
+        extractions[extractions.length - 1] = extraction;
+      }
       extractionMfaInfos = payload.data.mfaInfos;
 
       const extractionAccountsPrev = Object.values(
@@ -247,16 +250,18 @@
       const pendingCt = extractionAccounts.filter((o) => !o.finishedAt).length;
 
       const accountsDisp = extractionAccounts.map((o) => {
-        const accountDisp = accounts.find(
-          (p) => p._id === o.accountId
-        )?.display;
+        const account = accounts.find((p) => p._id === o.accountId);
         const startedStr = o.startedAt ? "yes" : "no";
         const finishedStr = o.finishedAt ? "yes" : "no";
-        return `${accountDisp} | started: ${startedStr}, finished: ${finishedStr}`;
+        return `${account?.display} | started: ${startedStr}, finished: ${finishedStr}`;
       });
-      console.log(`Fetched extraction status:\n${accountsDisp.join("\n")}`);
+      console.log("Fetched extraction status:");
+      console.log(accountsDisp.join("\n"));
 
       if (pendingCt !== pendingCtPrev) {
+        console.log(
+          `Pending accounts changed from ${pendingCtPrev} to ${pendingCt}; refetching data`
+        );
         await fetchAccounts();
         await fetchTransactions(query);
         await fetchExtractions();
@@ -274,7 +279,9 @@
     } catch (e) {
       console.log("Error fetching extraction status:", e);
       extraction.finishedAt = new Date().toISOString();
-      extractions[0] = extraction;
+      if (extractions.length > 0) {
+        extractions[extractions.length - 1] = extraction;
+      }
       extractionMfaInfos = [];
     }
   };

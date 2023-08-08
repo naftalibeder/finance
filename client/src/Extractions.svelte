@@ -6,7 +6,11 @@
   export let extractions: Extraction[];
   export let accounts: Account[];
 
-  $: extractionsReversed = [...extractions].reverse();
+  let extractionsReversed: Extraction[] = [];
+  $: {
+    const copy = extractions.slice();
+    extractionsReversed = copy.reverse();
+  }
 
   let expandedIndex: number | undefined = 0;
 

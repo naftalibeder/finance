@@ -132,6 +132,10 @@ const check = async () => {
     await runAccount(account._id, extraction._id);
   } catch (e) {
     console.log(`Error running account ${account.display}:`, e);
+    db.updateExtractionAccount(extraction._id, account._id, {
+      finishedAt: new Date().toISOString(),
+      error: `${e}`,
+    });
   }
 
   await check();
