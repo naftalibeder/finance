@@ -8,10 +8,16 @@ import {
   Page,
   firefox,
 } from "@playwright/test";
-import { Account, Bank, ExtractionAccount, Price, Transaction } from "shared";
+import { Account, ExtractionAccount, Price, Transaction } from "shared";
 import { EXTRACTIONS_PATH, TMP_DIR } from "../constants";
 import db from "../db";
-import { delay, prettyAccount, prettyDate, prettyDuration } from "../utils";
+import {
+  delay,
+  nextOccurrenceOfTime,
+  prettyAccount,
+  prettyDate,
+  prettyDuration,
+} from "../utils";
 import { extractors } from "./extractors";
 import { parseTransactions } from "./utils";
 import { ExtractorFuncArgs } from "types";
@@ -19,6 +25,42 @@ import env from "../env";
 
 const BROWSER_CONTEXT_PATH = `${TMP_DIR}/browser-context.json`;
 const HEADLESS = true;
+
+let timeout: NodeJS.Timeout;
+
+/**
+ * Schedules a regular extraction of all accounts at an upcoming date.
+ */
+const schedule = () => {
+  clearTimeout(timeout);
+
+  const next = nextOccurrenceOfTime({
+    from: new Date(),
+    toHr: 6,
+    toMin: 0,
+  });
+  const nextMs = next.valueOf() - new Date().valueOf();
+  const nextDisp = prettyDate(next, { includeTime: true });
+  console.log(`Setting next automatic extraction for ${nextDisp}`);
+
+  timeout = setInterval(async () => {
+    const res = db.getAccounts();
+    console.log(`Running extraction of all ${res.accounts.length} accounts`);
+
+    const extraction = db.getOrCreateExtractionInProgress();
+    db.updateExtractionWithPendingAccounts(
+      extraction._id,
+      res.accounts.map((o) => o._id)
+    );
+
+    await check();
+    schedule();
+  }, nextMs);
+};
+
+const unschedule = () => {
+  clearTimeout(timeout);
+};
 
 /**
  * Polls the current extraction and starts extraction on one pending account,
@@ -69,16 +111,28 @@ const check = async () => {
     return;
   }
 
-  console.log(
-    `Found ${pendingAccount.length} accounts pending extraction; running first`
-  );
   const firstPendingAccount = pendingAccount[0];
+  const account = db.getAccount(firstPendingAccount.accountId);
+  if (!account) {
+    console.log(
+      `Account with id ${firstPendingAccount.accountId} does not exist`
+    );
+    return;
+  }
+
+  console.log(
+    `Found ${pendingAccount.length} accounts pending extraction; running ${account.display}`
+  );
   if (!extraction.startedAt) {
     db.updateExtraction(extraction._id, {
       startedAt: new Date().toISOString(),
     });
   }
-  await runAccount(firstPendingAccount.accountId, extraction._id);
+  try {
+    await runAccount(account._id, extraction._id);
+  } catch (e) {
+    console.log(`Error running account ${account.display}:`, e);
+  }
 
   await check();
 };
@@ -432,19 +486,8 @@ const takeErrorScreenshot = async (browserPage: Page, tmpRunDir: string) => {
   });
 };
 
-const getBanks = (): { banks: Bank[] } => {
-  const banks = Object.entries(extractors).map(([bankId, extractor]) => {
-    return {
-      id: bankId,
-      displayName: extractor.bankDisplayName,
-      displayNameShort: extractor.bankDisplayNameShort,
-      supportedAccountKinds: extractor.supportedAccountKinds,
-    };
-  });
-  return { banks };
-};
-
 export default {
+  schedule,
+  unschedule,
   check,
-  getBanks,
 };

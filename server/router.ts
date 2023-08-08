@@ -19,15 +19,14 @@ import {
   GetExtractionsApiPayload,
   GetExtractionStatusApiPayload,
   AddExtractionAccountsApiArgs,
-  Extraction,
 } from "shared";
 import env from "./env";
 import { randomUUID } from "crypto";
 
-const start = () => {
-  const port = env.get("SERVER_PORT");
+const app = express();
+const port = env.get("SERVER_PORT");
 
-  const app = express();
+const start = () => {
   app.use(bodyParser.json());
   app.use((req, res, next) => {
     res.setHeader("Access-Control-Allow-Headers", "*");
@@ -101,7 +100,7 @@ const start = () => {
   });
 
   app.post("/banks", async (req, res) => {
-    const data = extractor.getBanks();
+    const data = db.getBanks();
 
     const payload: GetBanksApiPayload = { data };
     res.status(200).send(payload);
@@ -170,19 +169,8 @@ const start = () => {
 
   app.post("/extractions/add", async (req, res) => {
     const args = req.body as AddExtractionAccountsApiArgs;
-
     const extraction = db.getOrCreateExtractionInProgress();
-    let accounts: Extraction["accounts"] = {};
-    for (const accountId of args.accountIds) {
-      accounts[accountId] = {
-        accountId,
-        queuedAt: new Date().toISOString(),
-        foundCt: 0,
-        addCt: 0,
-      };
-    }
-    db.updateExtraction(extraction._id, { accounts: accounts });
-
+    db.updateExtractionWithPendingAccounts(extraction._id, args.accountIds);
     res.status(200).send({ message: "ok" });
   });
 
@@ -226,22 +214,19 @@ const start = () => {
 
     res.status(200).send({ message: "ok" });
   });
-
-  const stop = () => {
-    db.closeExtractionInProgress();
-    server.close();
-  };
-
-  process.on("SIGINT", stop);
-  process.on("SIGTERM", stop);
-
-  db.closeExtractionInProgress();
-
-  const server = app.listen(port, () => {
-    console.log(`Server started on port ${port}`);
-  });
 };
+
+const stop = () => {
+  console.log("Server stopped");
+  db.closeExtractionInProgress();
+  server.close();
+};
+
+const server = app.listen(port, () => {
+  console.log(`Server started on port ${port}`);
+});
 
 export default {
   start,
+  stop,
 };

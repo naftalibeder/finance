@@ -10,6 +10,7 @@ import {
   Extraction,
   MfaInfo,
   ExtractionAccount,
+  Bank,
 } from "shared";
 import { Database, User } from "types";
 import { DB_PATH } from "./constants";
@@ -22,6 +23,7 @@ import {
 } from "./utils";
 import { encrypt, decrypt } from "./utils/crypto";
 import env from "./env";
+import { extractors } from "./extractor/extractors";
 
 const initial: Database = {
   user: {
@@ -63,6 +65,18 @@ export const migrate = () => {
   }
 
   writeDatabase(db);
+};
+
+const getBanks = (): { banks: Bank[] } => {
+  const banks = Object.entries(extractors).map(([bankId, extractor]) => {
+    return {
+      id: bankId,
+      displayName: extractor.bankDisplayName,
+      displayNameShort: extractor.bankDisplayNameShort,
+      supportedAccountKinds: extractor.supportedAccountKinds,
+    };
+  });
+  return { banks };
 };
 
 export const getBankCredsMap = (): BankCredsMap => {
@@ -427,6 +441,7 @@ export const setDevice = (name: string, token: string) => {
 
 export default {
   migrate,
+  getBanks,
   getBankCredsMap,
   setBankCreds,
   getAccounts,
