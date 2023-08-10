@@ -34,14 +34,11 @@ let timeout: NodeJS.Timeout;
 const schedule = () => {
   clearTimeout(timeout);
 
-  const next = nextOccurrenceOfTime({
-    from: new Date(),
-    toHr: 6,
-    toMin: 0,
-  });
+  const toHr = 6;
+  const toMin = 0;
+  const next = nextOccurrenceOfTime({ from: new Date(), toHr, toMin });
   const nextMs = next.valueOf() - new Date().valueOf();
-  const nextDisp = prettyDate(next, { includeTime: true });
-  console.log(`Setting next automatic extraction for ${nextDisp}`);
+  console.log(`Setting next automatic extraction for ${next.toUTCString()}`);
 
   timeout = setInterval(async () => {
     const res = db.getAccounts();
@@ -201,7 +198,9 @@ const setUp = async (): Promise<[Browser, BrowserContext]> => {
   };
   const browser = await firefox.launch(launchOptions);
 
-  const contextOptions: BrowserContextOptions = {};
+  const contextOptions: BrowserContextOptions = {
+    timezoneId: "GMT",
+  };
   if (fs.existsSync(BROWSER_CONTEXT_PATH)) {
     contextOptions.storageState = BROWSER_CONTEXT_PATH;
   }

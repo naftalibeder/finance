@@ -2,7 +2,6 @@
   import { UUID } from "crypto";
   import { Account, Bank, BankCreds } from "shared";
   import { titleCase } from "../utils";
-  import { onMount } from "svelte";
 
   export let account: Account;
   export let banks: Bank[];
@@ -42,16 +41,6 @@
     "revenue",
     "expenses",
   ];
-
-  let timeZoneIds: Intl.DateTimeFormatOptions["timeZone"][] = [];
-
-  onMount(async () => {
-    const res = await fetch(
-      "https://raw.githubusercontent.com/DavesCodeMusings/tzText/main/tzdata/tzAll.txt"
-    );
-    const text = await res.text();
-    timeZoneIds = text.trim().split("\n");
-  });
 </script>
 
 <div class="container">
@@ -125,18 +114,6 @@
           >
             {#each types as type}
               <option value={type}>{titleCase(type)}</option>
-            {/each}
-          </select>
-          <label for={elemId("timeZoneId")}>Time zone</label>
-          <select
-            id={elemId("timeZoneId")}
-            value={timeZoneIds.length > 0 ? account.timeZoneId : ""}
-            on:change={(evt) => {
-              onChangeProperty("timeZoneId", evt.target["value"]);
-            }}
-          >
-            {#each timeZoneIds as id}
-              <option value={id}>{id}</option>
             {/each}
           </select>
         </div>

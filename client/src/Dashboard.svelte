@@ -161,7 +161,6 @@
             number: account.number,
             kind: account.kind,
             type: account.type,
-            timeZoneId: account.timeZoneId,
           },
         }
       );

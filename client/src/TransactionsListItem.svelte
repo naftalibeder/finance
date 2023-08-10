@@ -11,7 +11,7 @@
 
 <div class={"grid contents"}>
   <div class="cell date">
-    {prettyDate(transaction.date, { includeTime: false })}
+    {prettyDate(transaction.date)}
   </div>
   <div class="cell account">{account?.display ?? ""}</div>
   <div class="cell payee">{transaction.payee}</div>

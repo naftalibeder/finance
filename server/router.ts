@@ -51,7 +51,11 @@ const start = () => {
     const userCreds = db.getUser();
     if (userCreds.email === "") {
       const hash = await bcrypt.hash(password, saltRounds);
-      db.setUser({ email: email, password: hash, devices: {} });
+      db.setUser({
+        email: email,
+        password: hash,
+        devices: {},
+      });
     } else {
       const emailMatches = email === userCreds.email;
       const passwordMatches = await bcrypt.compare(
