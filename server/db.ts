@@ -9,6 +9,8 @@ import {
   BankCredsMap,
   Extraction,
   MfaInfo,
+  ExtractionAccount,
+  Bank,
 } from "shared";
 import { Database, User } from "types";
 import { DB_PATH } from "./constants";
@@ -21,6 +23,7 @@ import {
 } from "./utils";
 import { encrypt, decrypt } from "./utils/crypto";
 import env from "./env";
+import { extractors } from "./extractor/extractors";
 
 const initial: Database = {
   user: {
@@ -62,6 +65,18 @@ export const migrate = () => {
   }
 
   writeDatabase(db);
+};
+
+const getBanks = (): { banks: Bank[] } => {
+  const banks = Object.entries(extractors).map(([bankId, extractor]) => {
+    return {
+      id: bankId,
+      displayName: extractor.bankDisplayName,
+      displayNameShort: extractor.bankDisplayNameShort,
+      supportedAccountKinds: extractor.supportedAccountKinds,
+    };
+  });
+  return { banks };
 };
 
 export const getBankCredsMap = (): BankCredsMap => {
@@ -137,7 +152,6 @@ export const createAccount = (): { account: Account } => {
     number: "",
     kind: "unselected",
     type: "assets",
-    timeZoneId: "America/Chicago",
     price: {
       amount: 0,
       currency: "USD",
@@ -263,13 +277,35 @@ export const getExtractions = (): Extraction[] => {
   return db.extractions;
 };
 
-export const addExtraction = (extraction: Extraction) => {
+export const getExtractionInProgress = (): Extraction | undefined => {
   const db = readDatabase();
-  db.extractions.push(extraction);
-  writeDatabase(db);
+
+  let latest = db.extractions[db.extractions.length - 1];
+  if (!latest || latest.finishedAt) {
+    return undefined;
+  }
+
+  return latest;
 };
 
-export const updateExtraction = (id: UUID, extraction: Extraction) => {
+export const getOrCreateExtractionInProgress = (): Extraction => {
+  const db = readDatabase();
+
+  let extraction = getExtractionInProgress();
+  if (!extraction) {
+    extraction = {
+      _id: randomUUID(),
+      accounts: {},
+      queuedAt: new Date().toISOString(),
+    };
+    db.extractions.push(extraction);
+  }
+
+  writeDatabase(db);
+  return extraction;
+};
+
+export const updateExtraction = (id: UUID, update: Partial<Extraction>) => {
   const db = readDatabase();
 
   const index = db.extractions.findIndex((o) => o._id === id);
@@ -277,26 +313,60 @@ export const updateExtraction = (id: UUID, extraction: Extraction) => {
     return;
   }
 
-  db.extractions[index] = extraction;
+  db.extractions[index] = {
+    ...db.extractions[index],
+    ...update,
+  };
   writeDatabase(db);
 };
 
-/** Sets end timestamps on any in-progress extractions. */
-export const closeExtraction = () => {
-  const db = readDatabase();
-  const { extractions } = db;
+export const updateExtractionWithPendingAccounts = (
+  id: UUID,
+  accountIds: UUID[]
+) => {
+  let accounts: Extraction["accounts"] = {};
+  for (const accountId of accountIds) {
+    accounts[accountId] = {
+      accountId,
+      queuedAt: new Date().toISOString(),
+      foundCt: 0,
+      addCt: 0,
+    };
+  }
+  updateExtraction(id, { accounts });
+};
 
-  const extraction = extractions[extractions.length - 1];
+export const updateExtractionAccount = (
+  extractionId: UUID,
+  accountId: UUID,
+  update: Partial<ExtractionAccount>
+) => {
+  const db = readDatabase();
+
+  const index = db.extractions.findIndex((o) => o._id === extractionId);
+  if (index === -1) {
+    return;
+  }
+
+  db.extractions[index].accounts[accountId] = {
+    ...db.extractions[index].accounts[accountId],
+    ...update,
+  };
+  writeDatabase(db);
+};
+
+/**
+ * Sets end timestamps on any in-progress extractions.
+ */
+export const closeExtractionInProgress = () => {
+  const extraction = getExtractionInProgress();
   if (!extraction) {
     return;
   }
 
-  if (!extraction.finishedAt) {
-    extraction.finishedAt = new Date().toISOString();
-  }
-
-  db.extractions[extractions.length - 1] = extraction;
-  writeDatabase(db);
+  updateExtraction(extraction._id, {
+    finishedAt: new Date().toISOString(),
+  });
 };
 
 export const getMfaInfos = (): MfaInfo[] => {
@@ -370,6 +440,7 @@ export const setDevice = (name: string, token: string) => {
 
 export default {
   migrate,
+  getBanks,
   getBankCredsMap,
   setBankCreds,
   getAccounts,
@@ -380,9 +451,12 @@ export default {
   getTransactions,
   addTransactions,
   getExtractions,
-  addExtraction,
+  getExtractionInProgress,
+  getOrCreateExtractionInProgress,
   updateExtraction,
-  closeExtraction,
+  updateExtractionWithPendingAccounts,
+  updateExtractionAccount,
+  closeExtractionInProgress,
   getMfaInfos,
   setMfaInfo,
   deleteMfaInfo,

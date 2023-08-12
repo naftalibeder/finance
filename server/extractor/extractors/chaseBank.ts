@@ -97,9 +97,13 @@ class ChaseBankExtractor implements Extractor {
     loc = mfaFrame.locator("#header-simplerAuth-dropdownoptions-styledselect");
     await loc.click();
 
-    loc = mfaFrame.locator("#simplerAuth-dropdownoptions-styledselect").getByRole("option");
+    loc = mfaFrame
+      .locator("#simplerAuth-dropdownoptions-styledselect")
+      .getByRole("option");
     const rows = await loc.all();
-    const options = await Promise.all(rows.map(async row => await row.textContent() ?? ""));
+    const options = await Promise.all(
+      rows.map(async (row) => (await row.textContent()) ?? "")
+    );
     const option = await args.getMfaOption(options);
 
     await rows[option].click();
@@ -170,15 +174,11 @@ class ChaseBankExtractor implements Extractor {
     await page.waitForTimeout(1000);
 
     loc = dashboardFrame.locator("#accountActivityFromDate-input-input");
-    await loc.fill(
-      range.start.toLocaleDateString("en-US", { timeZone: account.timeZoneId })
-    );
+    await loc.fill(range.start.toLocaleDateString("en-US"));
     await loc.blur();
 
     loc = dashboardFrame.locator("#accountActivityToDate-input-input");
-    await loc.fill(
-      range.end.toLocaleDateString("en-US", { timeZone: account.timeZoneId })
-    );
+    await loc.fill(range.end.toLocaleDateString("en-US"));
     await loc.blur();
 
     await page.waitForTimeout(1000);

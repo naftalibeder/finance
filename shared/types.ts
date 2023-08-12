@@ -41,15 +41,6 @@ export type Account = {
     | "unselected";
   /** The type of resource stored in the account. */
   type: "assets" | "liabilities" | "equity" | "revenue" | "expenses";
-  /**
-   * The time zone of the account. This is used for date formatting and is
-   * necessary to prevent issues like requesting transactions for the following
-   * day, which can happen if the system zone differs from the account zone.
-   *
-   * See [this list](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)
-   * for all available identifiers.
-   */
-  timeZoneId: Intl.DateTimeFormatOptions["timeZone"];
   /** The current value of the account's assets. */
   price: Price;
 };
@@ -86,7 +77,8 @@ export type MfaInfo = {
 /** Information about a contiguous extraction attempt for one or more accounts. */
 export type Extraction = {
   _id: UUID;
-  startedAt: string;
+  queuedAt: string;
+  startedAt?: string;
   finishedAt?: string;
   accounts: Record<UUID, ExtractionAccount>;
 };
@@ -138,10 +130,6 @@ export type SignInApiPayload = {
 export type VerifyDeviceApiArgs = {
   name: string;
   token: string;
-};
-
-export type ExtractApiArgs = {
-  accountIds?: UUID[];
 };
 
 export type GetBanksApiPayload = {
@@ -204,6 +192,10 @@ export type GetExtractionsApiPayload = {
   data: {
     extractions: Extraction[];
   };
+};
+
+export type AddExtractionAccountsApiArgs = {
+  accountIds: UUID[];
 };
 
 export type GetExtractionStatusApiPayload = {

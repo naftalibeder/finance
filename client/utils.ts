@@ -3,23 +3,14 @@ import { Price, Transaction } from "shared";
 import { TransactionDateGroup } from "types";
 
 export const prettyDate = (
-  o?: Date | string,
+  d?: Date | string,
   opts?: { includeTime?: "hr" | "hr:min" }
 ): string | undefined => {
-  if (!o) {
+  if (!d) {
     return undefined;
   }
 
-  let d: Date;
-  if (typeof o === "string") {
-    try {
-      d = new Date(o);
-    } catch (e) {
-      return undefined;
-    }
-  } else {
-    d = o;
-  }
+  d = new Date(d);
 
   const year = d.getFullYear();
   const monthNum = d.getMonth() + 1;
@@ -29,13 +20,14 @@ export const prettyDate = (
   const hr = d.getHours();
   const hr12 = hr % 12;
   const min = d.getMinutes();
+  const minStr = min < 10 ? `0${min}` : min;
   const period = hr < 12 ? "a" : "p";
 
   if (opts?.includeTime) {
     const time =
       opts.includeTime === "hr"
         ? `${hr12}${period}`
-        : `${hr12}:${min}${period}`;
+        : `${hr12}:${minStr}${period}`;
     return `${year}.${month}.${date} ${time}`;
   } else {
     return `${year}.${month}.${date}`;
@@ -75,6 +67,16 @@ export const prettyDuration = (ms: number): string => {
   } else {
     return `${Math.floor(hr)}hr${min % 60}m`;
   }
+};
+
+export const prettyDurationBetweenDates = (
+  start: Date | string,
+  end: Date | string
+): string => {
+  start = new Date(start);
+  end = new Date(end);
+  const ms = end.valueOf() - start.valueOf();
+  return prettyDuration(ms);
 };
 
 export const secAgo = (s: string): number | undefined => {

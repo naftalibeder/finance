@@ -164,15 +164,11 @@ class CharlesSchwabBankExtractor implements Extractor {
     await page.waitForTimeout(1000);
 
     loc = dateRangeFrame.locator("#calendar-FromDate");
-    await loc.fill(
-      range.start.toLocaleDateString("en-US", { timeZone: account.timeZoneId })
-    );
+    await loc.fill(range.start.toLocaleDateString("en-US"));
     await loc.blur();
 
     loc = dateRangeFrame.locator("#calendar-ToDate");
-    await loc.fill(
-      range.end.toLocaleDateString("en-US", { timeZone: account.timeZoneId })
-    );
+    await loc.fill(range.end.toLocaleDateString("en-US"));
     await loc.blur();
 
     loc = dateRangeFrame.getByRole("button", { name: "search", exact: true });

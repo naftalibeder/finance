@@ -5,7 +5,6 @@ import extractor from "./extractor";
 import db from "./db";
 import {
   CreateAccountApiPayload,
-  ExtractApiArgs,
   GetAccountsApiPayload,
   GetBanksApiPayload,
   GetTransactionsApiArgs,
@@ -19,14 +18,15 @@ import {
   DeleteAccountApiArgs,
   GetExtractionsApiPayload,
   GetExtractionStatusApiPayload,
+  AddExtractionAccountsApiArgs,
 } from "shared";
 import env from "./env";
 import { randomUUID } from "crypto";
 
-const start = () => {
-  const port = env.get("SERVER_PORT");
+const app = express();
+const port = env.get("SERVER_PORT");
 
-  const app = express();
+const start = () => {
   app.use(bodyParser.json());
   app.use((req, res, next) => {
     res.setHeader("Access-Control-Allow-Headers", "*");
@@ -51,7 +51,11 @@ const start = () => {
     const userCreds = db.getUser();
     if (userCreds.email === "") {
       const hash = await bcrypt.hash(password, saltRounds);
-      db.setUser({ email: email, password: hash, devices: {} });
+      db.setUser({
+        email: email,
+        password: hash,
+        devices: {},
+      });
     } else {
       const emailMatches = email === userCreds.email;
       const passwordMatches = await bcrypt.compare(
@@ -95,15 +99,12 @@ const start = () => {
   });
 
   app.post("/extract", async (req, res) => {
-    const args = req.body as ExtractApiArgs;
-    const { accountIds } = args;
-    extractor.runAccounts(accountIds, () => {
-      res.status(200).send({ message: "ok" });
-    });
+    extractor.check();
+    res.status(200).send({ message: "ok" });
   });
 
   app.post("/banks", async (req, res) => {
-    const data = extractor.getBanks();
+    const data = db.getBanks();
 
     const payload: GetBanksApiPayload = { data };
     res.status(200).send(payload);
@@ -170,6 +171,13 @@ const start = () => {
     res.send(payload);
   });
 
+  app.post("/extractions/add", async (req, res) => {
+    const args = req.body as AddExtractionAccountsApiArgs;
+    const extraction = db.getOrCreateExtractionInProgress();
+    db.updateExtractionWithPendingAccounts(extraction._id, args.accountIds);
+    res.status(200).send({ message: "ok" });
+  });
+
   app.post("/status", async (req, res) => {
     const extractions = db.getExtractions();
     const extraction = extractions[extractions.length - 1];
@@ -191,6 +199,7 @@ const start = () => {
         mfaInfos,
       },
     };
+
     res.send(payload);
   });
 
@@ -209,22 +218,19 @@ const start = () => {
 
     res.status(200).send({ message: "ok" });
   });
-
-  const stop = () => {
-    db.closeExtraction();
-    server.close();
-  };
-
-  process.on("SIGINT", stop);
-  process.on("SIGTERM", stop);
-
-  db.closeExtraction();
-
-  const server = app.listen(port, () => {
-    console.log(`Server started on port ${port}`);
-  });
 };
+
+const stop = () => {
+  console.log("Server stopped");
+  db.closeExtractionInProgress();
+  server.close();
+};
+
+const server = app.listen(port, () => {
+  console.log(`Server started on port ${port}`);
+});
 
 export default {
   start,
+  stop,
 };
