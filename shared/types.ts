@@ -74,17 +74,9 @@ export type MfaInfo = {
   requestedAt: string;
 };
 
-/** Information about a contiguous extraction attempt for one or more accounts. */
+/** Information about the extraction for a single account. */
 export type Extraction = {
   _id: UUID;
-  queuedAt: string;
-  startedAt?: string;
-  finishedAt?: string;
-  accounts: Record<UUID, ExtractionAccount>;
-};
-
-/** Information about the extraction for a single account. */
-export type ExtractionAccount = {
   accountId: UUID;
   queuedAt: string;
   startedAt?: string;
@@ -188,19 +180,49 @@ export type GetTransactionsApiPayload = {
   };
 };
 
+export type ExtractApiArgs = {
+  account: Account;
+  bankCreds: BankCreds;
+};
+
+export type ExtractApiPayloadChunk = {
+  extraction?: Partial<Extraction>;
+  price?: Price;
+  transactions?: Transaction[];
+  mfaOptions?: string[];
+  needMfaCode?: boolean;
+  mfaUpdate?: any;
+  mfaFinish?: boolean;
+};
+
 export type GetExtractionsApiPayload = {
   data: {
     extractions: Extraction[];
   };
 };
 
-export type AddExtractionAccountsApiArgs = {
+export type GetExtractionsInProgressApiPayload = {
+  data: {
+    extractions: Extraction[];
+  };
+};
+
+export type AddExtractionsApiArgs = {
   accountIds: UUID[];
 };
 
-export type GetExtractionStatusApiPayload = {
+export type GetMfaInfoApiArgs = {
+  bankId: string;
+};
+
+export type GetMfaInfoApiPayload = {
   data: {
-    extraction?: Extraction;
-    mfaInfos: MfaInfo[];
+    mfaInfo?: MfaInfo;
   };
+};
+
+export type SetMfaInfoApiArgs = {
+  bankId: string;
+  option?: string;
+  code?: string;
 };

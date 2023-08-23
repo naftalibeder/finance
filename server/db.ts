@@ -9,8 +9,6 @@ import {
   BankCredsMap,
   Extraction,
   MfaInfo,
-  ExtractionAccount,
-  Bank,
 } from "shared";
 import { Database, User } from "types";
 import { DB_PATH } from "./constants";
@@ -23,7 +21,6 @@ import {
 } from "./utils";
 import { encrypt, decrypt } from "./utils/crypto";
 import env from "./env";
-import { extractors } from "./extractor/extractors";
 
 const initial: Database = {
   user: {
@@ -67,22 +64,10 @@ export const migrate = () => {
   writeDatabase(db);
 };
 
-const getBanks = (): { banks: Bank[] } => {
-  const banks = Object.entries(extractors).map(([bankId, extractor]) => {
-    return {
-      id: bankId,
-      displayName: extractor.bankDisplayName,
-      displayNameShort: extractor.bankDisplayNameShort,
-      supportedAccountKinds: extractor.supportedAccountKinds,
-    };
-  });
-  return { banks };
-};
-
 export const getBankCredsMap = (): BankCredsMap => {
   const db = readDatabase();
 
-  const userPassword = env.get("USER_PASSWORD");
+  const userPassword = process.env.USER_PASSWORD;
   if (!userPassword) {
     throw "Invalid user password";
   }
@@ -104,7 +89,7 @@ export const setBankCreds = (bankId: string, creds: BankCreds) => {
   credsMap[bankId] = creds;
   const credsStr = JSON.stringify(credsMap);
 
-  const userPassword = env.get("USER_PASSWORD");
+  const userPassword = process.env.USER_PASSWORD;
   if (!userPassword) {
     throw "Invalid user password";
   }
@@ -277,26 +262,42 @@ export const getExtractions = (): Extraction[] => {
   return db.extractions;
 };
 
-export const getExtractionInProgress = (): Extraction | undefined => {
+export const getExtractionsPending = (): Extraction[] => {
+  const db = readDatabase();
+  const extraction = db.extractions.filter((o) => {
+    return !o.startedAt && !o.finishedAt;
+  });
+  return extraction;
+};
+
+export const getExtractionInProgress = (
+  accountId: UUID
+): Extraction | undefined => {
   const db = readDatabase();
 
-  let latest = db.extractions[db.extractions.length - 1];
-  if (!latest || latest.finishedAt) {
+  const extraction = db.extractions.find((o) => {
+    return o.accountId === accountId && !o.finishedAt;
+  });
+  if (!extraction) {
     return undefined;
   }
 
-  return latest;
+  return extraction;
 };
 
-export const getOrCreateExtractionInProgress = (): Extraction => {
+export const getOrCreateExtractionInProgress = (
+  accountId: UUID
+): Extraction => {
   const db = readDatabase();
 
-  let extraction = getExtractionInProgress();
+  let extraction = getExtractionInProgress(accountId);
   if (!extraction) {
     extraction = {
       _id: randomUUID(),
-      accounts: {},
+      accountId: accountId,
       queuedAt: new Date().toISOString(),
+      foundCt: 0,
+      addCt: 0,
     };
     db.extractions.push(extraction);
   }
@@ -305,10 +306,15 @@ export const getOrCreateExtractionInProgress = (): Extraction => {
   return extraction;
 };
 
-export const updateExtraction = (id: UUID, update: Partial<Extraction>) => {
+export const updateExtractionInProgress = (
+  accountId: UUID,
+  update: Partial<Extraction>
+) => {
   const db = readDatabase();
 
-  const index = db.extractions.findIndex((o) => o._id === id);
+  const index = db.extractions.findIndex((o) => {
+    return o.accountId === accountId && !o.finishedAt;
+  });
   if (index === -1) {
     return;
   }
@@ -320,51 +326,11 @@ export const updateExtraction = (id: UUID, update: Partial<Extraction>) => {
   writeDatabase(db);
 };
 
-export const updateExtractionWithPendingAccounts = (
-  id: UUID,
-  accountIds: UUID[]
-) => {
-  let accounts: Extraction["accounts"] = {};
-  for (const accountId of accountIds) {
-    accounts[accountId] = {
-      accountId,
-      queuedAt: new Date().toISOString(),
-      foundCt: 0,
-      addCt: 0,
-    };
-  }
-  updateExtraction(id, { accounts });
-};
-
-export const updateExtractionAccount = (
-  extractionId: UUID,
-  accountId: UUID,
-  update: Partial<ExtractionAccount>
-) => {
-  const db = readDatabase();
-
-  const index = db.extractions.findIndex((o) => o._id === extractionId);
-  if (index === -1) {
-    return;
-  }
-
-  db.extractions[index].accounts[accountId] = {
-    ...db.extractions[index].accounts[accountId],
-    ...update,
-  };
-  writeDatabase(db);
-};
-
 /**
- * Sets end timestamps on any in-progress extractions.
+ * Sets end timestamps on any in-progress extraction for the provided account.
  */
-export const closeExtractionInProgress = () => {
-  const extraction = getExtractionInProgress();
-  if (!extraction) {
-    return;
-  }
-
-  updateExtraction(extraction._id, {
+export const closeExtractionInProgress = (accountId: UUID) => {
+  updateExtractionInProgress(accountId, {
     finishedAt: new Date().toISOString(),
   });
 };
@@ -440,7 +406,6 @@ export const setDevice = (name: string, token: string) => {
 
 export default {
   migrate,
-  getBanks,
   getBankCredsMap,
   setBankCreds,
   getAccounts,
@@ -451,11 +416,10 @@ export default {
   getTransactions,
   addTransactions,
   getExtractions,
+  getExtractionsPending,
   getExtractionInProgress,
   getOrCreateExtractionInProgress,
-  updateExtraction,
-  updateExtractionWithPendingAccounts,
-  updateExtractionAccount,
+  updateExtractionInProgress,
   closeExtractionInProgress,
   getMfaInfos,
   setMfaInfo,

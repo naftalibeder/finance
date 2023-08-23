@@ -7,8 +7,7 @@ import {
   ExtractorFuncArgs,
   ExtractorRangeFuncArgs,
 } from "types";
-import { toPrice } from "../../utils";
-import { getSelectorExists } from "../utils";
+import { getSelectorExists, toPrice } from "../utils";
 
 class ChaseBankExtractor implements Extractor {
   bankId = "chase-bank";

@@ -1,7 +1,7 @@
+import axios, { AxiosResponse } from "axios";
 import express from "express";
 import bodyParser from "body-parser";
 import bcrypt from "bcrypt";
-import extractor from "./extractor";
 import db from "./db";
 import {
   CreateAccountApiPayload,
@@ -17,14 +17,18 @@ import {
   VerifyDeviceApiArgs,
   DeleteAccountApiArgs,
   GetExtractionsApiPayload,
-  GetExtractionStatusApiPayload,
-  AddExtractionAccountsApiArgs,
+  GetExtractionsInProgressApiPayload,
+  AddExtractionsApiArgs,
+  GetMfaInfoApiPayload,
+  GetMfaInfoApiArgs,
+  ExtractApiArgs,
+  ExtractApiPayloadChunk,
+  Bank,
 } from "shared";
-import env from "./env";
 import { randomUUID } from "crypto";
 
 const app = express();
-const port = env.get("SERVER_PORT");
+const port = process.env.SERVER_PORT;
 
 const start = () => {
   app.use(bodyParser.json());
@@ -71,7 +75,7 @@ const start = () => {
     const name = randomUUID();
     const token = await bcrypt.hash(password, saltRounds);
     db.setDevice(name, token);
-    env.set("USER_PASSWORD", password);
+    process.env.USER_PASSWORD = password;
 
     const payload: SignInApiPayload = { name, token };
     res.status(200).send(payload);
@@ -81,7 +85,7 @@ const start = () => {
     const args = req.body as VerifyDeviceApiArgs;
     const { name, token } = args;
 
-    const userPassword = env.get("USER_PASSWORD");
+    const userPassword = process.env.USER_PASSWORD;
     if (!userPassword) {
       res.status(401).send({ error: "No password stored in memory" });
       return;
@@ -98,15 +102,19 @@ const start = () => {
     res.status(200).send({ message: "ok" });
   });
 
-  app.post("/extract", async (req, res) => {
-    extractor.check();
-    res.status(200).send({ message: "ok" });
-  });
-
   app.post("/banks", async (req, res) => {
-    const data = db.getBanks();
+    let banks: Bank[];
+    try {
+      const url = `${process.env.EXTRACTOR_URL_LOCALHOST}/banks`;
+      const r = await axios.post<any, AxiosResponse<Bank[]>>(url);
+      banks = r.data;
+    } catch (e) {
+      console.log("Error getting banks:", e);
+      res.status(501).send(e);
+      return;
+    }
 
-    const payload: GetBanksApiPayload = { data };
+    const payload: GetBanksApiPayload = { data: { banks } };
     res.status(200).send(payload);
   });
 
@@ -165,42 +173,95 @@ const start = () => {
     res.status(200).send(payload);
   });
 
-  app.post("/extractions", async (req, res) => {
-    const extractions = db.getExtractions();
-    const payload: GetExtractionsApiPayload = { data: { extractions } };
-    res.send(payload);
-  });
-
-  app.post("/extractions/add", async (req, res) => {
-    const args = req.body as AddExtractionAccountsApiArgs;
-    const extraction = db.getOrCreateExtractionInProgress();
-    db.updateExtractionWithPendingAccounts(extraction._id, args.accountIds);
-    res.status(200).send({ message: "ok" });
-  });
-
-  app.post("/status", async (req, res) => {
-    const extractions = db.getExtractions();
-    const extraction = extractions[extractions.length - 1];
-    if (!extraction || extraction.finishedAt) {
-      const payload: GetExtractionStatusApiPayload = {
-        data: {
-          extraction: undefined,
-          mfaInfos: [],
-        },
-      };
-      res.send(payload);
+  app.post("/extract", async (req, res) => {
+    const pendingExtractions = db.getExtractionsPending();
+    const accountId = pendingExtractions[0].accountId;
+    const account = db.getAccount(accountId);
+    if (!account) {
+      res.status(401).send({ error: `No account found with id ${accountId}` });
       return;
     }
 
-    const mfaInfos = db.getMfaInfos();
-    const payload: GetExtractionStatusApiPayload = {
+    const bankCredsMap = db.getBankCredsMap();
+    const bankCreds = bankCredsMap[account.bankId];
+    const args: ExtractApiArgs = {
+      account,
+      bankCreds,
+    };
+
+    try {
+      const url = `${process.env.EXTRACTOR_URL_LOCALHOST}/extract`;
+      const r = await axios.post(url, args, { responseType: "stream" });
+      const decoder = new TextDecoder("utf8");
+      r.data.on("data", (data: BufferSource) => {
+        const str = decoder.decode(data);
+        const chunk = JSON.parse(str) as ExtractApiPayloadChunk;
+        console.log(chunk);
+
+        if (chunk.extraction) {
+          db.updateExtractionInProgress(account._id, chunk.extraction);
+        } else if (chunk.price) {
+          db.updateAccount(account._id, { ...account, price: chunk.price });
+        } else {
+          // TODO: mfa, etc.
+        }
+      });
+      r.data.on("end", () => {
+        console.log("Extraction complete");
+      });
+    } catch (e) {
+      console.log(`Error extracting ${account.display}`);
+      res.status(401).send({ error: `Error extracting ${account.display}` });
+      return;
+    }
+
+    res.status(200);
+  });
+
+  app.post("/extractions", async (req, res) => {
+    const extractions = db.getExtractions();
+    const payload: GetExtractionsApiPayload = { data: { extractions } };
+    res.status(200).send(payload);
+  });
+
+  app.post("/extractions/current", async (req, res) => {
+    const payload: GetExtractionsInProgressApiPayload = {
       data: {
-        extraction,
-        mfaInfos,
+        extractions: [],
       },
     };
 
-    res.send(payload);
+    const accounts = db.getAccounts();
+    for (const account of accounts.accounts) {
+      const extraction = db.getExtractionInProgress(account._id);
+      if (extraction) {
+        payload.data.extractions.push(extraction);
+      }
+    }
+  });
+
+  app.post("/extractions/add", async (req, res) => {
+    const args = req.body as AddExtractionsApiArgs;
+    for (const accountId of args.accountIds) {
+      db.getOrCreateExtractionInProgress(accountId);
+    }
+    res.status(200).send({ message: "ok" });
+  });
+
+  app.post("/mfa/current", async (req, res) => {
+    const args = req.body as GetMfaInfoApiArgs;
+    const { bankId } = args;
+
+    const payload: GetMfaInfoApiPayload = {
+      data: {
+        mfaInfo: undefined,
+      },
+    };
+
+    const mfaInfos = db.getMfaInfos();
+    payload.data.mfaInfo = mfaInfos.find((o) => o.bankId === bankId);
+
+    res.status(200).send(payload);
   });
 
   app.post("/mfa/option", async (req, res) => {
@@ -211,7 +272,7 @@ const start = () => {
     res.status(200).send({ message: "ok" });
   });
 
-  app.post("/mfa", async (req, res) => {
+  app.post("/mfa/code", async (req, res) => {
     const args = req.body as { bankId: string; code: string };
     const { bankId, code } = args;
     db.setMfaInfo({ bankId, code });
@@ -221,9 +282,14 @@ const start = () => {
 };
 
 const stop = () => {
-  console.log("Server stopped");
-  db.closeExtractionInProgress();
+  const accounts = db.getAccounts();
+  for (const account of accounts.accounts) {
+    db.closeExtractionInProgress(account._id);
+  }
+
+  console.log("Stopping server");
   server.close();
+  console.log("Server stopped");
 };
 
 const server = app.listen(port, () => {

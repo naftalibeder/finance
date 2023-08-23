@@ -18,9 +18,9 @@
     DeleteAccountApiArgs,
     GetExtractionsApiPayload,
     Extraction,
-    GetExtractionStatusApiPayload,
+    GetExtractionsInProgressApiPayload,
+    AddExtractionsApiArgs,
     MfaInfo,
-    AddExtractionAccountsApiArgs,
     // @ts-ignore
   } from "shared";
   import { post } from "../api";
@@ -64,9 +64,9 @@
   let isLoading = false;
 
   /** A list of all extractions ever completed or in progress. */
-  let extractions: Extraction[] = [];
-  /** An extraction currently in progress. */
-  let extraction: Extraction | undefined;
+  let allExtractions: Extraction[] = [];
+  /** A list of all extractions currently in progress. */
+  let currentExtractions: Extraction[] = [];
   /** Multi-factor request information for an extraction currently in progress. */
   let extractionMfaInfos: MfaInfo[] = [];
 
@@ -220,7 +220,7 @@
       const payload = await post<undefined, GetExtractionsApiPayload>(
         "extractions"
       );
-      extractions = payload.data.extractions;
+      allExtractions = payload.data.extractions;
     } catch (e) {
       console.log("Error getting extractions:", e);
     }
@@ -228,27 +228,19 @@
 
   const fetchExtractionStatus = async () => {
     try {
-      const payload = await post<undefined, GetExtractionStatusApiPayload>(
-        "status"
+      const payload = await post<undefined, GetExtractionsInProgressApiPayload>(
+        "extraction/current"
       );
-      const extractionPrev = extraction;
-      extraction = payload.data.extraction;
-      if (extractions.length > 0) {
-        extractions[extractions.length - 1] = extraction;
-      }
+      const currentExtractionsPrev = currentExtractions;
+      currentExtractions = payload.data.extractions;
       extractionMfaInfos = payload.data.mfaInfos;
 
-      const extractionAccountsPrev = Object.values(
-        extractionPrev?.accounts ?? {}
-      );
-      const extractionAccounts = Object.values(extraction?.accounts ?? {});
-
-      const pendingCtPrev = extractionAccountsPrev.filter(
+      const pendingCtPrev = currentExtractionsPrev.filter(
         (o) => !o.finishedAt
       ).length;
-      const pendingCt = extractionAccounts.filter((o) => !o.finishedAt).length;
+      const pendingCt = currentExtractions.filter((o) => !o.finishedAt).length;
 
-      const accountsDisp = extractionAccounts.map((o) => {
+      const accountsDisp = currentExtractions.map((o) => {
         const account = accounts.find((p) => p._id === o.accountId);
         const startedStr = o.startedAt ? "yes" : "no";
         const finishedStr = o.finishedAt ? "yes" : "no";
@@ -277,10 +269,7 @@
       }
     } catch (e) {
       console.log("Error fetching extraction status:", e);
-      extraction.finishedAt = new Date().toISOString();
-      if (extractions.length > 0) {
-        extractions[extractions.length - 1] = extraction;
-      }
+      currentExtractions = [];
       extractionMfaInfos = [];
     }
   };
@@ -300,7 +289,7 @@
 
   const onClickSendMfaCode = async (bankId: string, code: string) => {
     try {
-      await post("mfa", { bankId, code });
+      await post("mfa/code", { bankId, code });
     } catch (e) {
       console.log("Error sending mfa code:", e);
     }
@@ -310,7 +299,7 @@
     if (!accountIds) {
       accountIds = accounts.map((o) => o._id);
     }
-    await post<AddExtractionAccountsApiArgs, undefined>("extractions/add", {
+    await post<AddExtractionsApiArgs, undefined>("extractions/add", {
       accountIds,
     });
     await post<undefined, undefined>("extract");
@@ -378,7 +367,7 @@
       {accounts}
       {accountsSum}
       {banks}
-      {extraction}
+      {currentExtractions}
       onClickCreate={createAccount}
       onClickAccount={(id) => {
         accountIdShowingDetail = id;
@@ -419,7 +408,7 @@
         isShowingExtractionsHistory = false;
       }}
     >
-      <Extractions {extractions} {accounts} />
+      <Extractions extractions={allExtractions} {accounts} />
     </Lightbox>
   {/if}
 </div>

@@ -8,13 +8,12 @@
   export let accounts: Account[];
   export let accountsSum: Price;
   export let banks: Bank[];
-  export let extraction: Extraction | undefined;
+  export let currentExtractions: Extraction[];
   export let onClickCreate: () => void;
   export let onClickAccount: (accountId: UUID) => void;
   export let onClickExtract: (accountIds?: UUID[]) => void;
 
-  $: anyIsExtracting =
-    extraction && Object.keys(extraction.accounts).length > 0;
+  $: anyIsExtracting = currentExtractions.length > 0;
 </script>
 
 <div class="section">
@@ -44,7 +43,7 @@
       <AccountsListItem
         account={a}
         bank={banks.find((o) => o.id === a.bankId)}
-        extractionAccount={extraction?.accounts[a._id]}
+        extractionAccount={currentExtractions.find((o) => o._id === a._id)}
         onClickAccount={() => onClickAccount(a._id)}
         onClickExtract={() => onClickExtract([a._id])}
       />
