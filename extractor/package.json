@@ -1,5 +1,6 @@
 {
-  "name": "server",
+  "name": "extractor",
+  "type": "module",
   "scripts": {
     "build": "npx tsc",
     "start": "set -a && . ../.env && set +a && npm run build && node dist/main.js",
@@ -11,6 +12,7 @@
     "@types/node": "20.2.1",
     "csv-parse": "5.3.10",
     "express": "4.18.2",
+    "got": "13.0.0",
     "shared": "file:../shared",
     "typescript": "5.0.4"
   }

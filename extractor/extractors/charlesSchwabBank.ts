@@ -1,19 +1,20 @@
 import fs from "fs";
 import { Locator } from "@playwright/test";
-import { Account, Price } from "shared";
+import { Account, MfaOption, Price } from "shared";
 import {
   Extractor,
   ExtractorFuncArgs,
   ExtractorRangeFuncArgs,
   ExtractorColumnMap,
-} from "types";
-import { toPrice, getSelectorExists } from "../utils";
+} from "../types.js";
+import { toPrice, getSelectorExists } from "../utils/index.js";
 
 class CharlesSchwabBankExtractor implements Extractor {
   bankId = "charles-schwab-bank";
   bankDisplayName = "Charles Schwab Bank";
   bankDisplayNameShort = "Schwab";
   supportedAccountKinds: Account["kind"][] = ["checking", "brokerage"];
+  supportedMfaOptions: MfaOption[] = ["sms", "email"];
 
   getColumnMap = (
     accountKind: Account["kind"]
@@ -80,6 +81,18 @@ class CharlesSchwabBankExtractor implements Extractor {
 
     loc = loginFrame.locator("#btnLogin");
     await loc.click();
+
+    let error: string | undefined = undefined;
+    try {
+      loc = loginFrame.locator("#link-section #error");
+      await loc.waitFor();
+      error = `Error logging in: ${await loc.textContent()}`;
+    } catch (e) {
+      log("Logged in successfully");
+    }
+    if (error) {
+      throw error;
+    }
   };
 
   enterMfaCode = async (args: ExtractorFuncArgs) => {
@@ -211,16 +224,11 @@ class CharlesSchwabBankExtractor implements Extractor {
     return transactionData;
   };
 
-  getDashboardExists = async (args: ExtractorFuncArgs): Promise<boolean> => {
+  getCurrentPageKind = async (
+    args: ExtractorFuncArgs
+  ): Promise<"login" | "mfa" | "dashboard"> => {
     const { extractor, account, bankCreds, page } = args;
-
-    try {
-      const loc = page.frames()[0].locator("#site-header");
-      await loc.waitFor({ state: "attached", timeout: 500 });
-      return true;
-    } catch (e) {
-      return false;
-    }
+    return "dashboard"; // TODO
   };
 }
 

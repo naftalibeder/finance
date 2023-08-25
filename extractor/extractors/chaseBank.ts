@@ -1,19 +1,21 @@
 import fs from "fs";
-import { Locator } from "@playwright/test";
-import { Account, Price } from "shared";
+import { Frame, Locator } from "@playwright/test";
+import { Account, MfaOption, Price } from "shared";
 import {
   Extractor,
   ExtractorColumnMap,
   ExtractorFuncArgs,
+  ExtractorPageKind,
   ExtractorRangeFuncArgs,
-} from "types";
-import { getSelectorExists, toPrice } from "../utils";
+} from "../types.js";
+import { toPrice } from "../utils/index.js";
 
 class ChaseBankExtractor implements Extractor {
   bankId = "chase-bank";
   bankDisplayName = "Chase Bank";
   bankDisplayNameShort = "Chase";
   supportedAccountKinds: Account["kind"][] = ["credit"];
+  supportedMfaOptions: MfaOption[] = ["sms", "email"];
 
   getColumnMap = (
     accountKind: Account["kind"]
@@ -47,29 +49,21 @@ class ChaseBankExtractor implements Extractor {
 
     let loc: Locator;
 
-    const loginFrame = page.frameLocator("#logonbox");
+    const welcomeFrame = page.frames()[0];
 
-    // Sometimes instead of a login form, the page loads a button leading to the
-    // login form. This button is inaccessible (?) programmatically, but reloading
-    // the page a few times usually prompts the login form to appear.
-    while (true) {
-      log("Waiting for login page");
-      try {
-        loc = loginFrame.locator("#userId-text-input-field");
-        await loc.waitFor({ state: "attached", timeout: 10000 });
-      } catch (e) {
-        log("Could not load login page; reloading");
-        page.reload();
-        continue;
-      }
-      break;
+    try {
+      await welcomeFrame.locator(".siginbox-button").click({ timeout: 5000 });
+    } catch (e) {
+      log("No welcome obstacle found; continuing");
     }
 
-    loc = loginFrame.locator("#userId-text-input-field");
-    await loc.fill(bankCreds.username);
+    const loginFrame = page.frameLocator("#logonbox");
 
-    loc = loginFrame.locator("#password-text-input-field");
-    await loc.fill(bankCreds.password);
+    const userIdLoc = loginFrame.locator("#userId-text-input-field");
+    const passwordLoc = loginFrame.locator("#password-text-input-field");
+
+    await userIdLoc.fill(bankCreds.username);
+    await passwordLoc.fill(bankCreds.password);
 
     loc = loginFrame.locator("#input-rememberMe");
     await loc.click();
@@ -83,29 +77,30 @@ class ChaseBankExtractor implements Extractor {
 
     let loc: Locator;
 
-    const mfaFrame = page.frames()[0];
+    let mfaFrame = page.mainFrame();
 
-    const mfaPageExists = await getSelectorExists(
-      mfaFrame,
-      "#header-simplerAuth-dropdownoptions-styledselect",
-      6000
-    );
-    if (!mfaPageExists) {
+    const mfaOptionLoc = mfaFrame.locator("input[value=otpMethod]");
+    try {
+      await mfaOptionLoc.waitFor({ timeout: 8000 });
+      log("Found MFA radio button");
+      await mfaOptionLoc.click();
+    } catch (e) {
+      log("MFA radio buttons not found; continuing");
+    }
+
+    const mfaDropdownLoc = mfaFrame.locator("input[id*=dropdown]");
+    try {
+      await mfaDropdownLoc.waitFor({ timeout: 8000 });
+      log("Found MFA dropdown");
+      await mfaDropdownLoc.click();
+    } catch (e) {
+      log("MFA dropdown not found; skipping");
       return;
     }
-    loc = mfaFrame.locator("#header-simplerAuth-dropdownoptions-styledselect");
+    await page.waitForTimeout(1000);
+
+    loc = mfaFrame.locator("li").filter({ hasText: "text" });
     await loc.click();
-
-    loc = mfaFrame
-      .locator("#simplerAuth-dropdownoptions-styledselect")
-      .getByRole("option");
-    const rows = await loc.all();
-    const options = await Promise.all(
-      rows.map(async (row) => (await row.textContent()) ?? "")
-    );
-    const option = await args.getMfaOption(options);
-
-    await rows[option].click();
 
     loc = mfaFrame.locator("button[type=submit]").first();
     await loc.click();
@@ -125,17 +120,19 @@ class ChaseBankExtractor implements Extractor {
   };
 
   scrapeAccountValue = async (args: ExtractorFuncArgs): Promise<Price> => {
-    const { extractor, account, bankCreds, page } = args;
+    const { extractor, account, bankCreds, page, log } = args;
 
     let loc: Locator;
 
     const dashboardFrame = page.frames()[0];
 
-    loc = dashboardFrame
-      .locator(".accountTileComponent")
-      .filter({
-        has: dashboardFrame.locator(`[text*="${account.number.slice(-4)}"]`),
-      })
+    const tileLoc = dashboardFrame.locator(".account-tile");
+    const tileCt = await tileLoc.count();
+    log(`Found ${tileCt} account items`);
+
+    const lastFour = account.number.slice(-4);
+    loc = tileLoc
+      .filter({ has: dashboardFrame.locator(`[text*="${lastFour}"]`) })
       .locator(".primary-value.text-primary");
     const text = await loc.innerText();
 
@@ -154,7 +151,8 @@ class ChaseBankExtractor implements Extractor {
 
     const dashboardFrame = page.frames()[0];
 
-    loc = dashboardFrame.locator(`[text*="${account.number.slice(-4)}"]`);
+    const lastFour = account.number.slice(-4);
+    loc = dashboardFrame.locator(`[text*="${lastFour}"]`);
     await loc.click();
     await page.waitForTimeout(3000);
 
@@ -205,16 +203,28 @@ class ChaseBankExtractor implements Extractor {
     return transactionData;
   };
 
-  getDashboardExists = async (args: ExtractorFuncArgs): Promise<boolean> => {
-    const { extractor, account, bankCreds, page } = args;
+  getCurrentPageKind = async (
+    args: ExtractorFuncArgs
+  ): Promise<"login" | "mfa" | "dashboard"> => {
+    const { extractor, account, bankCreds, page, log } = args;
 
-    try {
-      const loc = page.frames()[0].locator(".global-nav-position-container");
-      await loc.waitFor({ state: "attached", timeout: 500 });
-      return true;
-    } catch (e) {
-      return false;
-    }
+    const kind = await Promise.any([
+      new Promise<ExtractorPageKind>(async (res, rej) => {
+        await page.waitForSelector("#logonbox");
+        res("login");
+      }),
+      new Promise<ExtractorPageKind>(async (res, rej) => {
+        await page.waitForSelector("input[value=otpMethod]");
+        res("mfa");
+      }),
+      new Promise<ExtractorPageKind>(async (res, rej) => {
+        await page.waitForSelector(".global-nav-position-container");
+        res("dashboard");
+      }),
+    ]);
+
+    log(`Current page kind: ${kind}`);
+    return kind;
   };
 }
 

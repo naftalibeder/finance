@@ -1,8 +1,8 @@
 import express from "express";
 import bodyParser from "body-parser";
-import { runAccount } from "./extractor";
 import { Bank, ExtractApiArgs, ExtractApiPayloadChunk } from "shared";
-import { extractors } from "./extractors";
+import { runAccount } from "./extractor.js";
+import { extractors } from "./extractors/index.js";
 
 const app = express();
 const port = process.env.EXTRACTOR_PORT;
@@ -26,29 +26,38 @@ const start = () => {
       res.write(JSON.stringify(obj));
     };
 
-    await runAccount(args.account, args.bankCreds, {
-      onStatusChange: (extraction) => {
-        sendChunk({ extraction });
-      },
-      onReceiveAccountValue: (price) => {
-        sendChunk({ price });
-      },
-      onReceiveTransactions: (transactions) => {
-        sendChunk({ transactions });
-      },
-      onNeedMfaOption: (mfaOptions) => {
-        sendChunk({ mfaOptions });
-      },
-      onNeedMfaCode: () => {
-        sendChunk({ needMfaCode: true });
-      },
-      onMfaUpdate: (mfaUpdate) => {
-        sendChunk({ mfaUpdate });
-      },
-      onMfaFinish: () => {
-        sendChunk({ mfaFinish: true });
-      },
-    });
+    try {
+      await runAccount(args.account, args.bankCreds, {
+        onStatusChange: (extraction) => {
+          sendChunk({ extraction });
+        },
+        onReceiveAccountValue: (price) => {
+          sendChunk({ price });
+        },
+        onReceiveTransactions: (transactions) => {
+          sendChunk({ transactions });
+        },
+        onNeedMfaCode: () => {
+          sendChunk({ needMfaCode: true });
+        },
+        onMfaUpdate: (mfaUpdate) => {
+          sendChunk({ mfaUpdate });
+        },
+        onMfaFinish: () => {
+          sendChunk({ mfaFinish: true });
+        },
+        onInfo: (msg: string, ...a: string[]) => {
+          console.log(
+            `${args.account.display} | ${args.account.bankId} | ${msg} ${a}`
+          );
+        },
+      });
+    } catch (e) {
+      console.log("Error running extractor:", e);
+      res.end();
+      return;
+    }
+
     res.end();
   });
 
@@ -61,7 +70,7 @@ const start = () => {
         supportedAccountKinds: o.supportedAccountKinds,
       };
     });
-    res.status(200).send(JSON.stringify(banks));
+    res.status(200).send(banks);
   });
 };
 

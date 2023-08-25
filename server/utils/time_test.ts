@@ -1,5 +1,5 @@
 import mocha from "mocha";
-import { nextOccurrenceOfTime } from ".";
+import { nextOccurrenceOfTime } from "./index.js";
 
 const { describe, it } = mocha;
 

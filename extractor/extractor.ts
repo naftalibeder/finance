@@ -1,4 +1,6 @@
 import fs from "fs";
+import path from "path";
+import got from "got";
 import {
   Browser,
   BrowserContext,
@@ -7,14 +9,22 @@ import {
   Page,
   firefox,
 } from "@playwright/test";
-import { Account, BankCreds, MfaInfo, Price, Transaction } from "shared";
-import { EXTRACTIONS_PATH, TMP_DIR } from "./constants";
-import { extractors } from "./extractors";
-import { delay, parseTransactions } from "./utils";
-import { ExtractionCallbacks, ExtractorFuncArgs } from "types";
+import {
+  Account,
+  BankCreds,
+  GetMfaInfoApiPayload,
+  MfaInfo,
+  Price,
+  Transaction,
+} from "shared";
+import { randomUUID } from "crypto";
+import { EXTRACTIONS_PATH, TMP_DIR } from "./paths.js";
+import { extractors } from "./extractors/index.js";
+import { delay, parseTransactions } from "./utils/index.js";
+import { ExtractionCallbacks, ExtractorFuncArgs } from "./types.js";
 
 const BROWSER_CONTEXT_PATH = `${TMP_DIR}/browser-context.json`;
-const HEADLESS = true;
+const HEADLESS = false;
 
 /**
  * Extracts the current account value and all available transactions for the
@@ -25,12 +35,23 @@ export const runAccount = async (
   bankCreds: BankCreds,
   callbacks: ExtractionCallbacks
 ) => {
+  const {
+    onStatusChange,
+    onReceiveAccountValue,
+    onReceiveTransactions,
+    onMfaFinish,
+    onInfo,
+  } = callbacks;
+
+  let error: string | undefined = undefined;
+  let errorScreenshotPath: string | undefined = undefined;
+
   const tmpRunDir = `${EXTRACTIONS_PATH}/${new Date().toISOString()}`;
   fs.mkdirSync(tmpRunDir, { recursive: true });
 
   // Prepare for the account extraction.
 
-  console.log("Preparing extraction");
+  onInfo("Preparing extraction");
   const [browser, browserContext] = await setUp();
 
   const page = await browserContext.newPage();
@@ -38,66 +59,71 @@ export const runAccount = async (
 
   // Run the account extraction.
 
-  callbacks.onStatusChange({
+  onStatusChange({
     startedAt: new Date().toISOString(),
   });
 
   try {
     const extractor = extractors[account.bankId];
+    if (!extractor) {
+      throw `Extractor not found for bank with id "${account.bankId}"`;
+    }
 
     let accountValue: Price | undefined;
     let transactions: Transaction[] = [];
 
-    const res = await getAccountData({
-      extractor,
-      account,
-      bankCreds,
-      page,
-      tmpRunDir,
-      getMfaOption: async (options: string[]): Promise<number> => {
-        const option = await waitForMfaOption(
-          account.bankId,
-          options,
-          callbacks
-        );
-        return option;
+    const res = await getAccountData(
+      {
+        extractor,
+        account,
+        bankCreds,
+        page,
+        tmpRunDir,
+        getMfaCode: async (): Promise<string> => {
+          const code = await waitForMfaCode(account.bankId, callbacks);
+          return code;
+        },
+        log: callbacks.onInfo,
       },
-      getMfaCode: async (): Promise<string> => {
-        const code = await waitForMfaCode(account.bankId, callbacks);
-        return code;
-      },
-      log: (msg: string, ...args: string[]) => {
-        console.log(`${account.bankId} | ${account.display} | ${msg} ${args}`);
-      },
-    });
+      callbacks
+    );
     accountValue = res.accountValue;
     transactions = res.transactions;
 
     if (accountValue !== undefined) {
-      callbacks.onReceiveAccountValue(accountValue);
-      console.log(`Updated account value: ${accountValue.amount}`);
+      onReceiveAccountValue(accountValue);
+      onInfo(`Updated account value: ${accountValue.amount}`);
     }
 
     if (transactions.length > 0) {
-      callbacks.onReceiveTransactions(transactions);
-      console.log(`Found ${transactions.length} total transactions`);
+      onReceiveTransactions(transactions);
+      onInfo(`Found ${transactions.length} total transactions`);
     }
 
     await browserContext.storageState({ path: BROWSER_CONTEXT_PATH });
     await page.close();
   } catch (e) {
-    console.log("Error:", e);
-    await takeErrorScreenshot(page, tmpRunDir);
+    onInfo(`Error extracting`);
+    const p = await takeErrorScreenshot(page, tmpRunDir);
+    errorScreenshotPath = path.resolve(p);
+    error = `${e}`;
   }
 
-  callbacks.onStatusChange({
+  onStatusChange({
     finishedAt: new Date().toISOString(),
   });
 
   // Clean up after the account extraction.
 
   await tearDown(browser, browserContext);
-  callbacks.onMfaFinish();
+  onMfaFinish();
+
+  if (error) {
+    onInfo(`Error message: ${error}`);
+    onInfo(`Error screenshot: ${errorScreenshotPath}`);
+    throw error;
+  }
+  onInfo("Extraction successful");
 };
 
 const setUp = async (): Promise<[Browser, BrowserContext]> => {
@@ -127,23 +153,26 @@ const setUp = async (): Promise<[Browser, BrowserContext]> => {
  * specific account.
  */
 export const getAccountData = async (
-  args: ExtractorFuncArgs
+  args: ExtractorFuncArgs,
+  callbacks: ExtractionCallbacks
 ): Promise<{
   accountValue: Price;
   transactions: Transaction[];
 }> => {
   const { extractor, account, page, tmpRunDir } = args;
+  const { onInfo } = callbacks;
 
   const getAccountValue = async (): Promise<Price> => {
-    console.log("Loading start page");
+    onInfo("Loading start page");
     await extractor.loadStartPage(args);
     await page.waitForTimeout(3000);
 
-    console.log("Checking authentication status");
+    onInfo("Checking authentication status");
     await authenticate();
     await page.waitForTimeout(3000);
+    throw "Test crash!";
 
-    console.log("Scraping account value");
+    onInfo("Scraping account value");
     let accountValue = await extractor.scrapeAccountValue(args);
 
     const accountType = account.type;
@@ -151,7 +180,7 @@ export const getAccountData = async (
       accountValue.amount *= -1;
     }
 
-    console.log(
+    onInfo(
       `Found account value: ${accountValue.amount} ${accountValue.currency}`
     );
     return accountValue;
@@ -172,15 +201,15 @@ export const getAccountData = async (
       let skipCt = 0;
 
       try {
-        console.log(`Getting transactions for range ${prettyRange}`);
+        onInfo(`Getting transactions for range ${prettyRange}`);
         await extractor.loadStartPage(args);
         await page.waitForTimeout(3000);
 
-        console.log("Checking authentication status");
+        onInfo("Checking authentication status");
         await authenticate();
         await page.waitForTimeout(3000);
 
-        console.log("Scraping transaction data");
+        onInfo("Scraping transaction data");
         const data = await extractor.scrapeTransactionData({
           ...args,
           range: { start, end },
@@ -193,7 +222,7 @@ export const getAccountData = async (
           }
         );
 
-        console.log("Parsing transactions");
+        onInfo("Parsing transactions");
         const res = await parseTransactions(data, account, extractor);
         transactionsChunk = res.transactions;
         skipCt = res.skipCt;
@@ -201,7 +230,7 @@ export const getAccountData = async (
         if (transactions.length === 0) {
           throw `Error getting transaction data for range ${prettyRange}: ${e}`;
         } else {
-          console.log(
+          onInfo(
             `Passed earliest allowed transaction range with ${prettyRange}; stopping loop`
           );
           break;
@@ -209,13 +238,11 @@ export const getAccountData = async (
       }
 
       if (transactionsChunk.length === 0) {
-        console.log(
-          `No new transactions for range ${prettyRange}; stopping loop`
-        );
+        onInfo(`No new transactions for range ${prettyRange}; stopping loop`);
         break;
       }
 
-      console.log(
+      onInfo(
         `Found ${transactionsChunk.length} transactions for range ${prettyRange}; skipped ${skipCt} non-transaction rows`
       );
       transactions = [...transactions, ...transactionsChunk];
@@ -223,30 +250,35 @@ export const getAccountData = async (
       end = start;
     }
 
-    console.log(`Found ${transactions.length} total transactions`);
+    onInfo(`Found ${transactions.length} total transactions`);
     return transactions;
   };
 
   const authenticate = async (): Promise<void> => {
-    let dashboardExists = await extractor.getDashboardExists(args);
-    if (dashboardExists) {
-      console.log("Already authenticated");
+    let pageKind = await extractor.getCurrentPageKind(args);
+    if (pageKind === "dashboard") {
+      onInfo("Already authenticated");
       return;
+    } else if (pageKind === "login") {
+      onInfo("Entering bank credentials");
+      await extractor.enterCredentials(args);
+      await page.waitForTimeout(3000);
     }
 
-    console.log("Entering bank credentials if needed");
-    await extractor.enterCredentials(args);
-    await page.waitForTimeout(3000);
-
-    dashboardExists = await extractor.getDashboardExists(args);
-    if (dashboardExists) {
-      console.log("Already authenticated");
-      return;
+    pageKind = await extractor.getCurrentPageKind(args);
+    if (pageKind === "mfa") {
+      onInfo("Entering two-factor code");
+      await extractor.enterMfaCode(args);
+      await page.waitForTimeout(1000);
     }
 
-    console.log("Entering two-factor code if needed");
-    await extractor.enterMfaCode(args);
-    await page.waitForTimeout(1000);
+    pageKind = await extractor.getCurrentPageKind(args);
+    if (pageKind !== "dashboard") {
+      onInfo("Authentication failed");
+      throw "Authentication failed";
+    }
+
+    onInfo("Authenticated");
   };
 
   const accountValue = await getAccountValue();
@@ -258,67 +290,44 @@ export const getAccountData = async (
   };
 };
 
-const waitForMfaOption = async (
-  bankId: string,
-  options: string[],
-  callbacks: ExtractionCallbacks
-): Promise<number> => {
-  callbacks.onNeedMfaOption(options);
-  let maxSec = 60 * 4;
-
-  for (let i = 0; i < maxSec; i++) {
-    const mfaInfo = await fetchMfaInfo(bankId);
-
-    if (mfaInfo?.option) {
-      console.log(
-        `Requesting two-factor option ${mfaInfo.option} for ${bankId}`
-      );
-      callbacks.onMfaFinish();
-      return mfaInfo.option;
-    }
-
-    console.log(`No two-factor option found yet (${i}/${maxSec}s)...`);
-    await delay(1000);
-  }
-
-  console.log(`No two-factor option found in ${maxSec}s`);
-  callbacks.onMfaFinish();
-
-  throw `No two-factor option found in ${maxSec}s`;
-};
-
 const waitForMfaCode = async (
   bankId: string,
   callbacks: ExtractionCallbacks
 ): Promise<string> => {
-  callbacks.onNeedMfaCode();
+  const { onNeedMfaCode, onMfaFinish, onInfo } = callbacks;
+
+  onNeedMfaCode();
   let maxSec = 60 * 4;
 
   for (let i = 0; i < maxSec; i++) {
     const mfaInfo = await fetchMfaInfo(bankId);
 
     if (mfaInfo?.code) {
-      console.log(`Clearing two-factor info for ${bankId}`);
-      callbacks.onMfaFinish();
+      onInfo(`Clearing two-factor info for ${bankId}`);
+      onMfaFinish();
       return mfaInfo.code;
     }
 
-    console.log(`No code found yet (${i}/${maxSec}s)...`);
+    onInfo(`No code found yet (${i}/${maxSec}s)...`);
     await delay(1000);
   }
 
-  console.log(`No code found in ${maxSec}s`);
-  callbacks.onMfaFinish();
+  onInfo(`No code found in ${maxSec}s`);
+  onMfaFinish();
 
   throw `No code found in ${maxSec}s`;
 };
 
-const fetchMfaInfo = async (bankId: string): Promise<MfaInfo> => {
-  const res = await fetch(`${process.env.SERVER_LOCAL_URL}/mfa`, {
-    method: "POST",
-    body: JSON.stringify({ bankId }),
-  });
-  const info = await res.json();
+const fetchMfaInfo = async (bankId: string): Promise<MfaInfo | undefined> => {
+  const res = await got.post<GetMfaInfoApiPayload>(
+    `${process.env.SERVER_LOCAL_URL}/mfa/current`,
+    {
+      json: {
+        bankId,
+      },
+    }
+  );
+  const info = res.body.data.mfaInfo;
   return info;
 };
 
@@ -331,9 +340,11 @@ const tearDown = async (browser: Browser, browserContext: BrowserContext) => {
   console.log("Saved and closed browser");
 };
 
-const takeErrorScreenshot = async (browserPage: Page, tmpRunDir: string) => {
-  return browserPage.screenshot({
-    path: `${tmpRunDir}/error_${new Date()}.png`,
-    type: "png",
-  });
+const takeErrorScreenshot = async (
+  browserPage: Page,
+  tmpRunDir: string
+): Promise<string> => {
+  const p = `${tmpRunDir}/error-${randomUUID()}.png`;
+  await browserPage.screenshot({ path: p, type: "png" });
+  return p;
 };

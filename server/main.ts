@@ -1,5 +1,5 @@
-import db from "./db";
-import router from "./router";
+import db from "./db.js";
+import router from "./router.js";
 
 const start = async () => {
   db.migrate();

@@ -41,9 +41,13 @@ export type Account = {
     | "unselected";
   /** The type of resource stored in the account. */
   type: "assets" | "liabilities" | "equity" | "revenue" | "expenses";
+  /** The preferred place to receive multi-factor codes. */
+  preferredMfaOption: MfaOption;
   /** The current value of the account's assets. */
   price: Price;
 };
+
+export type MfaOption = "sms" | "email";
 
 /** A unique transaction. */
 export type Transaction = {
@@ -68,8 +72,6 @@ export type Price = {
 
 export type MfaInfo = {
   bankId: string;
-  options?: string[];
-  option?: number;
   code?: string;
   requestedAt: string;
 };
@@ -189,7 +191,6 @@ export type ExtractApiPayloadChunk = {
   extraction?: Partial<Extraction>;
   price?: Price;
   transactions?: Transaction[];
-  mfaOptions?: string[];
   needMfaCode?: boolean;
   mfaUpdate?: any;
   mfaFinish?: boolean;

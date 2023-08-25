@@ -1,10 +1,12 @@
-import { Extractor } from "types";
-import { CharlesSchwabBankExtractor } from "./charlesSchwabBank";
-import { ChaseBankExtractor } from "./chaseBank";
+import { Extractor } from "../types.js";
+import { CharlesSchwabBankExtractor } from "./charlesSchwabBank.js";
+import { ChaseBankExtractor } from "./chaseBank.js";
+import { TestBankExtractor } from "./testBank.js";
 
 const extractorsList: Extractor[] = [
   new CharlesSchwabBankExtractor(),
   new ChaseBankExtractor(),
+  new TestBankExtractor(),
 ];
 
 const extractors: Record<string, Extractor> = {};

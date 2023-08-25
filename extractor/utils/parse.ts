@@ -1,9 +1,13 @@
 import { parse } from "csv-parse";
-import { Account, Transaction } from "shared/types";
+import { Account, Transaction } from "shared";
 import { Frame, FrameLocator } from "@playwright/test";
-import { toDate, toPrice } from ".";
-import { Extractor, ExtractorColumnMap, ExtractorColumnMapKey } from "types";
 import { randomUUID } from "crypto";
+import { toDate, toPrice } from "./index.js";
+import {
+  Extractor,
+  ExtractorColumnMap,
+  ExtractorColumnMapKey,
+} from "../types.js";
 
 export const parseTransactions = async (
   transactionData: string,

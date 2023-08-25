@@ -1,8 +1,8 @@
-import axios, { AxiosResponse } from "axios";
 import express from "express";
+import got from "got";
 import bodyParser from "body-parser";
 import bcrypt from "bcrypt";
-import db from "./db";
+import { randomUUID } from "crypto";
 import {
   CreateAccountApiPayload,
   GetAccountsApiPayload,
@@ -25,7 +25,7 @@ import {
   ExtractApiPayloadChunk,
   Bank,
 } from "shared";
-import { randomUUID } from "crypto";
+import db from "./db.js";
 
 const app = express();
 const port = process.env.SERVER_PORT;
@@ -106,8 +106,8 @@ const start = () => {
     let banks: Bank[];
     try {
       const url = `${process.env.EXTRACTOR_URL_LOCALHOST}/banks`;
-      const r = await axios.post<any, AxiosResponse<Bank[]>>(url);
-      banks = r.data;
+      const data = await got.post(url).json<Bank[]>();
+      banks = data;
     } catch (e) {
       console.log("Error getting banks:", e);
       res.status(501).send(e);
@@ -175,6 +175,11 @@ const start = () => {
 
   app.post("/extract", async (req, res) => {
     const pendingExtractions = db.getExtractionsPending();
+    if (pendingExtractions.length === 0) {
+      res.status(401).send({ error: "No pending extractions found" });
+      return;
+    }
+
     const accountId = pendingExtractions[0].accountId;
     const account = db.getAccount(accountId);
     if (!account) {
@@ -191,23 +196,34 @@ const start = () => {
 
     try {
       const url = `${process.env.EXTRACTOR_URL_LOCALHOST}/extract`;
-      const r = await axios.post(url, args, { responseType: "stream" });
+      const stream = got.stream(url, { method: "POST", json: args });
+
       const decoder = new TextDecoder("utf8");
-      r.data.on("data", (data: BufferSource) => {
+      stream.on("data", (data) => {
         const str = decoder.decode(data);
         const chunk = JSON.parse(str) as ExtractApiPayloadChunk;
-        console.log(chunk);
+        console.log("Received extraction chunk:", chunk);
 
         if (chunk.extraction) {
           db.updateExtractionInProgress(account._id, chunk.extraction);
         } else if (chunk.price) {
           db.updateAccount(account._id, { ...account, price: chunk.price });
+        } else if (chunk.transactions) {
+          db.addTransactions(chunk.transactions);
         } else {
           // TODO: mfa, etc.
         }
       });
-      r.data.on("end", () => {
+      stream.on("end", () => {
         console.log("Extraction complete");
+      });
+      stream.on("close", () => {
+        console.log("Extraction closed");
+        stream.destroy();
+      });
+      stream.on("error", (e) => {
+        console.log("Extraction error:", e);
+        stream.destroy();
       });
     } catch (e) {
       console.log(`Error extracting ${account.display}`);
@@ -262,14 +278,6 @@ const start = () => {
     payload.data.mfaInfo = mfaInfos.find((o) => o.bankId === bankId);
 
     res.status(200).send(payload);
-  });
-
-  app.post("/mfa/option", async (req, res) => {
-    const args = req.body as { bankId: string; option: number };
-    const { bankId, option } = args;
-    db.setMfaInfo({ bankId, option });
-
-    res.status(200).send({ message: "ok" });
   });
 
   app.post("/mfa/code", async (req, res) => {

@@ -10,17 +10,17 @@ import {
   Extraction,
   MfaInfo,
 } from "shared";
-import { Database, User } from "types";
-import { DB_PATH } from "./constants";
+import { Database, User } from "./types.js";
+import { DB_PATH } from "./paths.js";
 import {
   buildFiltersFromQuery,
   transactionMatchesFilters,
   transactionsMaxPrice,
   transactionsSumPrice,
   transactionsEarliestDate,
-} from "./utils";
-import { encrypt, decrypt } from "./utils/crypto";
-import env from "./env";
+  encrypt,
+  decrypt,
+} from "./utils/index.js";
 
 const initial: Database = {
   user: {
@@ -137,6 +137,7 @@ export const createAccount = (): { account: Account } => {
     number: "",
     kind: "unselected",
     type: "assets",
+    preferredMfaOption: "sms",
     price: {
       amount: 0,
       currency: "USD",
@@ -354,15 +355,11 @@ export const setMfaInfo = (info: {
     const existing = infos[index];
     infos[index] = {
       ...existing,
-      options: info.options,
-      option: info.option,
       code: info.code,
     };
   } else {
     infos.push({
       bankId: info.bankId,
-      options: info.options,
-      option: info.option,
       code: info.code,
       requestedAt: new Date().toISOString(),
     });

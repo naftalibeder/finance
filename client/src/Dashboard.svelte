@@ -21,7 +21,6 @@
     GetExtractionsInProgressApiPayload,
     AddExtractionsApiArgs,
     MfaInfo,
-    // @ts-ignore
   } from "shared";
   import { post } from "../api";
   import {
@@ -161,6 +160,7 @@
             number: account.number,
             kind: account.kind,
             type: account.type,
+            preferredMfaOption: "sms",
           },
         }
       );
@@ -229,11 +229,11 @@
   const fetchExtractionStatus = async () => {
     try {
       const payload = await post<undefined, GetExtractionsInProgressApiPayload>(
-        "extraction/current"
+        "extractions/current"
       );
       const currentExtractionsPrev = currentExtractions;
       currentExtractions = payload.data.extractions;
-      extractionMfaInfos = payload.data.mfaInfos;
+      // extractionMfaInfos = payload.data.mfaInfos; // TODO
 
       const pendingCtPrev = currentExtractionsPrev.filter(
         (o) => !o.finishedAt
@@ -277,14 +277,6 @@
   const onClickExtractionsHistory = async () => {
     isShowingExtractionsHistory = true;
     await fetchExtractions();
-  };
-
-  const onClickMfaOption = async (bankId: string, option: number) => {
-    try {
-      await post("mfa/option", { bankId, option });
-    } catch (e) {
-      console.log("Error sending mfa option:", e);
-    }
   };
 
   const onClickSendMfaCode = async (bankId: string, code: string) => {
@@ -349,7 +341,6 @@
     {#if extractionMfaInfos.length > 0}
       <MfaInputList
         mfaInfos={extractionMfaInfos}
-        onClickOption={onClickMfaOption}
         onClickSend={onClickSendMfaCode}
       />
     {/if}
