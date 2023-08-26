@@ -24,9 +24,5 @@ export const findAll = async (
     i++;
   }
 
-  if (res.length === 0) {
-    throw new Error(`No results for selector '${selector}'`);
-  }
-
   return res;
 };
