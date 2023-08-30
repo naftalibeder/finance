@@ -8,7 +8,7 @@ import {
   ExtractorPageKind,
   ExtractorRangeFuncArgs,
 } from "../types.js";
-import { toPrice } from "../utils/index.js";
+import { findAll, findFirst, toPrice } from "../utils/index.js";
 
 class ChaseBankExtractor implements Extractor {
   bankId = "chase-bank";
@@ -47,76 +47,59 @@ class ChaseBankExtractor implements Extractor {
   enterCredentials = async (args: ExtractorFuncArgs) => {
     const { extractor, account, bankCreds, page, log } = args;
 
-    let loc: Locator;
+    let loc: Locator | undefined;
 
-    const welcomeFrame = page.frames()[0];
-
-    try {
-      await welcomeFrame.locator(".siginbox-button").click({ timeout: 5000 });
-    } catch (e) {
+    await page.waitForTimeout(3000);
+    loc = await findFirst(page, ".siginbox-button");
+    if (loc) {
+      await loc.click();
+    } else {
       log("No welcome obstacle found; continuing");
     }
 
-    const loginFrame = page.frameLocator("#logonbox");
+    loc = await findFirst(page, "input[name=userId]");
+    await loc?.fill(bankCreds.username);
 
-    const userIdLoc = loginFrame.locator("#userId-text-input-field");
-    const passwordLoc = loginFrame.locator("#password-text-input-field");
+    loc = await findFirst(page, "input[name=password]");
+    await loc?.fill(bankCreds.password);
 
-    await userIdLoc.fill(bankCreds.username);
-    await passwordLoc.fill(bankCreds.password);
+    loc = await findFirst(page, "#input-rememberMe");
+    loc?.evaluate((o) => o.classList.add("checkbox__input--checked"));
 
-    loc = loginFrame.locator("#input-rememberMe");
-    await loc.click();
-
-    loc = loginFrame.locator("#signin-button");
-    await loc.click();
+    loc = await findFirst(page, "#signin-button");
+    await loc?.click();
   };
 
   enterMfaCode = async (args: ExtractorFuncArgs) => {
     const { extractor, account, bankCreds, page, log } = args;
 
-    let loc: Locator;
+    let loc: Locator | undefined;
 
-    let mfaFrame = page.mainFrame();
+    loc = await findFirst(page, "input[value=otpMethod]");
+    await loc?.click();
 
-    const mfaOptionLoc = mfaFrame.locator("input[value=otpMethod]");
-    try {
-      await mfaOptionLoc.waitFor({ timeout: 8000 });
-      log("Found MFA radio button");
-      await mfaOptionLoc.click();
-    } catch (e) {
-      log("MFA radio buttons not found; continuing");
-    }
+    loc = await findFirst(page, "input[name=contact]");
+    await loc?.click();
 
-    const mfaDropdownLoc = mfaFrame.locator("input[id*=dropdown]");
-    try {
-      await mfaDropdownLoc.waitFor({ timeout: 8000 });
-      log("Found MFA dropdown");
-      await mfaDropdownLoc.click();
-    } catch (e) {
-      log("MFA dropdown not found; skipping");
-      return;
-    }
-    await page.waitForTimeout(1000);
+    loc = await findFirst(
+      page,
+      "#container-1-simplerAuth-dropdownoptions-styledselect"
+    );
+    await loc?.click();
 
-    loc = mfaFrame.locator("li").filter({ hasText: "text" });
-    await loc.click();
-
-    loc = mfaFrame.locator("button[type=submit]").first();
-    await loc.click();
+    loc = await findFirst(page, "#requestIdentificationCode-sm");
+    await loc?.click();
 
     const code = await args.getMfaCode();
 
-    const codeInputFrame = page.frames()[0];
+    loc = await findFirst(page, "#otpcode_input-input-field");
+    await loc?.fill(code);
 
-    loc = codeInputFrame.locator("#otpcode_input-input-field");
-    await loc.fill(code);
+    loc = await findFirst(page, "#password_input-input-field");
+    await loc?.fill(bankCreds.password);
 
-    loc = codeInputFrame.locator("#password_input-input-field");
-    await loc.fill(bankCreds.password);
-
-    loc = codeInputFrame.locator("button[type=submit]").first();
-    await loc.click();
+    loc = await findFirst(page, "button[type=submit]");
+    await loc?.click();
   };
 
   scrapeAccountValue = async (args: ExtractorFuncArgs): Promise<Price> => {
@@ -207,24 +190,50 @@ class ChaseBankExtractor implements Extractor {
     args: ExtractorFuncArgs
   ): Promise<"login" | "mfa" | "dashboard"> => {
     const { extractor, account, bankCreds, page, log } = args;
+    log("Checking current page kind");
 
-    const kind = await Promise.any([
-      new Promise<ExtractorPageKind>(async (res, rej) => {
-        await page.waitForSelector("#logonbox");
-        res("login");
-      }),
-      new Promise<ExtractorPageKind>(async (res, rej) => {
-        await page.waitForSelector("input[value=otpMethod]");
-        res("mfa");
-      }),
-      new Promise<ExtractorPageKind>(async (res, rej) => {
-        await page.waitForSelector(".global-nav-position-container");
-        res("dashboard");
-      }),
-    ]);
+    try {
+      const kind = await Promise.any([
+        new Promise<ExtractorPageKind>(async (res, rej) => {
+          const loc = await findFirst(page, "#welcomeHeader");
+          if (loc) {
+            res("login");
+          } else {
+            rej();
+          }
+        }),
+        new Promise<ExtractorPageKind>(async (res, rej) => {
+          const loc = await findFirst(page, ".siginbox-button");
+          if (loc) {
+            res("login");
+          } else {
+            rej();
+          }
+        }),
+        new Promise<ExtractorPageKind>(async (res, rej) => {
+          const loc = await findFirst(page, "input[value=otpMethod]");
+          if (loc) {
+            res("mfa");
+          } else {
+            rej();
+          }
+        }),
+        new Promise<ExtractorPageKind>(async (res, rej) => {
+          const loc = await findFirst(page, ".global-nav-position-container");
+          if (loc) {
+            res("dashboard");
+          } else {
+            rej();
+          }
+        }),
+      ]);
 
-    log(`Current page kind: ${kind}`);
-    return kind;
+      log(`Current page kind: ${kind}`);
+      return kind;
+    } catch (e) {
+      log("Unable to find current page kind; trying again");
+      return this.getCurrentPageKind(args);
+    }
   };
 }
 

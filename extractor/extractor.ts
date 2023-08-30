@@ -103,7 +103,7 @@ export const runAccount = async (
     await browserContext.storageState({ path: BROWSER_CONTEXT_PATH });
     await page.close();
   } catch (e) {
-    onInfo(`Error extracting`);
+    onInfo(`Error extracting: ${e}`);
     const p = await takeErrorScreenshot(page, tmpRunDir);
     errorScreenshotPath = path.resolve(p);
     error = `${e}`;
@@ -169,8 +169,6 @@ export const getAccountData = async (
 
     onInfo("Checking authentication status");
     await authenticate();
-    await page.waitForTimeout(3000);
-    throw "Test crash!";
 
     onInfo("Scraping account value");
     let accountValue = await extractor.scrapeAccountValue(args);
@@ -259,7 +257,9 @@ export const getAccountData = async (
     if (pageKind === "dashboard") {
       onInfo("Already authenticated");
       return;
-    } else if (pageKind === "login") {
+    }
+
+    if (pageKind === "login") {
       onInfo("Entering bank credentials");
       await extractor.enterCredentials(args);
       await page.waitForTimeout(3000);
@@ -269,7 +269,7 @@ export const getAccountData = async (
     if (pageKind === "mfa") {
       onInfo("Entering two-factor code");
       await extractor.enterMfaCode(args);
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(3000);
     }
 
     pageKind = await extractor.getCurrentPageKind(args);
@@ -295,15 +295,15 @@ const waitForMfaCode = async (
   callbacks: ExtractionCallbacks
 ): Promise<string> => {
   const { onNeedMfaCode, onMfaFinish, onInfo } = callbacks;
+  onInfo("Starting wait for mfa code");
 
   onNeedMfaCode();
   let maxSec = 60 * 4;
 
   for (let i = 0; i < maxSec; i++) {
     const mfaInfo = await fetchMfaInfo(bankId);
-
     if (mfaInfo?.code) {
-      onInfo(`Clearing two-factor info for ${bankId}`);
+      onInfo(`Received code; clearing info for ${bankId}`);
       onMfaFinish();
       return mfaInfo.code;
     }
@@ -319,15 +319,11 @@ const waitForMfaCode = async (
 };
 
 const fetchMfaInfo = async (bankId: string): Promise<MfaInfo | undefined> => {
-  const res = await got.post<GetMfaInfoApiPayload>(
-    `${process.env.SERVER_LOCAL_URL}/mfa/current`,
-    {
-      json: {
-        bankId,
-      },
-    }
-  );
-  const info = res.body.data.mfaInfo;
+  const url = `${process.env.SERVER_URL_LOCALHOST}/mfa/current`;
+  console.log(`Fetching mfa info at ${url}`);
+
+  const res = await got.post(url).json<GetMfaInfoApiPayload>();
+  const info = res.data.mfaInfos.find((o) => o.bankId === bankId);
   return info;
 };
 
