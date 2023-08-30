@@ -212,13 +212,9 @@ export type AddExtractionsApiArgs = {
   accountIds: UUID[];
 };
 
-export type GetMfaInfoApiArgs = {
-  bankId: string;
-};
-
 export type GetMfaInfoApiPayload = {
   data: {
-    mfaInfo?: MfaInfo;
+    mfaInfos: MfaInfo[];
   };
 };
 
