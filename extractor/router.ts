@@ -1,6 +1,11 @@
 import express from "express";
 import bodyParser from "body-parser";
-import { Bank, ExtractApiArgs, ExtractApiPayloadChunk } from "shared";
+import {
+  Bank,
+  ExtractApiArgs,
+  ExtractApiPayloadChunk,
+  GetBanksApiPayload,
+} from "shared";
 import { runAccount } from "./extractor.js";
 import { extractors } from "./extractors/index.js";
 
@@ -70,7 +75,12 @@ const start = () => {
         supportedAccountKinds: o.supportedAccountKinds,
       };
     });
-    res.status(200).send(banks);
+    const payload: GetBanksApiPayload = {
+      data: {
+        banks,
+      },
+    };
+    res.status(200).send(payload);
   });
 };
 
