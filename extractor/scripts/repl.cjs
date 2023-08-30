@@ -1,7 +1,7 @@
 /*
 Usage:
 ~ node
-> const page = await require('./scripts/repl').launch()
+> const page = await require('./scripts/repl.cjs').launch()
 > await page.goto('https://nytimes.com')
 > await page.getByRole('link', { name: 'Magazine' }).click()
 */
