@@ -21,6 +21,7 @@
     GetExtractionsInProgressApiPayload,
     AddExtractionsApiArgs,
     MfaInfo,
+    GetMfaInfoApiPayload,
   } from "shared";
   import { post } from "../api";
   import {
@@ -228,12 +229,17 @@
 
   const fetchExtractionStatus = async () => {
     try {
-      const payload = await post<undefined, GetExtractionsInProgressApiPayload>(
-        "extractions/current"
-      );
+      const extractionPayload = await post<
+        undefined,
+        GetExtractionsInProgressApiPayload
+      >("extractions/current");
       const currentExtractionsPrev = currentExtractions;
-      currentExtractions = payload.data.extractions;
-      // extractionMfaInfos = payload.data.mfaInfos; // TODO
+      currentExtractions = extractionPayload.data.extractions;
+
+      const mfaPayload = await post<undefined, GetMfaInfoApiPayload>(
+        "mfa/current"
+      );
+      extractionMfaInfos = mfaPayload.data.mfaInfos;
 
       const pendingCtPrev = currentExtractionsPrev.filter(
         (o) => !o.finishedAt
