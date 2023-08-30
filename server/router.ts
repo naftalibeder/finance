@@ -20,7 +20,6 @@ import {
   GetExtractionsInProgressApiPayload,
   AddExtractionsApiArgs,
   GetMfaInfoApiPayload,
-  GetMfaInfoApiArgs,
   ExtractApiArgs,
   ExtractApiPayloadChunk,
   Bank,
@@ -106,8 +105,8 @@ const start = () => {
     let banks: Bank[];
     try {
       const url = `${process.env.EXTRACTOR_URL_LOCALHOST}/banks`;
-      const data = await got.post(url).json<Bank[]>();
-      banks = data;
+      const res = await got.post(url).json<GetBanksApiPayload>();
+      banks = res.data.banks;
     } catch (e) {
       console.log("Error getting banks:", e);
       res.status(501).send(e);
@@ -265,17 +264,14 @@ const start = () => {
   });
 
   app.post("/mfa/current", async (req, res) => {
-    const args = req.body as GetMfaInfoApiArgs;
-    const { bankId } = args;
-
     const payload: GetMfaInfoApiPayload = {
       data: {
-        mfaInfo: undefined,
+        mfaInfos: [],
       },
     };
 
     const mfaInfos = db.getMfaInfos();
-    payload.data.mfaInfo = mfaInfos.find((o) => o.bankId === bankId);
+    payload.data.mfaInfos = mfaInfos;
 
     res.status(200).send(payload);
   });
