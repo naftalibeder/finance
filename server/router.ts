@@ -205,12 +205,13 @@ const start = () => {
       const decoder = new TextDecoder("utf8");
       stream.on("data", (data) => {
         let chunk: ExtractApiPayloadChunk;
+        const str = decoder.decode(data);
         try {
-          const str = decoder.decode(data);
-          chunk = JSON.parse(str);
+          chunk = JSON.parse(str); // TODO: Chunks are frequently not valid JSON. Why?
           console.log("Received progress chunk from extractor:", chunk);
         } catch (e) {
-          console.log("Error decoding progress chunk from extractor");
+          console.log("Error decoding progress chunk from extractor:");
+          console.log(str);
           return;
         }
 
