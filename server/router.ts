@@ -188,6 +188,7 @@ const start = () => {
 
     db.updateExtraction(accountId, {
       startedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     });
 
     const bankCredsMap = db.getBankCredsMap();
@@ -209,7 +210,7 @@ const start = () => {
           chunk = JSON.parse(str);
           console.log("Received progress chunk from extractor:", chunk);
         } catch (e) {
-          console.log("Error decoding progress chunk from extractor:", e);
+          console.log("Error decoding progress chunk from extractor");
           return;
         }
 
@@ -224,10 +225,6 @@ const start = () => {
         } else if (chunk.mfaFinish) {
           db.deleteMfaInfo(account.bankId);
         }
-      });
-      stream.on("finish", () => {
-        console.log("Extraction finished");
-        db.closeExtractionInProgress(account._id);
       });
       stream.on("end", () => {
         console.log("Extraction ended");

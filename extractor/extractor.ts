@@ -51,7 +51,12 @@ export const runAccount = async (
 
   // Run the account extraction.
 
-  onEvent({ extraction: { startedAt: new Date().toISOString() } });
+  onEvent({
+    extraction: {
+      startedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  });
 
   try {
     const extractor = extractors[account.bankId];
