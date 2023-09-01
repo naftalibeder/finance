@@ -6,14 +6,14 @@ A private, self-hosted personal finance app that pulls new transactions automati
 
 ## Instructions
 
-1. Set up the project and install dependencies:
+1. Set up the project and install dependencies.
 
 ```sh
 npm run setup
 npm install
 ```
 
-2. Install dependencies for the headless browser. (May require sudo.)
+2. Install dependencies for the headless browser.
 
 ```sh
 cd server && npx playwright install firefox --with-deps
@@ -21,7 +21,7 @@ cd server && npx playwright install firefox --with-deps
 
 3. Update `.env` with a value for `BROWSER_EXECUTABLE` output by the previous command, and change any other variables as needed.
 
-4. Run the client and server:
+4. Run the client, server, and extractor. (You can also run each from its own directory.)
 
 ```sh
 npm run start
@@ -29,9 +29,10 @@ npm run start
 
 ## Principles
 
-- Data is stored in a human-readable format
-- Transaction scraping happens automatically
+- Automatic recurring transaction scraping
 - All passwords are encrypted and stored locally
+- Search is actually good
+- Fast client load
 
 ## Roadmap
 
