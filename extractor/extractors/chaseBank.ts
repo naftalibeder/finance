@@ -98,7 +98,7 @@ class ChaseBankExtractor implements Extractor {
     loc = await findFirst(page, "#password_input-input-field");
     await loc?.fill(bankCreds.password);
 
-    loc = await findFirst(page, "button.primary");
+    loc = await findFirst(page, "#log_on_to_landing_page-sm");
     await loc?.click();
   };
 
