@@ -203,9 +203,15 @@ const start = () => {
 
       const decoder = new TextDecoder("utf8");
       stream.on("data", (data) => {
-        const str = decoder.decode(data);
-        const chunk = JSON.parse(str) as ExtractApiPayloadChunk;
-        console.log("Received progress chunk from extractor:", chunk);
+        let chunk: ExtractApiPayloadChunk;
+        try {
+          const str = decoder.decode(data);
+          chunk = JSON.parse(str);
+          console.log("Received progress chunk from extractor:", chunk);
+        } catch (e) {
+          console.log("Error decoding progress chunk from extractor:", e);
+          return;
+        }
 
         if (chunk.extraction) {
           db.updateExtraction(account._id, chunk.extraction);
@@ -215,14 +221,16 @@ const start = () => {
           db.addTransactions(chunk.transactions);
         } else if (chunk.needMfaCode) {
           db.setMfaInfo({ bankId: account.bankId });
-        } else if (chunk.mfaUpdate) {
-          db.setMfaInfo({ bankId: account.bankId });
         } else if (chunk.mfaFinish) {
           db.deleteMfaInfo(account.bankId);
         }
       });
+      stream.on("finish", () => {
+        console.log("Extraction finished");
+        db.closeExtractionInProgress(account._id);
+      });
       stream.on("end", () => {
-        console.log("Extraction complete");
+        console.log("Extraction ended");
         db.closeExtractionInProgress(account._id);
       });
       stream.on("close", () => {

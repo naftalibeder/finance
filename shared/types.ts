@@ -194,7 +194,6 @@ export type ExtractApiPayloadChunk = {
   price?: Price;
   transactions?: Transaction[];
   needMfaCode?: boolean;
-  mfaUpdate?: any;
   mfaFinish?: boolean;
 };
 
