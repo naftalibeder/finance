@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Account, Extraction, ExtractionAccount } from "shared";
+  import { Account, Extraction } from "shared";
   import { prettyDate, prettyDurationBetweenDates } from "../utils";
 
   export let extraction: Extraction;
@@ -8,14 +8,11 @@
   export let now: Date;
   export let onClickToggleExpand: () => void;
 
-  const accountDisplay = (a: ExtractionAccount) => {
+  const accountDisplay = (a: Extraction) => {
     return accounts.find((o) => o._id === a.accountId)?.display;
   };
 
-  const durationDisplay = (
-    a: ExtractionAccount,
-    now: Date
-  ): string | undefined => {
+  const durationDisplay = (a: Extraction, now: Date): string | undefined => {
     if (a.finishedAt) {
       return prettyDurationBetweenDates(a.startedAt, a.finishedAt);
     } else if (a.startedAt) {
@@ -25,7 +22,7 @@
     }
   };
 
-  const statusDisplay = (a: ExtractionAccount) => {
+  const statusDisplay = (a: Extraction) => {
     if (a.finishedAt) {
       return a.error ? a.error : "Complete";
     } else if (a.startedAt) {
@@ -51,17 +48,15 @@
       <div class="cell">Duration</div>
       <div class="cell">Status</div>
 
-      {#each Object.values(extraction.accounts) as account}
-        <div class="cell">{accountDisplay(account)}</div>
-        <div class="cell">{account.foundCt}</div>
-        <div class="cell">{account.addCt}</div>
-        {#if account.startedAt}
-          <div class="cell">{durationDisplay(account, now)}</div>
-        {:else}
-          <div class="cell faded">{"N/A"}</div>
-        {/if}
-        <div class="cell h-scroll">{statusDisplay(account)}</div>
-      {/each}
+      <div class="cell">{accountDisplay(extraction)}</div>
+      <div class="cell">{extraction.foundCt}</div>
+      <div class="cell">{extraction.addCt}</div>
+      {#if extraction.startedAt}
+        <div class="cell">{durationDisplay(extraction, now)}</div>
+      {:else}
+        <div class="cell faded">{"N/A"}</div>
+      {/if}
+      <div class="cell h-scroll">{statusDisplay(extraction)}</div>
     </div>
   {/if}
 </div>

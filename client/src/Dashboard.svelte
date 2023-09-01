@@ -64,9 +64,9 @@
   let isLoading = false;
 
   /** A list of all extractions ever completed or in progress. */
-  let allExtractions: Extraction[] = [];
+  let extractions: Extraction[] = [];
   /** A list of all extractions currently in progress. */
-  let currentExtractions: Extraction[] = [];
+  let activeExtractions: Extraction[] = [];
   /** Multi-factor request information for an extraction currently in progress. */
   let extractionMfaInfos: MfaInfo[] = [];
 
@@ -221,7 +221,7 @@
       const payload = await post<undefined, GetExtractionsApiPayload>(
         "extractions"
       );
-      allExtractions = payload.data.extractions;
+      extractions = payload.data.extractions;
     } catch (e) {
       console.log("Error getting extractions:", e);
     }
@@ -233,32 +233,37 @@
         undefined,
         GetExtractionsInProgressApiPayload
       >("extractions/current");
-      const currentExtractionsPrev = currentExtractions;
-      currentExtractions = extractionPayload.data.extractions;
+      const activeExtractionsPrevTick = activeExtractions;
+      activeExtractions = extractionPayload.data.extractions;
 
       const mfaPayload = await post<undefined, GetMfaInfoApiPayload>(
         "mfa/current"
       );
       extractionMfaInfos = mfaPayload.data.mfaInfos;
 
-      const pendingCtPrev = currentExtractionsPrev.filter(
+      if (activeExtractions.length > 0) {
+        const accountsDisp = activeExtractions.map((o) => {
+          const account = accounts.find((p) => p._id === o.accountId);
+          const startedStr = o.startedAt ? "yes" : "no";
+          const finishedStr = o.finishedAt ? "yes" : "no";
+          return `${account?.display} | started: ${startedStr}, finished: ${finishedStr}`;
+        });
+
+        console.log("Fetched extraction status:");
+        console.log(accountsDisp.join("\n"));
+      }
+
+      const pendingCtPrev = activeExtractionsPrevTick.filter(
         (o) => !o.finishedAt
       ).length;
-      const pendingCt = currentExtractions.filter((o) => !o.finishedAt).length;
+      const pendingCt = activeExtractions.filter((o) => !o.finishedAt).length;
 
-      const accountsDisp = currentExtractions.map((o) => {
-        const account = accounts.find((p) => p._id === o.accountId);
-        const startedStr = o.startedAt ? "yes" : "no";
-        const finishedStr = o.finishedAt ? "yes" : "no";
-        return `${account?.display} | started: ${startedStr}, finished: ${finishedStr}`;
-      });
-      console.log("Fetched extraction status:");
-      console.log(accountsDisp.join("\n"));
-
-      if (pendingCt !== pendingCtPrev) {
-        console.log(
-          `Pending accounts changed from ${pendingCtPrev} to ${pendingCt}; refetching data`
-        );
+      const updatedAts = activeExtractions.map((o) => o.updatedAt).join(",");
+      const updatedAtsPrev = activeExtractionsPrevTick
+        .map((o) => o.updatedAt)
+        .join(",");
+      if (pendingCt !== pendingCtPrev || updatedAts !== updatedAtsPrev) {
+        console.log(`Pending accounts or extractions changed; refetching data`);
         await fetchAccounts();
         await fetchTransactions(query);
         await fetchExtractions();
@@ -275,7 +280,7 @@
       }
     } catch (e) {
       console.log("Error fetching extraction status:", e);
-      currentExtractions = [];
+      activeExtractions = [];
       extractionMfaInfos = [];
     }
   };
@@ -364,7 +369,7 @@
       {accounts}
       {accountsSum}
       {banks}
-      {currentExtractions}
+      {activeExtractions}
       onClickCreate={createAccount}
       onClickAccount={(id) => {
         accountIdShowingDetail = id;
@@ -405,7 +410,7 @@
         isShowingExtractionsHistory = false;
       }}
     >
-      <Extractions extractions={allExtractions} {accounts} />
+      <Extractions {extractions} {accounts} />
     </Lightbox>
   {/if}
 </div>

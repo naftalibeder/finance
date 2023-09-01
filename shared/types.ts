@@ -82,6 +82,7 @@ export type Extraction = {
   accountId: UUID;
   queuedAt: string;
   startedAt?: string;
+  updatedAt?: string;
   finishedAt?: string;
   foundCt: number;
   addCt: number;
@@ -188,6 +189,7 @@ export type ExtractApiArgs = {
 };
 
 export type ExtractApiPayloadChunk = {
+  message?: string;
   extraction?: Partial<Extraction>;
   price?: Price;
   transactions?: Transaction[];

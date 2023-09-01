@@ -186,6 +186,10 @@ const start = () => {
       return;
     }
 
+    db.updateExtraction(accountId, {
+      startedAt: new Date().toISOString(),
+    });
+
     const bankCredsMap = db.getBankCredsMap();
     const bankCreds = bankCredsMap[account.bankId];
     const args: ExtractApiArgs = {
@@ -201,27 +205,34 @@ const start = () => {
       stream.on("data", (data) => {
         const str = decoder.decode(data);
         const chunk = JSON.parse(str) as ExtractApiPayloadChunk;
-        console.log("Received extraction chunk:", chunk);
+        console.log("Received progress chunk from extractor:", chunk);
 
         if (chunk.extraction) {
-          db.updateExtractionInProgress(account._id, chunk.extraction);
+          db.updateExtraction(account._id, chunk.extraction);
         } else if (chunk.price) {
           db.updateAccount(account._id, { ...account, price: chunk.price });
         } else if (chunk.transactions) {
           db.addTransactions(chunk.transactions);
-        } else {
-          // TODO: mfa, etc.
+        } else if (chunk.needMfaCode) {
+          db.setMfaInfo({ bankId: account.bankId });
+        } else if (chunk.mfaUpdate) {
+          db.setMfaInfo({ bankId: account.bankId });
+        } else if (chunk.mfaFinish) {
+          db.deleteMfaInfo(account.bankId);
         }
       });
       stream.on("end", () => {
         console.log("Extraction complete");
+        db.closeExtractionInProgress(account._id);
       });
       stream.on("close", () => {
         console.log("Extraction closed");
+        db.closeExtractionInProgress(account._id);
         stream.destroy();
       });
       stream.on("error", (e) => {
         console.log("Extraction error:", e);
+        db.closeExtractionInProgress(account._id);
         stream.destroy();
       });
     } catch (e) {
@@ -230,7 +241,7 @@ const start = () => {
       return;
     }
 
-    res.status(200);
+    res.status(200).send({ message: "ok" });
   });
 
   app.post("/extractions", async (req, res) => {
@@ -253,12 +264,14 @@ const start = () => {
         payload.data.extractions.push(extraction);
       }
     }
+
+    res.status(200).send(payload);
   });
 
   app.post("/extractions/add", async (req, res) => {
     const args = req.body as AddExtractionsApiArgs;
     for (const accountId of args.accountIds) {
-      db.getOrCreateExtractionInProgress(accountId);
+      db.addExtractionPending(accountId);
     }
     res.status(200).send({ message: "ok" });
   });

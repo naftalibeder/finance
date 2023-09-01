@@ -98,7 +98,7 @@ class ChaseBankExtractor implements Extractor {
     loc = await findFirst(page, "#password_input-input-field");
     await loc?.fill(bankCreds.password);
 
-    loc = await findFirst(page, "button[type=submit]");
+    loc = await findFirst(page, "button.primary");
     await loc?.click();
   };
 
@@ -196,6 +196,14 @@ class ChaseBankExtractor implements Extractor {
       const kind = await Promise.any([
         new Promise<ExtractorPageKind>(async (res, rej) => {
           const loc = await findFirst(page, "#welcomeHeader");
+          if (loc) {
+            res("login");
+          } else {
+            rej();
+          }
+        }),
+        new Promise<ExtractorPageKind>(async (res, rej) => {
+          const loc = await findFirst(page, "#logonbox");
           if (loc) {
             res("login");
           } else {

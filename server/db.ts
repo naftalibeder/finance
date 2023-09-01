@@ -265,8 +265,18 @@ export const getExtractions = (): Extraction[] => {
 
 export const getExtractionsPending = (): Extraction[] => {
   const db = readDatabase();
-  const extraction = db.extractions.filter((o) => {
+  const extractions = db.extractions.filter((o) => {
     return !o.startedAt && !o.finishedAt;
+  });
+  return extractions;
+};
+
+export const getExtractionPending = (
+  accountId: UUID
+): Extraction | undefined => {
+  const db = readDatabase();
+  const extraction = db.extractions.find((o) => {
+    return o.accountId === accountId && !o.startedAt && !o.finishedAt;
   });
   return extraction;
 };
@@ -275,27 +285,22 @@ export const getExtractionInProgress = (
   accountId: UUID
 ): Extraction | undefined => {
   const db = readDatabase();
-
   const extraction = db.extractions.find((o) => {
-    return o.accountId === accountId && !o.finishedAt;
+    return o.accountId === accountId && o.startedAt && !o.finishedAt;
   });
-  if (!extraction) {
-    return undefined;
-  }
-
   return extraction;
 };
 
-export const getOrCreateExtractionInProgress = (
-  accountId: UUID
-): Extraction => {
+export const addExtractionPending = (accountId: UUID): Extraction => {
   const db = readDatabase();
 
-  let extraction = getExtractionInProgress(accountId);
+  let extraction = db.extractions.find((o) => {
+    return o.accountId === accountId && !o.startedAt && !o.finishedAt;
+  });
   if (!extraction) {
     extraction = {
       _id: randomUUID(),
-      accountId: accountId,
+      accountId,
       queuedAt: new Date().toISOString(),
       foundCt: 0,
       addCt: 0,
@@ -307,7 +312,7 @@ export const getOrCreateExtractionInProgress = (
   return extraction;
 };
 
-export const updateExtractionInProgress = (
+export const updateExtraction = (
   accountId: UUID,
   update: Partial<Extraction>
 ) => {
@@ -331,7 +336,7 @@ export const updateExtractionInProgress = (
  * Sets end timestamps on any in-progress extraction for the provided account.
  */
 export const closeExtractionInProgress = (accountId: UUID) => {
-  updateExtractionInProgress(accountId, {
+  updateExtraction(accountId, {
     finishedAt: new Date().toISOString(),
   });
 };
@@ -414,9 +419,10 @@ export default {
   addTransactions,
   getExtractions,
   getExtractionsPending,
+  getExtractionPending,
   getExtractionInProgress,
-  getOrCreateExtractionInProgress,
-  updateExtractionInProgress,
+  addExtractionPending,
+  updateExtraction,
   closeExtractionInProgress,
   getMfaInfos,
   setMfaInfo,

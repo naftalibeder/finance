@@ -4,19 +4,13 @@ import {
   Transaction,
   Price,
   BankCreds,
-  Extraction,
   MfaOption,
+  ExtractApiPayloadChunk,
 } from "shared";
 
-export type ExtractionCallbacks = {
-  onStatusChange: (update: Partial<Extraction>) => void;
-  onReceiveAccountValue: (value: Price) => void;
-  onReceiveTransactions: (transactions: Transaction[]) => void;
-  onNeedMfaCode: () => void;
-  onMfaUpdate: (update: { code?: string }) => void;
-  onMfaFinish: () => void;
-  onInfo: (msg: string, ...args: any[]) => void;
-};
+export type OnExtractionEvent = (event: ExtractApiPayloadChunk) => void;
+
+export type ExtractionLog = (msg: string, ...args: any[]) => void;
 
 export interface ExtractorFuncArgs {
   extractor: Extractor;
@@ -25,7 +19,7 @@ export interface ExtractorFuncArgs {
   page: Page;
   tmpRunDir: string;
   getMfaCode: () => Promise<string>;
-  log: ExtractionCallbacks["onInfo"];
+  log: ExtractionLog;
 }
 
 export interface ExtractorRangeFuncArgs extends ExtractorFuncArgs {

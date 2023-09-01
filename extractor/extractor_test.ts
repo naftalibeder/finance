@@ -27,28 +27,8 @@ describe("extract account value and transactions", () => {
     };
 
     try {
-      await runAccount(account, bankCreds, {
-        onStatusChange: (extraction) => {
-          console.log({ extraction });
-        },
-        onReceiveAccountValue: (price) => {
-          console.log({ price });
-        },
-        onReceiveTransactions: (transactions) => {
-          console.log({ transactions });
-        },
-        onNeedMfaCode: () => {
-          console.log({ needMfaCode: true });
-        },
-        onMfaUpdate: (mfaUpdate) => {
-          console.log({ mfaUpdate });
-        },
-        onMfaFinish: () => {
-          console.log({ mfaFinish: true });
-        },
-        onInfo: (msg: string, ...a: string[]) => {
-          console.log(`${account.display} | ${account.bankId} | ${msg} ${a}`);
-        },
+      await runAccount(account, bankCreds, (event) => {
+        console.log(event);
       });
     } catch (e) {
       throw new Error(`${e}`);
