@@ -1,6 +1,5 @@
 import { parse } from "csv-parse";
 import { Account, Transaction } from "shared";
-import { Frame, FrameLocator } from "@playwright/test";
 import { randomUUID } from "crypto";
 import { toDate, toPrice } from "./index.js";
 import {
@@ -116,18 +115,4 @@ const buildTransaction = (
     description: rowNorm.description,
   };
   return transaction;
-};
-
-export const getSelectorExists = async (
-  frame: Frame | FrameLocator,
-  selector: string,
-  timeout: number
-): Promise<boolean> => {
-  try {
-    const loc = frame.locator(selector);
-    await loc.waitFor({ state: "attached", timeout });
-    return true;
-  } catch (e) {
-    return false;
-  }
 };

@@ -8,7 +8,7 @@ import {
   ExtractorColumnMap,
   ExtractorPageKind,
 } from "../types.js";
-import { toPrice, getSelectorExists } from "../utils/index.js";
+import { toPrice, findFirst, findAll } from "../utils/index.js";
 
 class CharlesSchwabBankExtractor implements Extractor {
   bankId = "charles-schwab-bank";
@@ -18,7 +18,7 @@ class CharlesSchwabBankExtractor implements Extractor {
   supportedMfaOptions: MfaOption[] = ["sms", "email"];
   currentPageMap: Record<ExtractorPageKind, string[]> = {
     login: ["#loginIdInput", "#loginHeadline"],
-    mfa: [],
+    mfa: ["#otp_sms"],
     dashboard: ["meganav-header-container"],
   };
 
@@ -63,38 +63,26 @@ class CharlesSchwabBankExtractor implements Extractor {
   enterCredentials = async (args: ExtractorFuncArgs) => {
     const { extractor, account, bankCreds, page, log } = args;
 
-    let loc: Locator;
+    let loc: Locator | undefined;
 
-    const loginFrame = page.frameLocator("#schwablmslogin");
+    loc = await findFirst(page, "#loginIdInput");
+    await loc?.fill(bankCreds.username);
 
-    while (true) {
-      log("Waiting for login page");
-      try {
-        loc = loginFrame.locator("#loginIdInput");
-        await loc.waitFor({ state: "attached", timeout: 6000 });
-      } catch (e) {
-        page.reload();
-        continue;
-      }
-      break;
-    }
+    loc = await findFirst(page, "#passwordInput");
+    await loc?.fill(bankCreds.password);
 
-    loc = loginFrame.locator("#loginIdInput");
-    await loc.fill(bankCreds.username);
-
-    loc = loginFrame.locator("#passwordInput");
-    await loc.fill(bankCreds.password);
-
-    loc = loginFrame.locator("#btnLogin");
-    await loc.click();
+    loc = await findFirst(page, "#btnLogin");
+    await loc?.click();
 
     let error: string | undefined = undefined;
     try {
-      loc = loginFrame.locator("#link-section #error");
-      await loc.waitFor();
-      error = `Error logging in: ${await loc.textContent()}`;
+      loc = await findFirst(page, "#link-section #error");
+      if (!loc) {
+        throw "No error message found";
+      }
+      error = `Error logging in: ${await loc?.textContent()}`;
     } catch (e) {
-      log("Logged in successfully");
+      log("Logged in successfully:", e);
     }
     if (error) {
       throw error;
@@ -104,36 +92,27 @@ class CharlesSchwabBankExtractor implements Extractor {
   enterMfaCode = async (args: ExtractorFuncArgs) => {
     const { extractor, account, bankCreds, page } = args;
 
-    let loc: Locator;
+    let loc: Locator | undefined;
 
-    const mfaFrame = page.frames()[0];
-
-    const mfaPageExists = await getSelectorExists(mfaFrame, "#otp_sms", 5000);
-    if (!mfaPageExists) {
-      return;
-    }
-
-    loc = mfaFrame.locator("#otp_sms");
-    await loc.click();
+    loc = await findFirst(page, "#otp_sms");
+    await loc?.click();
 
     const code = await args.getMfaCode();
 
-    const codeInputFrame = page.frames()[0];
+    loc = await findFirst(page, "#securityCode");
+    await loc?.fill(code);
 
-    loc = codeInputFrame.locator("#securityCode");
-    await loc.fill(code);
+    loc = await findFirst(page, "#checkbox-remember-device");
+    await loc?.check();
 
-    loc = codeInputFrame.locator("#checkbox-remember-device");
-    await loc.check();
-
-    loc = codeInputFrame.locator("#continueButton");
-    await loc.click();
+    loc = await findFirst(page, "#continueButton");
+    await loc?.click();
   };
 
   scrapeAccountValue = async (args: ExtractorFuncArgs): Promise<Price> => {
     const { extractor, account, bankCreds, page } = args;
 
-    let loc: Locator;
+    let loc: Locator | undefined;
 
     const dashboardFrame = page.frames()[0];
 
@@ -142,7 +121,7 @@ class CharlesSchwabBankExtractor implements Extractor {
       .filter({ hasText: account.display })
       .locator("div.balance-container-cs > div > span")
       .first();
-    let text = await loc.evaluate((o) => o.childNodes[2].textContent ?? "");
+    let text = await loc?.evaluate((o) => o.childNodes[2].textContent ?? "");
 
     const price = toPrice(text);
     return price;
@@ -153,51 +132,52 @@ class CharlesSchwabBankExtractor implements Extractor {
   ): Promise<string> => {
     const { extractor, account, bankCreds, range, page } = args;
 
-    let loc: Locator;
+    let loc: Locator | undefined;
 
     // Go to history page.
 
-    const dashboardFrame = page.frames()[0];
-
-    loc = dashboardFrame.locator("#meganav-secondary-menu-hist");
-    await loc.click();
+    loc = await findFirst(page, "#meganav-secondary-menu-hist");
+    await loc?.click();
     await page.waitForTimeout(3000);
 
-    loc = dashboardFrame.locator(".sdps-account-selector");
-    await loc.click();
+    loc = await findFirst(page, ".sdps-account-selector");
+    await loc?.click();
     await page.waitForTimeout(3000);
 
-    loc = dashboardFrame.locator(".sdps-account-selector__list-item", {
-      hasText: account.number,
-    });
-    await loc.click();
-    await page.waitForTimeout(3000);
+    const locs = await findAll(page, ".sdps-account-selector__list-item");
+    for (const l of locs) {
+      const text = await l.textContent();
+      if (text?.includes(account.number)) {
+        await loc?.click();
+        await page.waitForTimeout(3000);
+        break;
+      }
+    }
 
     // Set date range.
 
-    const dateRangeFrame = page.frames()[0];
-
-    loc = dateRangeFrame.locator("#statements-daterange1");
-    await loc.selectOption({ value: "Custom" });
+    loc = await findFirst(page, "#statements-daterange1");
+    await loc?.selectOption({ value: "Custom" });
     await page.waitForTimeout(1000);
 
-    loc = dateRangeFrame.locator("#calendar-FromDate");
-    await loc.fill(range.start.toLocaleDateString("en-US"));
-    await loc.blur();
+    loc = await findFirst(page, "#calendar-FromDate");
+    await loc?.fill(range.start.toLocaleDateString("en-US"));
+    await loc?.blur();
 
-    loc = dateRangeFrame.locator("#calendar-ToDate");
-    await loc.fill(range.end.toLocaleDateString("en-US"));
-    await loc.blur();
+    loc = await findFirst(page, "#calendar-ToDate");
+    await loc?.fill(range.end.toLocaleDateString("en-US"));
+    await loc?.blur();
 
-    loc = dateRangeFrame.getByRole("button", { name: "search", exact: true });
-    await loc.click();
+    loc = await findFirst(page, "button[name=search]");
+    await loc?.click();
     await page.waitForTimeout(3000);
 
     let rangeIsValid = true;
     try {
-      loc = dateRangeFrame.locator("#datepicker-range-error-alert");
-      await loc.waitFor({ state: "attached", timeout: 3000 });
-      rangeIsValid = false;
+      loc = await findFirst(page, "#datepicker-range-error-alert");
+      if (loc) {
+        rangeIsValid = false;
+      }
     } catch (e) {}
     if (!rangeIsValid) {
       throw "Invalid date range";
@@ -207,15 +187,15 @@ class CharlesSchwabBankExtractor implements Extractor {
 
     const popupPromise = page.waitForEvent("popup");
 
-    loc = dashboardFrame.locator("#bttnExport button");
-    await loc.click();
+    loc = await findFirst(page, "#bttnExport button");
+    await loc?.click();
 
     const popupPage = await popupPromise;
     await popupPage.waitForLoadState("domcontentloaded");
 
     loc = popupPage.locator(".button-primary");
     try {
-      await loc.click();
+      await loc?.click();
     } catch (e) {
       // Silence 'target closed' error.
     }
