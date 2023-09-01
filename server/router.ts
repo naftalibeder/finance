@@ -217,13 +217,21 @@ const start = () => {
 
         if (chunk.extraction) {
           db.updateExtraction(account._id, chunk.extraction);
-        } else if (chunk.price) {
+        }
+
+        if (chunk.price) {
           db.updateAccount(account._id, { ...account, price: chunk.price });
-        } else if (chunk.transactions) {
+        }
+
+        if (chunk.transactions) {
           db.addTransactions(chunk.transactions);
-        } else if (chunk.needMfaCode) {
+        }
+
+        if (chunk.needMfaCode) {
           db.setMfaInfo({ bankId: account.bankId });
-        } else if (chunk.mfaFinish) {
+        }
+
+        if (chunk.mfaFinish) {
           db.deleteMfaInfo(account.bankId);
         }
       });
