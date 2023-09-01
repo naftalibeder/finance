@@ -1,4 +1,5 @@
 import { Locator, Page } from "@playwright/test";
+import { ExtractorPageKind } from "../types.js";
 
 export const findAll = async (
   page: Page,
@@ -59,4 +60,34 @@ export const findFirst = async (
   }
 
   return all[0];
+};
+
+export const getPageKind = async (
+  page: Page,
+  map: Record<ExtractorPageKind, string[]>
+): Promise<ExtractorPageKind> => {
+  console.log("Checking current page kind");
+
+  const promises: Promise<ExtractorPageKind>[] = [];
+  for (const [kind, sels] of Object.entries(map)) {
+    for (const sel of sels) {
+      const promise = new Promise<ExtractorPageKind>(async (res, rej) => {
+        const loc = await findFirst(page, sel);
+        if (loc) {
+          res(kind as ExtractorPageKind);
+        } else {
+          rej();
+        }
+      });
+      promises.push(promise);
+    }
+  }
+
+  try {
+    const kind = await Promise.any(promises);
+    console.log(`Current page kind: ${kind}`);
+    return kind;
+  } catch (e) {
+    throw "Unable to find current page kind";
+  }
 };

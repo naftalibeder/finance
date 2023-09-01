@@ -16,6 +16,11 @@ class ChaseBankExtractor implements Extractor {
   bankDisplayNameShort = "Chase";
   supportedAccountKinds: Account["kind"][] = ["credit"];
   supportedMfaOptions: MfaOption[] = ["sms", "email"];
+  currentPageMap: Record<ExtractorPageKind, string[]> = {
+    login: ["#welcomeHeader", "#logonbox", ".siginbox-button"],
+    mfa: ["input[value=otpMethod]"],
+    dashboard: [".global-nav-position-container"],
+  };
 
   getColumnMap = (
     accountKind: Account["kind"]
@@ -184,64 +189,6 @@ class ChaseBankExtractor implements Extractor {
     }
 
     return transactionData;
-  };
-
-  getCurrentPageKind = async (
-    args: ExtractorFuncArgs
-  ): Promise<"login" | "mfa" | "dashboard"> => {
-    const { extractor, account, bankCreds, page, log } = args;
-    log("Checking current page kind");
-
-    try {
-      const kind = await Promise.any([
-        new Promise<ExtractorPageKind>(async (res, rej) => {
-          const loc = await findFirst(page, "#welcomeHeader");
-          if (loc) {
-            res("login");
-          } else {
-            rej();
-          }
-        }),
-        new Promise<ExtractorPageKind>(async (res, rej) => {
-          const loc = await findFirst(page, "#logonbox");
-          if (loc) {
-            res("login");
-          } else {
-            rej();
-          }
-        }),
-        new Promise<ExtractorPageKind>(async (res, rej) => {
-          const loc = await findFirst(page, ".siginbox-button");
-          if (loc) {
-            res("login");
-          } else {
-            rej();
-          }
-        }),
-        new Promise<ExtractorPageKind>(async (res, rej) => {
-          const loc = await findFirst(page, "input[value=otpMethod]");
-          if (loc) {
-            res("mfa");
-          } else {
-            rej();
-          }
-        }),
-        new Promise<ExtractorPageKind>(async (res, rej) => {
-          const loc = await findFirst(page, ".global-nav-position-container");
-          if (loc) {
-            res("dashboard");
-          } else {
-            rej();
-          }
-        }),
-      ]);
-
-      log(`Current page kind: ${kind}`);
-      return kind;
-    } catch (e) {
-      log("Unable to find current page kind; trying again");
-      return this.getCurrentPageKind(args);
-    }
   };
 }
 

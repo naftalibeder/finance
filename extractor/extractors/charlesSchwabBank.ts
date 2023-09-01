@@ -6,6 +6,7 @@ import {
   ExtractorFuncArgs,
   ExtractorRangeFuncArgs,
   ExtractorColumnMap,
+  ExtractorPageKind,
 } from "../types.js";
 import { toPrice, getSelectorExists } from "../utils/index.js";
 
@@ -15,6 +16,11 @@ class CharlesSchwabBankExtractor implements Extractor {
   bankDisplayNameShort = "Schwab";
   supportedAccountKinds: Account["kind"][] = ["checking", "brokerage"];
   supportedMfaOptions: MfaOption[] = ["sms", "email"];
+  currentPageMap: Record<ExtractorPageKind, string[]> = {
+    login: ["#loginIdInput", "#loginHeadline"],
+    mfa: [],
+    dashboard: ["meganav-header-container"],
+  };
 
   getColumnMap = (
     accountKind: Account["kind"]
@@ -222,13 +228,6 @@ class CharlesSchwabBankExtractor implements Extractor {
       encoding: "utf-8",
     });
     return transactionData;
-  };
-
-  getCurrentPageKind = async (
-    args: ExtractorFuncArgs
-  ): Promise<"login" | "mfa" | "dashboard"> => {
-    const { extractor, account, bankCreds, page } = args;
-    return "dashboard"; // TODO
   };
 }
 

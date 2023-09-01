@@ -20,7 +20,7 @@ import {
 import { randomUUID } from "crypto";
 import { EXTRACTIONS_PATH, TMP_DIR } from "./paths.js";
 import { extractors } from "./extractors/index.js";
-import { delay, parseTransactions } from "./utils/index.js";
+import { delay, getPageKind, parseTransactions } from "./utils/index.js";
 import { ExtractorFuncArgs, OnExtractionEvent } from "./types.js";
 
 const BROWSER_CONTEXT_PATH = `${TMP_DIR}/browser-context.json`;
@@ -245,7 +245,7 @@ export const getAccountData = async (
   };
 
   const authenticate = async (): Promise<void> => {
-    let pageKind = await extractor.getCurrentPageKind(args);
+    let pageKind = await getPageKind(args.page, extractor.currentPageMap);
     if (pageKind === "dashboard") {
       onEvent({ message: "Already authenticated" });
       return;
@@ -257,14 +257,14 @@ export const getAccountData = async (
       await page.waitForTimeout(3000);
     }
 
-    pageKind = await extractor.getCurrentPageKind(args);
+    pageKind = await getPageKind(args.page, extractor.currentPageMap);
     if (pageKind === "mfa") {
       onEvent({ message: "Entering two-factor code" });
       await extractor.enterMfaCode(args);
       await page.waitForTimeout(3000);
     }
 
-    pageKind = await extractor.getCurrentPageKind(args);
+    pageKind = await getPageKind(args.page, extractor.currentPageMap);
     if (pageKind !== "dashboard") {
       onEvent({ message: "Authentication failed" });
       throw "Authentication failed";

@@ -42,6 +42,7 @@ export interface Extractor {
   bankDisplayNameShort: string;
   supportedAccountKinds: Account["kind"][];
   supportedMfaOptions: MfaOption[];
+  currentPageMap: Record<ExtractorPageKind, string[]>;
   getColumnMap: (
     accountKind: Account["kind"]
   ) => ExtractorColumnMap | undefined;
@@ -51,7 +52,6 @@ export interface Extractor {
   enterMfaCode: (args: ExtractorFuncArgs) => Promise<void>;
   scrapeAccountValue: (args: ExtractorFuncArgs) => Promise<Price>;
   scrapeTransactionData: (args: ExtractorRangeFuncArgs) => Promise<string>;
-  getCurrentPageKind: (args: ExtractorFuncArgs) => Promise<ExtractorPageKind>;
 }
 
 export type ExtractorPageKind = "login" | "mfa" | "dashboard";

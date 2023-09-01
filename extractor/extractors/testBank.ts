@@ -5,6 +5,7 @@ import {
   Extractor,
   ExtractorColumnMap,
   ExtractorFuncArgs,
+  ExtractorPageKind,
   ExtractorRangeFuncArgs,
 } from "../types.js";
 
@@ -14,6 +15,11 @@ class TestBankExtractor implements Extractor {
   bankDisplayNameShort = "Test";
   supportedAccountKinds: Account["kind"][] = ["credit"];
   supportedMfaOptions: MfaOption[] = ["sms", "email"];
+  currentPageMap: Record<ExtractorPageKind, string[]> = {
+    login: [],
+    mfa: [],
+    dashboard: [],
+  };
 
   getColumnMap = (
     accountKind: Account["kind"]
@@ -42,13 +48,6 @@ class TestBankExtractor implements Extractor {
     args: ExtractorRangeFuncArgs
   ): Promise<string> => {
     return "";
-  };
-
-  getCurrentPageKind = async (
-    args: ExtractorFuncArgs
-  ): Promise<"login" | "mfa" | "dashboard"> => {
-    const { extractor, account, bankCreds, page } = args;
-    return "dashboard"; // TODO
   };
 }
 
