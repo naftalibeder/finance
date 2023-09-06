@@ -264,7 +264,9 @@ export const getAccountData = async (
       await page.waitForTimeout(3000);
     }
 
-    pageKind = await getPageKind(args.page, extractor.currentPageMap);
+    pageKind = await getPageKind(args.page, extractor.currentPageMap, {
+      timeout: 6000,
+    });
     if (pageKind !== "dashboard") {
       onEvent({ message: "Authentication failed" });
       throw "Authentication failed";

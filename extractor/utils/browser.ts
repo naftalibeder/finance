@@ -1,70 +1,72 @@
 import { Locator, Page } from "@playwright/test";
 import { ExtractorPageKind } from "../types.js";
 
+type Options = {
+  timeout?: number;
+};
+
 export const findAll = async (
   page: Page,
   selector: string,
-  options?: {
-    timeout?: number;
-  }
+  options?: Options
 ): Promise<Locator[]> => {
   const frames = page.frames();
-  let res: Locator[] = [];
-
+  const timeout = options?.timeout ?? 1000;
   console.log(
     `Searching for selector '${selector}' in ${frames.length} frames`
   );
 
+  let promises: Promise<Locator | undefined>[] = [];
+
   for (let i = 0; i < frames.length; i++) {
-    const frame = frames[i];
-    try {
-      const loc = frame.locator(selector);
-      await loc.waitFor({
-        state: "visible",
-        timeout: options?.timeout ?? 2000,
-      });
-      res = [...res, loc];
-    } catch (e) {
-      // No results; continue searching.
-    }
+    const promise = new Promise<Locator | undefined>(async (res, rej) => {
+      const frame = frames[i];
+      try {
+        const loc = frame.locator(selector);
+        await loc.waitFor({ state: "visible", timeout });
+        res(loc);
+      } catch (e) {
+        res(undefined);
+      }
+    });
+    promises.push(promise);
   }
 
-  if (res.length === 0) {
-    console.log(`Found no elements for selector '${selector}'`);
+  const frameResults = await Promise.all(promises);
+  let locs = frameResults.filter((o) => o !== undefined) as Locator[];
+
+  if (locs.length === 0) {
+    console.log(`Found no results for selector '${selector}'`);
     return [];
   }
 
-  const texts: string[] = [];
-  for (const r of res) {
-    const t = await r.textContent();
-    if (t) {
-      texts.push(t);
+  for (const loc of locs) {
+    const ct = await loc.count();
+    if (ct > 0) {
+      let t = await loc.textContent();
+      t = t?.trim().slice(0, 100) ?? "";
+      console.log(`Found ${ct} elements for selector '${selector}': '${t}'`);
     }
   }
-  console.log(
-    `Found ${res.length} elements for selector '${selector}': ${texts}`
-  );
-  return res;
+  return locs;
 };
 
 export const findFirst = async (
   page: Page,
   selector: string,
-  options?: {
-    timeout?: number;
-  }
+  options?: Options
 ): Promise<Locator | undefined> => {
   const all = await findAll(page, selector, options);
-  if (all.length === 0) {
-    return undefined;
+  if (all.length > 0) {
+    return all[0];
   }
-
-  return all[0];
+  return undefined;
 };
 
 export const getPageKind = async (
   page: Page,
-  map: Record<ExtractorPageKind, string[]>
+  map: Record<ExtractorPageKind, string[]>,
+  options?: Options
 ): Promise<ExtractorPageKind> => {
   console.log("Checking current page kind");
 
@@ -72,7 +74,7 @@ export const getPageKind = async (
   for (const [kind, sels] of Object.entries(map)) {
     for (const sel of sels) {
       const promise = new Promise<ExtractorPageKind>(async (res, rej) => {
-        const loc = await findFirst(page, sel);
+        const loc = await findFirst(page, sel, options);
         if (loc) {
           res(kind as ExtractorPageKind);
         } else {
@@ -88,6 +90,7 @@ export const getPageKind = async (
     console.log(`Current page kind: ${kind}`);
     return kind;
   } catch (e) {
-    throw "Unable to find current page kind";
+    console.log("Unable to find current page kind");
+    return getPageKind(page, map);
   }
 };

@@ -33,8 +33,8 @@ describe("find all elements on page by selector", () => {
 
     const selector = ".not-monkey";
     const loc = await findFirst(page, selector, { timeout: 1000 });
-    const resultText = await loc?.textContent();
     if (loc) {
+      const resultText = await loc.textContent();
       throw new Error(
         `Incorrect results; expected no results, got '${resultText}'`
       );

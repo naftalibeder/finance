@@ -19,7 +19,7 @@ class CharlesSchwabBankExtractor implements Extractor {
   currentPageMap: Record<ExtractorPageKind, string[]> = {
     login: ["#loginIdInput", "#loginHeadline"],
     mfa: ["#otp_sms"],
-    dashboard: ["meganav-header-container"],
+    dashboard: ["#meganav-header-container"],
   };
 
   getColumnMap = (
@@ -138,21 +138,17 @@ class CharlesSchwabBankExtractor implements Extractor {
 
     loc = await findFirst(page, "#meganav-secondary-menu-hist");
     await loc?.click();
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(1000);
 
     loc = await findFirst(page, ".sdps-account-selector");
     await loc?.click();
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(1000);
 
-    const locs = await findAll(page, ".sdps-account-selector__list-item");
-    for (const l of locs) {
-      const text = await l.textContent();
-      if (text?.includes(account.number)) {
-        await loc?.click();
-        await page.waitForTimeout(3000);
-        break;
-      }
-    }
+    loc = page
+      .locator(".sdps-account-selector__list-item")
+      .filter({ hasText: account.number });
+    await loc?.click();
+    await page.waitForTimeout(1000);
 
     // Set date range.
 
@@ -174,7 +170,7 @@ class CharlesSchwabBankExtractor implements Extractor {
 
     let rangeIsValid = true;
     try {
-      loc = await findFirst(page, "#datepicker-range-error-alert");
+      loc = await findFirst(page, "#errorMessage");
       if (loc) {
         rangeIsValid = false;
       }
