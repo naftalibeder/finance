@@ -20,7 +20,12 @@ import {
 import { randomUUID } from "crypto";
 import { EXTRACTIONS_PATH, TMP_DIR } from "./paths.js";
 import { extractors } from "./extractors/index.js";
-import { delay, getPageKind, parseTransactions } from "./utils/index.js";
+import {
+  delay,
+  getPageKind,
+  parseTransactions,
+  prettyDate,
+} from "./utils/index.js";
 import { ExtractorFuncArgs, OnExtractionEvent } from "./types.js";
 
 const BROWSER_CONTEXT_PATH = `${TMP_DIR}/browser-context.json`;
@@ -178,7 +183,7 @@ export const getAccountData = async (
 
     while (true) {
       const start = new Date(end.valueOf() - spanMs);
-      const prettyRange = `[${start}, ${end}]`;
+      const prettyRange = `[${prettyDate(start)}, ${prettyDate(end)}]`;
 
       let transactionsChunk: Transaction[] = [];
       let skipCt = 0;
