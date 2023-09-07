@@ -159,6 +159,7 @@ class CharlesSchwabBankExtractor implements Extractor {
     await loc?.click();
     await page.waitForTimeout(1000);
 
+    // TODO: This works with `page.locator` but fails with `findFirst`. Try `forceTimeout`?
     loc = page
       .locator(".sdps-account-selector__list-item")
       .filter({ hasText: account.number });
