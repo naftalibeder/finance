@@ -11,7 +11,7 @@
     "test": "npm run test:client && npm run test:server && npm run test:extractor",
     "test:client": "cd client && npm run test",
     "test:server": "cd server && npm run test",
-    "test:extractorr": "cd extractor && npm run test"
+    "test:extractor": "cd extractor && npm run test"
   },
   "devDependencies": {
     "@types/mocha": "10.0.1",
