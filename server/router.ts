@@ -203,15 +203,15 @@ const start = () => {
       const stream = got.stream(url, { method: "POST", json: args });
 
       const decoder = new TextDecoder("utf8");
-      let dataStrCache = "";
-      stream.on("data", (data) => {
+      let buffer = "";
+      stream.on("data", (d) => {
         let chunk: ExtractApiPayloadChunk;
-        const dataStr = decoder.decode(data);
-        dataStrCache += dataStr;
+
         try {
-          chunk = JSON.parse(dataStrCache);
+          buffer += decoder.decode(d);
+          chunk = JSON.parse(buffer);
           console.log("Received progress chunk from extractor:", chunk);
-          dataStrCache = "";
+          buffer = "";
         } catch (e) {
           console.log("Error decoding progress chunk from extractor");
           return;
