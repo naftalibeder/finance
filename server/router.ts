@@ -226,10 +226,13 @@ const start = () => {
         }
 
         if (chunk.transactions) {
+          const foundCt = chunk.transactions.length;
           const addCt = db.addTransactions(chunk.transactions);
+          console.log(`Received ${foundCt} transactions, ${addCt} new`);
+          const extraction = db.getExtractionInProgress(account._id);
           db.updateExtraction(account._id, {
-            foundCt: chunk.transactions.length,
-            addCt,
+            foundCt: (extraction?.foundCt ?? 0) + foundCt,
+            addCt: (extraction?.addCt ?? 0) + addCt,
           });
         }
 
