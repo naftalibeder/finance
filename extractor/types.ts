@@ -47,7 +47,8 @@ export interface Extractor {
     accountKind: Account["kind"]
   ) => ExtractorColumnMap | undefined;
   getMaxDateRangeMonths: (accountKind: Account["kind"]) => number;
-  loadStartPage: (args: ExtractorFuncArgs) => Promise<void>;
+  goToLoginPage: (args: ExtractorFuncArgs) => Promise<void>;
+  goToDashboardPage: (args: ExtractorFuncArgs) => Promise<void>;
   enterCredentials: (args: ExtractorFuncArgs) => Promise<void>;
   enterMfaCode: (args: ExtractorFuncArgs) => Promise<void>;
   scrapeAccountValue: (args: ExtractorFuncArgs) => Promise<Price>;

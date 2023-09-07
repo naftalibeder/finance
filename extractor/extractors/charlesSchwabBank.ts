@@ -55,9 +55,18 @@ class CharlesSchwabBankExtractor implements Extractor {
     return 12;
   };
 
-  loadStartPage = async (args: ExtractorFuncArgs) => {
+  goToLoginPage = async (args: ExtractorFuncArgs) => {
     const { extractor, account, bankCreds, page } = args;
     await page.goto("https://schwab.com", { timeout: 6000 });
+  };
+
+  goToDashboardPage = async (args: ExtractorFuncArgs) => {
+    const { extractor, account, bankCreds, page } = args;
+
+    let loc: Locator | undefined;
+
+    loc = await findFirst(page, ".sdps-header__brand-link");
+    await loc?.click();
   };
 
   enterCredentials = async (args: ExtractorFuncArgs) => {

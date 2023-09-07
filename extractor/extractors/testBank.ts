@@ -31,7 +31,12 @@ class TestBankExtractor implements Extractor {
     return 6;
   };
 
-  loadStartPage = async (args: ExtractorFuncArgs) => {
+  goToLoginPage = async (args: ExtractorFuncArgs) => {
+    const { extractor, account, bankCreds, page } = args;
+    await page.goto("https://example.com", { waitUntil: "domcontentloaded" });
+  };
+
+  goToDashboardPage = async (args: ExtractorFuncArgs) => {
     const { extractor, account, bankCreds, page } = args;
     await page.goto("https://example.com", { waitUntil: "domcontentloaded" });
   };

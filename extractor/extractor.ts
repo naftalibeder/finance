@@ -24,7 +24,7 @@ import { delay, getPageKind, parseTransactions } from "./utils/index.js";
 import { ExtractorFuncArgs, OnExtractionEvent } from "./types.js";
 
 const BROWSER_CONTEXT_PATH = `${TMP_DIR}/browser-context.json`;
-const HEADLESS = true;
+const HEADLESS = false;
 
 /**
  * Extracts the current account value and all available transactions for the
@@ -148,13 +148,10 @@ export const getAccountData = async (
 }> => {
   const { extractor, account, page, tmpRunDir } = args;
 
-  const getAccountValue = async (): Promise<Price> => {
-    onEvent({ message: "Loading start page" });
-    await extractor.loadStartPage(args);
-    await page.waitForTimeout(3000);
+  await extractor.goToLoginPage(args);
 
-    onEvent({ message: "Checking authentication status" });
-    await authenticate();
+  const getAccountValue = async (): Promise<Price> => {
+    await extractor.goToDashboardPage(args);
 
     onEvent({ message: "Scraping account value" });
     let accountValue = await extractor.scrapeAccountValue(args);
@@ -187,14 +184,9 @@ export const getAccountData = async (
       let skipCt = 0;
 
       try {
-        await extractor.loadStartPage(args);
-        await page.waitForTimeout(3000);
+        await extractor.goToDashboardPage(args);
 
-        onEvent({ message: "Checking authentication status" });
-        await authenticate();
-        await page.waitForTimeout(3000);
-
-        onEvent({ message: `Getting transactions for range ${prettyRange}` });
+        onEvent({ message: `Scraping transactions for range ${prettyRange}` });
         const data = await extractor.scrapeTransactionData({
           ...args,
           range: { start, end },
@@ -244,29 +236,32 @@ export const getAccountData = async (
   };
 
   const authenticate = async (): Promise<void> => {
+    onEvent({ message: "Checking authentication status" });
+
     while (true) {
       const pageKind = await getPageKind(args.page, extractor.currentPageMap);
 
       if (pageKind === "dashboard") {
         onEvent({ message: "Authenticated" });
-        await page.waitForTimeout(3000);
+        await page.waitForTimeout(2000);
         break;
       }
 
       if (pageKind === "login") {
         onEvent({ message: "Entering bank credentials" });
         await extractor.enterCredentials(args);
-        await page.waitForTimeout(3000);
+        await page.waitForTimeout(2000);
       }
 
       if (pageKind === "mfa") {
         onEvent({ message: "Entering two-factor code" });
         await extractor.enterMfaCode(args);
-        await page.waitForTimeout(3000);
+        await page.waitForTimeout(2000);
       }
     }
   };
 
+  await authenticate();
   const accountValue = await getAccountValue();
   const transactions = await getTransactions();
 

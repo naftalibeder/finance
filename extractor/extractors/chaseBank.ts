@@ -44,9 +44,18 @@ class ChaseBankExtractor implements Extractor {
     return 6;
   };
 
-  loadStartPage = async (args: ExtractorFuncArgs) => {
+  goToLoginPage = async (args: ExtractorFuncArgs) => {
     const { extractor, account, bankCreds, page } = args;
     await page.goto("https://chase.com", { waitUntil: "domcontentloaded" });
+  };
+
+  goToDashboardPage = async (args: ExtractorFuncArgs) => {
+    const { extractor, account, bankCreds, page } = args;
+
+    let loc: Locator | undefined;
+
+    loc = await findFirst(page, "#brand_bar_logo");
+    await loc?.click();
   };
 
   enterCredentials = async (args: ExtractorFuncArgs) => {
@@ -154,6 +163,12 @@ class ChaseBankExtractor implements Extractor {
 
     loc = await findFirst(page, "#downloadActivityIcon");
     await loc?.scrollIntoViewIfNeeded();
+    await loc?.click();
+    await page.waitForTimeout(1000);
+
+    // Clear filters if any are set.
+
+    loc = await findFirst(page, "#downloadOtherActivity");
     await loc?.click();
     await page.waitForTimeout(1000);
 
