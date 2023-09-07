@@ -24,7 +24,7 @@ import { delay, getPageKind, parseTransactions } from "./utils/index.js";
 import { ExtractorFuncArgs, OnExtractionEvent } from "./types.js";
 
 const BROWSER_CONTEXT_PATH = `${TMP_DIR}/browser-context.json`;
-const HEADLESS = false;
+const HEADLESS = true;
 
 /**
  * Extracts the current account value and all available transactions for the
@@ -187,7 +187,6 @@ export const getAccountData = async (
       let skipCt = 0;
 
       try {
-        onEvent({ message: `Getting transactions for range ${prettyRange}` });
         await extractor.loadStartPage(args);
         await page.waitForTimeout(3000);
 
@@ -195,7 +194,7 @@ export const getAccountData = async (
         await authenticate();
         await page.waitForTimeout(3000);
 
-        onEvent({ message: "Scraping transaction data" });
+        onEvent({ message: `Getting transactions for range ${prettyRange}` });
         const data = await extractor.scrapeTransactionData({
           ...args,
           range: { start, end },
@@ -245,34 +244,27 @@ export const getAccountData = async (
   };
 
   const authenticate = async (): Promise<void> => {
-    let pageKind = await getPageKind(args.page, extractor.currentPageMap);
-    if (pageKind === "dashboard") {
-      onEvent({ message: "Already authenticated" });
-      return;
-    }
+    while (true) {
+      const pageKind = await getPageKind(args.page, extractor.currentPageMap);
 
-    if (pageKind === "login") {
-      onEvent({ message: "Entering bank credentials" });
-      await extractor.enterCredentials(args);
-      await page.waitForTimeout(3000);
-    }
+      if (pageKind === "dashboard") {
+        onEvent({ message: "Authenticated" });
+        await page.waitForTimeout(3000);
+        break;
+      }
 
-    pageKind = await getPageKind(args.page, extractor.currentPageMap);
-    if (pageKind === "mfa") {
-      onEvent({ message: "Entering two-factor code" });
-      await extractor.enterMfaCode(args);
-      await page.waitForTimeout(3000);
-    }
+      if (pageKind === "login") {
+        onEvent({ message: "Entering bank credentials" });
+        await extractor.enterCredentials(args);
+        await page.waitForTimeout(3000);
+      }
 
-    pageKind = await getPageKind(args.page, extractor.currentPageMap, {
-      timeout: 6000,
-    });
-    if (pageKind !== "dashboard") {
-      onEvent({ message: "Authentication failed" });
-      throw "Authentication failed";
+      if (pageKind === "mfa") {
+        onEvent({ message: "Entering two-factor code" });
+        await extractor.enterMfaCode(args);
+        await page.waitForTimeout(3000);
+      }
     }
-
-    onEvent({ message: "Authenticated" });
   };
 
   const accountValue = await getAccountValue();

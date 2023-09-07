@@ -8,7 +8,7 @@ import {
   ExtractorColumnMap,
   ExtractorPageKind,
 } from "../types.js";
-import { toPrice, findFirst, findAll } from "../utils/index.js";
+import { toPrice, findFirst } from "../utils/index.js";
 
 class CharlesSchwabBankExtractor implements Extractor {
   bankId = "charles-schwab-bank";
@@ -114,14 +114,20 @@ class CharlesSchwabBankExtractor implements Extractor {
 
     let loc: Locator | undefined;
 
-    const dashboardFrame = page.frames()[0];
-
-    loc = dashboardFrame
-      .locator("single-account")
-      .filter({ hasText: account.display })
+    loc = await findFirst(page, ".row.account-row", {
+      timeout: 3000,
+      forceTimeout: true,
+    });
+    loc = loc
+      ?.filter({ hasText: account.display })
       .locator("div.balance-container-cs > div > span")
       .first();
-    let text = await loc?.evaluate((o) => o.childNodes[2].textContent ?? "");
+    let text = await loc?.evaluate((o) => {
+      return o.childNodes[2]?.textContent;
+    });
+    if (!text) {
+      throw "Could not find account value";
+    }
 
     const price = toPrice(text);
     return price;

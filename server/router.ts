@@ -203,15 +203,17 @@ const start = () => {
       const stream = got.stream(url, { method: "POST", json: args });
 
       const decoder = new TextDecoder("utf8");
+      let dataStrCache = "";
       stream.on("data", (data) => {
         let chunk: ExtractApiPayloadChunk;
-        const str = decoder.decode(data);
+        const dataStr = decoder.decode(data);
+        dataStrCache += dataStr;
         try {
-          chunk = JSON.parse(str); // TODO: Chunks are frequently not valid JSON. Why?
+          chunk = JSON.parse(dataStrCache);
           console.log("Received progress chunk from extractor:", chunk);
+          dataStrCache = "";
         } catch (e) {
-          console.log("Error decoding progress chunk from extractor:");
-          console.log(str);
+          console.log("Error decoding progress chunk from extractor");
           return;
         }
 
@@ -224,7 +226,11 @@ const start = () => {
         }
 
         if (chunk.transactions) {
-          db.addTransactions(chunk.transactions);
+          const addCt = db.addTransactions(chunk.transactions);
+          db.updateExtraction(account._id, {
+            foundCt: chunk.transactions.length,
+            addCt,
+          });
         }
 
         if (chunk.needMfaCode) {

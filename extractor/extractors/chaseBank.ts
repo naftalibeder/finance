@@ -1,5 +1,5 @@
 import fs from "fs";
-import { Frame, Locator } from "@playwright/test";
+import { Locator } from "@playwright/test";
 import { Account, MfaOption, Price } from "shared";
 import {
   Extractor,
@@ -8,7 +8,7 @@ import {
   ExtractorPageKind,
   ExtractorRangeFuncArgs,
 } from "../types.js";
-import { findAll, findFirst, toPrice } from "../utils/index.js";
+import { findFirst, toPrice } from "../utils/index.js";
 
 class ChaseBankExtractor implements Extractor {
   bankId = "chase-bank";
@@ -110,19 +110,29 @@ class ChaseBankExtractor implements Extractor {
   scrapeAccountValue = async (args: ExtractorFuncArgs): Promise<Price> => {
     const { extractor, account, bankCreds, page, log } = args;
 
-    let loc: Locator;
+    let loc: Locator | undefined;
 
-    const dashboardFrame = page.frames()[0];
-
-    const tileLoc = dashboardFrame.locator(".account-tile");
-    const tileCt = await tileLoc.count();
+    loc = await findFirst(page, ".account-tile", {
+      timeout: 2000,
+      forceTimeout: true,
+    });
+    const tileCt = await loc?.count();
+    if (!tileCt || tileCt === 0) {
+      throw "No account items found";
+    }
     log(`Found ${tileCt} account items`);
 
     const lastFour = account.number.slice(-4);
-    loc = tileLoc
-      .filter({ has: dashboardFrame.locator(`[text*="${lastFour}"]`) })
-      .locator(".primary-value.text-primary");
-    const text = await loc.innerText();
+    const textLoc = await findFirst(page, `[text*="${lastFour}"]`);
+    if (!textLoc) {
+      throw "Account item does not exist";
+    }
+
+    loc = loc?.filter({ has: textLoc }).locator(".primary-value.text-primary");
+    const text = await loc?.innerText();
+    if (!text) {
+      throw "Account value not found";
+    }
 
     const price = toPrice(text);
     return price;
@@ -133,38 +143,37 @@ class ChaseBankExtractor implements Extractor {
   ): Promise<string> => {
     const { extractor, account, bankCreds, range, page } = args;
 
-    let loc: Locator;
+    let loc: Locator | undefined;
 
     // Go to history page.
 
-    const dashboardFrame = page.frames()[0];
-
     const lastFour = account.number.slice(-4);
-    loc = dashboardFrame.locator(`[text*="${lastFour}"]`);
-    await loc.click();
-    await page.waitForTimeout(3000);
+    loc = await findFirst(page, `[text*="${lastFour}"]`);
+    await loc?.click();
+    await page.waitForTimeout(1000);
 
-    loc = dashboardFrame.locator("#downloadActivityIcon");
-    await loc.click();
-    await page.waitForTimeout(3000);
+    loc = await findFirst(page, "#downloadActivityIcon");
+    await loc?.scrollIntoViewIfNeeded();
+    await loc?.click();
+    await page.waitForTimeout(1000);
 
     // Set date range.
 
-    loc = dashboardFrame.locator("#select-downloadActivityOptionId");
-    await loc.click();
+    loc = await findFirst(page, "#select-downloadActivityOptionId");
+    await loc?.click();
     await page.waitForTimeout(1000);
 
-    loc = dashboardFrame.locator(`[value="DATE_RANGE"]`);
-    await loc.click();
+    loc = await findFirst(page, `[value="DATE_RANGE"]`);
+    await loc?.click();
     await page.waitForTimeout(1000);
 
-    loc = dashboardFrame.locator("#accountActivityFromDate-input-input");
-    await loc.fill(range.start.toLocaleDateString("en-US"));
-    await loc.blur();
+    loc = await findFirst(page, "#accountActivityFromDate-input-input");
+    await loc?.fill(range.start.toLocaleDateString("en-US"));
+    await loc?.blur();
 
-    loc = dashboardFrame.locator("#accountActivityToDate-input-input");
-    await loc.fill(range.end.toLocaleDateString("en-US"));
-    await loc.blur();
+    loc = await findFirst(page, "#accountActivityToDate-input-input");
+    await loc?.fill(range.end.toLocaleDateString("en-US"));
+    await loc?.blur();
 
     await page.waitForTimeout(1000);
 
@@ -172,8 +181,8 @@ class ChaseBankExtractor implements Extractor {
 
     const downloadPromise = page.waitForEvent("download", { timeout: 6000 });
 
-    loc = dashboardFrame.locator("#download");
-    await loc.click();
+    loc = await findFirst(page, "#download");
+    await loc?.click();
 
     // Get data from downloaded file.
 
