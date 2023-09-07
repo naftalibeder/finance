@@ -180,9 +180,9 @@ class CharlesSchwabBankExtractor implements Extractor {
     await loc?.fill(range.end.toLocaleDateString("en-US"));
     await loc?.blur();
 
-    loc = await findFirst(page, "button[name=search]");
+    loc = await findFirst(page, "#btnSearch");
     await loc?.click();
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(2000);
 
     let rangeIsValid = true;
     try {
