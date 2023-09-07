@@ -1,11 +1,19 @@
+import path from "path";
 import { firefox } from "@playwright/test";
 import mocha from "mocha";
 import { findFirst } from "./browser.js";
 
 const { describe, it } = mocha;
 
-// TODO: Make path relative to project.
-const url = `file:///Users/naftalibeder/code/finance/extractor/utils/fixtures/iframes.html`;
+const url = path.join(
+  import.meta.url,
+  "..",
+  "..",
+  "..", // Back out of `dist` directory.
+  "utils",
+  "fixtures",
+  "iframes.html"
+);
 
 describe("find all elements on page by selector", () => {
   it("find existing", async () => {
