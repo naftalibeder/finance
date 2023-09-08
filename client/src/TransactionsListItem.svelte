@@ -1,12 +1,12 @@
 <script lang="ts">
   import { Account, Transaction } from "shared";
-  import { prettyCurrency, prettyDate, secAgo } from "../utils";
+  import { prettyCurrency, prettyDate, msAgo } from "../utils";
   import { Icon } from ".";
 
   export let transaction: Transaction;
   export let account: Account | undefined;
 
-  $: isRecent = secAgo(transaction._createdAt) < 60 * 60;
+  $: isRecent = msAgo(transaction._createdAt) < 1000 * 60 * 60;
 </script>
 
 <div class={"grid contents"}>

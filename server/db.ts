@@ -263,6 +263,12 @@ export const getExtractions = (): Extraction[] => {
   return db.extractions;
 };
 
+export const getExtraction = (id: UUID): Extraction | undefined => {
+  const db = readDatabase();
+  const extraction = db.extractions.find((o) => o._id === id);
+  return extraction;
+};
+
 export const getExtractionsPending = (): Extraction[] => {
   const db = readDatabase();
   const extractions = db.extractions.filter((o) => {
@@ -271,24 +277,12 @@ export const getExtractionsPending = (): Extraction[] => {
   return extractions;
 };
 
-export const getExtractionPending = (
-  accountId: UUID
-): Extraction | undefined => {
+export const getExtractionsUnfinished = (): Extraction[] => {
   const db = readDatabase();
-  const extraction = db.extractions.find((o) => {
-    return o.accountId === accountId && !o.startedAt && !o.finishedAt;
+  const extractions = db.extractions.filter((o) => {
+    return !o.finishedAt;
   });
-  return extraction;
-};
-
-export const getExtractionInProgress = (
-  accountId: UUID
-): Extraction | undefined => {
-  const db = readDatabase();
-  const extraction = db.extractions.find((o) => {
-    return o.accountId === accountId && o.startedAt && !o.finishedAt;
-  });
-  return extraction;
+  return extractions;
 };
 
 export const addExtractionPending = (accountId: UUID): Extraction => {
@@ -312,14 +306,11 @@ export const addExtractionPending = (accountId: UUID): Extraction => {
   return extraction;
 };
 
-export const updateExtraction = (
-  accountId: UUID,
-  update: Partial<Extraction>
-) => {
+export const updateExtraction = (id: UUID, update: Partial<Extraction>) => {
   const db = readDatabase();
 
   const index = db.extractions.findIndex((o) => {
-    return o.accountId === accountId && !o.finishedAt;
+    return o._id === id && !o.finishedAt;
   });
   if (index === -1) {
     return;
@@ -333,12 +324,16 @@ export const updateExtraction = (
 };
 
 /**
- * Sets end timestamps on any in-progress extraction for the provided account.
+ * Sets end timestamps on any in-progress extractions.
  */
-export const closeExtractionInProgress = (accountId: UUID) => {
-  updateExtraction(accountId, {
-    finishedAt: new Date().toISOString(),
-  });
+export const abortAllUnfinishedExtractions = () => {
+  const extractions = getExtractionsUnfinished();
+  for (const extraction of extractions) {
+    updateExtraction(extraction._id, {
+      finishedAt: new Date().toISOString(),
+      error: "Aborted",
+    });
+  }
 };
 
 export const getMfaInfos = (): MfaInfo[] => {
@@ -418,12 +413,12 @@ export default {
   getTransactions,
   addTransactions,
   getExtractions,
+  getExtraction,
   getExtractionsPending,
-  getExtractionPending,
-  getExtractionInProgress,
+  getExtractionsUnfinished,
   addExtractionPending,
   updateExtraction,
-  closeExtractionInProgress,
+  abortAllUnfinishedExtractions,
   getMfaInfos,
   setMfaInfo,
   deleteMfaInfo,

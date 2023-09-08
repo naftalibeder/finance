@@ -17,7 +17,7 @@ import {
   VerifyDeviceApiArgs,
   DeleteAccountApiArgs,
   GetExtractionsApiPayload,
-  GetExtractionsInProgressApiPayload,
+  GetExtractionsUnfinishedApiPayload,
   AddExtractionsApiArgs,
   GetMfaInfoApiPayload,
   ExtractApiArgs,
@@ -179,92 +179,117 @@ const start = () => {
       return;
     }
 
-    const accountId = pendingExtractions[0].accountId;
-    const account = db.getAccount(accountId);
-    if (!account) {
-      res.status(401).send({ error: `No account found with id ${accountId}` });
-      return;
-    }
+    res.status(200).send({ message: "ok" });
 
-    db.updateExtraction(accountId, {
-      startedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-
-    const bankCredsMap = db.getBankCredsMap();
-    const bankCreds = bankCredsMap[account.bankId];
-    const args: ExtractApiArgs = {
-      account,
-      bankCreds,
-    };
-
-    try {
-      const url = `${process.env.EXTRACTOR_URL_LOCALHOST}/extract`;
-      const stream = got.stream(url, { method: "POST", json: args });
-
-      const decoder = new TextDecoder("utf8");
-      let buffer = "";
-      stream.on("data", (d) => {
-        let chunk: ExtractApiPayloadChunk;
-
-        try {
-          buffer += decoder.decode(d);
-          chunk = JSON.parse(buffer);
-          console.log("Received progress chunk from extractor:", chunk);
-          buffer = "";
-        } catch (e) {
-          console.log("Error decoding progress chunk from extractor");
+    for (const pendingExtraction of pendingExtractions) {
+      const promise = new Promise<void>((res, rej) => {
+        const extractionId = pendingExtraction._id;
+        const accountId = pendingExtraction.accountId;
+        const account = db.getAccount(accountId);
+        if (!account) {
+          rej(`No account found with id ${accountId}`);
           return;
         }
 
-        if (chunk.extraction) {
-          db.updateExtraction(account._id, chunk.extraction);
-        }
+        console.log(`Starting extraction for account ${account.display}`);
 
-        if (chunk.price) {
-          db.updateAccount(account._id, { ...account, price: chunk.price });
-        }
+        db.updateExtraction(extractionId, {
+          startedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
 
-        if (chunk.transactions) {
-          const foundCt = chunk.transactions.length;
-          const addCt = db.addTransactions(chunk.transactions);
-          console.log(`Received ${foundCt} transactions, ${addCt} new`);
-          const extraction = db.getExtractionInProgress(account._id);
-          db.updateExtraction(account._id, {
-            foundCt: (extraction?.foundCt ?? 0) + foundCt,
-            addCt: (extraction?.addCt ?? 0) + addCt,
+        const bankCredsMap = db.getBankCredsMap();
+        const bankCreds = bankCredsMap[account.bankId];
+        const args: ExtractApiArgs = {
+          account,
+          bankCreds,
+        };
+
+        const url = `${process.env.EXTRACTOR_URL_LOCALHOST}/extract`;
+        const stream = got.stream(url, { method: "POST", json: args });
+
+        const decoder = new TextDecoder("utf8");
+        let buffer = "";
+        stream.on("data", (d) => {
+          let chunk: ExtractApiPayloadChunk;
+          try {
+            buffer += decoder.decode(d);
+            chunk = JSON.parse(buffer);
+            buffer = "";
+          } catch (e) {
+            console.log("Error decoding progress chunk from extractor");
+            return;
+          }
+
+          if (chunk.extraction) {
+            console.log(
+              "Received extraction update:",
+              Object.keys(chunk.extraction)
+            );
+            db.updateExtraction(extractionId, chunk.extraction);
+          }
+
+          if (chunk.price) {
+            console.log("Received account update:", Object.keys(chunk.price));
+            db.updateAccount(account._id, {
+              ...account,
+              price: chunk.price,
+            });
+            db.updateExtraction(extractionId, {
+              updatedAt: new Date().toISOString(),
+            });
+          }
+
+          if (chunk.transactions) {
+            const foundCt = chunk.transactions.length;
+            const addCt = db.addTransactions(chunk.transactions);
+            console.log(
+              `Received transactions update: ${foundCt} total, ${addCt} new`
+            );
+            const extraction = db.getExtraction(extractionId);
+            db.updateExtraction(extractionId, {
+              foundCt: (extraction?.foundCt ?? 0) + foundCt,
+              addCt: (extraction?.addCt ?? 0) + addCt,
+              updatedAt: new Date().toISOString(),
+            });
+          }
+
+          if (chunk.needMfaCode) {
+            db.setMfaInfo({ bankId: account.bankId });
+          }
+
+          if (chunk.mfaFinish) {
+            db.deleteMfaInfo(account.bankId);
+          }
+        });
+        stream.on("end", () => {
+          console.log("Extraction ended");
+          db.updateExtraction(extractionId, {
+            finishedAt: new Date().toISOString(),
           });
-        }
+          res();
+        });
+        stream.on("close", () => {
+          console.log("Extraction closed");
+          db.abortAllUnfinishedExtractions();
+          stream.destroy();
+          rej("Extraction closed");
+        });
+        stream.on("error", (e) => {
+          console.log("Extraction error:", e);
+          db.abortAllUnfinishedExtractions();
+          stream.destroy();
+          rej("Extraction closed");
+        });
+      });
 
-        if (chunk.needMfaCode) {
-          db.setMfaInfo({ bankId: account.bankId });
-        }
-
-        if (chunk.mfaFinish) {
-          db.deleteMfaInfo(account.bankId);
-        }
-      });
-      stream.on("end", () => {
-        console.log("Extraction ended");
-        db.closeExtractionInProgress(account._id);
-      });
-      stream.on("close", () => {
-        console.log("Extraction closed");
-        db.closeExtractionInProgress(account._id);
-        stream.destroy();
-      });
-      stream.on("error", (e) => {
-        console.log("Extraction error:", e);
-        db.closeExtractionInProgress(account._id);
-        stream.destroy();
-      });
-    } catch (e) {
-      console.log(`Error extracting ${account.display}`);
-      res.status(401).send({ error: `Error extracting ${account.display}` });
-      return;
+      try {
+        await promise;
+      } catch (e) {
+        console.log(`Unrecoverable error extracting account: ${e}`);
+        return;
+      }
     }
-
-    res.status(200).send({ message: "ok" });
   });
 
   app.post("/extractions", async (req, res) => {
@@ -273,20 +298,15 @@ const start = () => {
     res.status(200).send(payload);
   });
 
-  app.post("/extractions/current", async (req, res) => {
-    const payload: GetExtractionsInProgressApiPayload = {
+  app.post("/extractions/unfinished", async (req, res) => {
+    const payload: GetExtractionsUnfinishedApiPayload = {
       data: {
         extractions: [],
       },
     };
 
-    const accounts = db.getAccounts();
-    for (const account of accounts.accounts) {
-      const extraction = db.getExtractionInProgress(account._id);
-      if (extraction) {
-        payload.data.extractions.push(extraction);
-      }
-    }
+    const unfinishedExtractions = db.getExtractionsUnfinished();
+    payload.data.extractions = unfinishedExtractions;
 
     res.status(200).send(payload);
   });
@@ -322,11 +342,7 @@ const start = () => {
 };
 
 const stop = () => {
-  const accounts = db.getAccounts();
-  for (const account of accounts.accounts) {
-    db.closeExtractionInProgress(account._id);
-  }
-
+  db.abortAllUnfinishedExtractions();
   console.log("Stopping server");
   server.close();
   console.log("Server stopped");

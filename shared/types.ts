@@ -203,7 +203,7 @@ export type GetExtractionsApiPayload = {
   };
 };
 
-export type GetExtractionsInProgressApiPayload = {
+export type GetExtractionsUnfinishedApiPayload = {
   data: {
     extractions: Extraction[];
   };

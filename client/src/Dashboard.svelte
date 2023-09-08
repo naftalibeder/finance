@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
   import { UUID } from "crypto";
   import {
     Account,
@@ -18,7 +18,7 @@
     DeleteAccountApiArgs,
     GetExtractionsApiPayload,
     Extraction,
-    GetExtractionsInProgressApiPayload,
+    GetExtractionsUnfinishedApiPayload,
     AddExtractionsApiArgs,
     MfaInfo,
     GetMfaInfoApiPayload,
@@ -66,7 +66,7 @@
   /** A list of all extractions ever completed or in progress. */
   let extractions: Extraction[] = [];
   /** A list of all extractions currently in progress. */
-  let activeExtractions: Extraction[] = [];
+  let unfinishedExtractions: Extraction[] = [];
   /** Multi-factor request information for an extraction currently in progress. */
   let extractionMfaInfos: MfaInfo[] = [];
 
@@ -105,9 +105,15 @@
   );
 
   onMount(async () => {
+    document.addEventListener("keydown", onKeyPress);
+
     isLoading = true;
     await fetchAll();
     isLoading = false;
+  });
+
+  onDestroy(() => {
+    document.removeEventListener("keydown", onKeyPress);
   });
 
   const fetchAll = async () => {
@@ -231,18 +237,18 @@
     try {
       const extractionPayload = await post<
         undefined,
-        GetExtractionsInProgressApiPayload
-      >("extractions/current");
-      const activeExtractionsPrevTick = activeExtractions;
-      activeExtractions = extractionPayload.data.extractions;
+        GetExtractionsUnfinishedApiPayload
+      >("extractions/unfinished");
+      const unfinishedExtractionsPrevTick = unfinishedExtractions;
+      unfinishedExtractions = extractionPayload.data.extractions;
 
       const mfaPayload = await post<undefined, GetMfaInfoApiPayload>(
         "mfa/current"
       );
       extractionMfaInfos = mfaPayload.data.mfaInfos;
 
-      if (activeExtractions.length > 0) {
-        const accountsDisp = activeExtractions.map((o) => {
+      if (unfinishedExtractions.length > 0) {
+        const accountsDisp = unfinishedExtractions.map((o) => {
           const account = accounts.find((p) => p._id === o.accountId);
           const startedStr = o.startedAt ? "yes" : "no";
           const finishedStr = o.finishedAt ? "yes" : "no";
@@ -253,13 +259,17 @@
         console.log(accountsDisp.join("\n"));
       }
 
-      const pendingCtPrev = activeExtractionsPrevTick.filter(
+      const pendingCtPrev = unfinishedExtractionsPrevTick.filter(
         (o) => !o.finishedAt
       ).length;
-      const pendingCt = activeExtractions.filter((o) => !o.finishedAt).length;
+      const pendingCt = unfinishedExtractions.filter(
+        (o) => !o.finishedAt
+      ).length;
 
-      const updatedAts = activeExtractions.map((o) => o.updatedAt).join(",");
-      const updatedAtsPrev = activeExtractionsPrevTick
+      const updatedAts = unfinishedExtractions
+        .map((o) => o.updatedAt)
+        .join(",");
+      const updatedAtsPrev = unfinishedExtractionsPrevTick
         .map((o) => o.updatedAt)
         .join(",");
       if (pendingCt !== pendingCtPrev || updatedAts !== updatedAtsPrev) {
@@ -280,7 +290,7 @@
       }
     } catch (e) {
       console.log("Error fetching extraction status:", e);
-      activeExtractions = [];
+      unfinishedExtractions = [];
       extractionMfaInfos = [];
     }
   };
@@ -316,7 +326,7 @@
     }, 100);
   };
 
-  document.addEventListener("keydown", (evt) => {
+  const onKeyPress = (evt: KeyboardEvent) => {
     if (evt.metaKey && evt.key === "k") {
       evt.preventDefault();
       searchInputFieldRef.focus();
@@ -326,7 +336,7 @@
       query = "";
       searchInputFieldRef.blur();
     }
-  });
+  };
 </script>
 
 <div class="container">
@@ -369,7 +379,7 @@
       {accounts}
       {accountsSum}
       {banks}
-      {activeExtractions}
+      {unfinishedExtractions}
       onClickCreate={createAccount}
       onClickAccount={(id) => {
         accountIdShowingDetail = id;

@@ -29,7 +29,7 @@ import {
 import { ExtractorFuncArgs, OnExtractionEvent } from "./types.js";
 
 const BROWSER_CONTEXT_PATH = `${TMP_DIR}/browser-context.json`;
-const HEADLESS = false;
+const HEADLESS = true;
 
 /**
  * Extracts the current account value and all available transactions for the
@@ -57,10 +57,7 @@ export const runAccount = async (
   // Run the account extraction.
 
   onEvent({
-    extraction: {
-      startedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
+    extraction: { startedAt: new Date().toISOString() },
   });
 
   try {
@@ -92,14 +89,13 @@ export const runAccount = async (
     await browserContext.storageState({ path: BROWSER_CONTEXT_PATH });
     await page.close();
   } catch (e) {
-    onEvent({ message: `Error extracting: ${e}` });
     const p = await takeErrorScreenshot(page, tmpRunDir);
     errorScreenshotPath = path.resolve(p);
     error = `${e}`;
   }
 
   onEvent({
-    extraction: { finishedAt: new Date().toISOString() },
+    extraction: { finishedAt: new Date().toISOString(), error },
     mfaFinish: true,
   });
 
@@ -109,13 +105,13 @@ export const runAccount = async (
 
   if (error) {
     onEvent({
-      message: `Error:
+      message: `Extraction finished with error:
       ${error}
       ${errorScreenshotPath}`,
     });
-    throw error;
+  } else {
+    onEvent({ message: "Extraction successful" });
   }
-  onEvent({ message: "Extraction successful" });
 };
 
 const setUp = async (): Promise<[Browser, BrowserContext]> => {
@@ -169,7 +165,6 @@ export const getAccountData = async (
     onEvent({
       message: `Found account value: ${accountValue.amount} ${accountValue.currency}`,
       price: accountValue,
-      extraction: { updatedAt: new Date().toISOString() },
     });
     return accountValue;
   };
@@ -229,7 +224,6 @@ export const getAccountData = async (
       onEvent({
         message: `Found ${transactionsChunk.length} transactions for range ${prettyRange}; skipped ${skipCt} non-transaction rows`,
         transactions: transactionsChunk,
-        extraction: { updatedAt: new Date().toISOString() },
       });
       transactions = [...transactions, ...transactionsChunk];
 

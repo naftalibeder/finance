@@ -8,12 +8,10 @@
   export let accounts: Account[];
   export let accountsSum: Price;
   export let banks: Bank[];
-  export let activeExtractions: Extraction[];
+  export let unfinishedExtractions: Extraction[];
   export let onClickCreate: () => void;
   export let onClickAccount: (accountId: UUID) => void;
   export let onClickExtract: (accountIds?: UUID[]) => void;
-
-  $: anyIsExtracting = activeExtractions.length > 0;
 </script>
 
 <div class="section">
@@ -31,7 +29,7 @@
         {prettyCurrency(accountsSum)}
       </div>
       <div class="cell account gutter-r">
-        {#if !anyIsExtracting}
+        {#if unfinishedExtractions.length === 0}
           <button class="hover-fade" on:click={() => onClickExtract()}>
             <Icon kind="reload" size="small" />
           </button>
@@ -43,7 +41,7 @@
       <AccountsListItem
         account={a}
         bank={banks.find((o) => o.id === a.bankId)}
-        extraction={activeExtractions.find((o) => o.accountId === a._id)}
+        extraction={unfinishedExtractions.find((o) => o.accountId === a._id)}
         onClickAccount={() => onClickAccount(a._id)}
         onClickExtract={() => onClickExtract([a._id])}
       />
