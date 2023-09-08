@@ -159,28 +159,30 @@ class ChaseBankExtractor implements Extractor {
     const lastFour = account.number.slice(-4);
     loc = await findFirst(page, `[text*="${lastFour}"]`);
     await loc?.click();
-    await page.waitForTimeout(1000);
 
-    loc = await findFirst(page, "#downloadActivityIcon");
+    loc = await findFirst(page, "#downloadActivityIcon", {
+      timeout: 3000,
+      forceTimeout: true,
+    });
     await loc?.scrollIntoViewIfNeeded();
     await loc?.click();
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(3000);
 
     // Clear filters if any are set.
 
     loc = await findFirst(page, "#downloadOtherActivity");
     await loc?.click();
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(3000);
 
     // Set date range.
 
     loc = await findFirst(page, "#select-downloadActivityOptionId");
     await loc?.click();
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(3000);
 
     loc = await findFirst(page, `[value="DATE_RANGE"]`);
     await loc?.click();
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(3000);
 
     loc = await findFirst(page, "#accountActivityFromDate-input-input");
     await loc?.fill(range.start.toLocaleDateString("en-US"));
