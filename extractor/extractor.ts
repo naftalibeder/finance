@@ -52,7 +52,7 @@ export const runAccount = async (
   const [browser, browserContext] = await setUp();
 
   const page = await browserContext.newPage();
-  page.setViewportSize({ width: 1948, height: 955 });
+  await page.setViewportSize({ width: 1948, height: 955 });
 
   // Run the account extraction.
 
