@@ -46,7 +46,9 @@ class ChaseBankExtractor implements Extractor {
 
   goToLoginPage = async (args: ExtractorFuncArgs) => {
     const { extractor, account, bankCreds, page } = args;
-    await page.goto("https://chase.com", { waitUntil: "domcontentloaded" });
+    await page.goto("https://www.chase.com/", {
+      waitUntil: "domcontentloaded",
+    });
   };
 
   goToDashboardPage = async (args: ExtractorFuncArgs) => {
@@ -178,11 +180,9 @@ class ChaseBankExtractor implements Extractor {
 
     loc = await findFirst(page, "#select-downloadActivityOptionId");
     await loc?.click();
-    await page.waitForTimeout(3000);
 
     loc = await findFirst(page, `[value="DATE_RANGE"]`);
     await loc?.click();
-    await page.waitForTimeout(3000);
 
     loc = await findFirst(page, "#accountActivityFromDate-input-input");
     await loc?.fill(range.start.toLocaleDateString("en-US"));
