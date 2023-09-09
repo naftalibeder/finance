@@ -2,16 +2,9 @@
   import { MfaInfo } from "shared";
 
   export let mfaInfos: MfaInfo[];
-  export let onClickOption: (bankId: string, option: number) => Promise<void>;
   export let onClickSend: (bankId: string, code: string) => Promise<void>;
 
   let isSending = false;
-
-  const _onClickOption = async (bankId: string, option: number) => {
-    isSending = true;
-    await onClickOption(bankId, option);
-    isSending = false;
-  };
 
   const _onClickSend = async (bankId: string, code: string) => {
     isSending = true;
@@ -24,27 +17,6 @@
   <div class="outline-box">
     {#each mfaInfos as mfaInfo}
       <div class="row">
-        {#if mfaInfo.options}
-        <div>
-          <label for={mfaInfo.bankId}>{mfaInfo.bankId}</label>
-          <select name="{mfaInfo.bankId}" id="{mfaInfo.bankId}" disabled={isSending}>
-            {#each mfaInfo.options as option, index}
-            <option value="{index}">{option}</option>
-            {/each}
-          </select>
-        </div>
-        <button
-          class="outline"
-          on:click={(evt) => {
-            // @ts-ignore
-            const option = document.getElementById(mfaInfo.bankId).value;
-            _onClickOption(mfaInfo.bankId, option);
-          }}
-          disabled={isSending}
-        >
-          Select option
-        </button>
-        {:else}
         <div>
           <label for={mfaInfo.bankId}>{mfaInfo.bankId}</label>
           <input
@@ -64,7 +36,6 @@
         >
           Send code
         </button>
-        {/if}
       </div>
     {/each}
   </div>

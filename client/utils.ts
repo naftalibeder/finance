@@ -35,11 +35,12 @@ export const prettyDate = (
 };
 
 export const prettyTimeAgo = (s: string): string | undefined => {
-  const sec = secAgo(s);
-  if (!sec) {
+  const ms = msAgo(s);
+  if (ms === undefined) {
     return undefined;
   }
 
+  const sec = Math.round(ms / 1000);
   const min = Math.round(sec / 60);
   const hr = Math.round(min / 60);
   const day = Math.round(hr / 24);
@@ -79,14 +80,14 @@ export const prettyDurationBetweenDates = (
   return prettyDuration(ms);
 };
 
-export const secAgo = (s: string): number | undefined => {
+export const msAgo = (s: string): number | undefined => {
   const d = new Date(s);
   if (!d) {
     return undefined;
   }
 
-  const msAgo = new Date().valueOf() - new Date(d).valueOf();
-  return Math.round(msAgo / 1000);
+  const ms = new Date().valueOf() - new Date(d).valueOf();
+  return ms;
 };
 
 export const datesInRange = (start: Date, end: Date): Date[] => {

@@ -1,5 +1,5 @@
 import mocha from "mocha";
-import { buildFiltersFromQuery, transactionMatchesFilters } from "./query";
+import { buildFiltersFromQuery, transactionMatchesFilters } from "./index.js";
 // @ts-ignore
 import { Transaction } from "shared";
 import { randomUUID } from "crypto";

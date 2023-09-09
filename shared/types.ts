@@ -41,9 +41,13 @@ export type Account = {
     | "unselected";
   /** The type of resource stored in the account. */
   type: "assets" | "liabilities" | "equity" | "revenue" | "expenses";
+  /** The preferred place to receive multi-factor codes. */
+  preferredMfaOption: MfaOption;
   /** The current value of the account's assets. */
   price: Price;
 };
+
+export type MfaOption = "sms" | "email";
 
 /** A unique transaction. */
 export type Transaction = {
@@ -68,26 +72,17 @@ export type Price = {
 
 export type MfaInfo = {
   bankId: string;
-  options?: string[];
-  option?: number;
   code?: string;
   requestedAt: string;
 };
 
-/** Information about a contiguous extraction attempt for one or more accounts. */
+/** Information about the extraction for a single account. */
 export type Extraction = {
   _id: UUID;
-  queuedAt: string;
-  startedAt?: string;
-  finishedAt?: string;
-  accounts: Record<UUID, ExtractionAccount>;
-};
-
-/** Information about the extraction for a single account. */
-export type ExtractionAccount = {
   accountId: UUID;
   queuedAt: string;
   startedAt?: string;
+  updatedAt?: string;
   finishedAt?: string;
   foundCt: number;
   addCt: number;
@@ -188,19 +183,44 @@ export type GetTransactionsApiPayload = {
   };
 };
 
+export type ExtractApiArgs = {
+  account: Account;
+  bankCreds: BankCreds;
+};
+
+export type ExtractApiPayloadChunk = {
+  message?: string;
+  extraction?: Partial<Extraction>;
+  price?: Price;
+  transactions?: Transaction[];
+  needMfaCode?: boolean;
+  mfaFinish?: boolean;
+};
+
 export type GetExtractionsApiPayload = {
   data: {
     extractions: Extraction[];
   };
 };
 
-export type AddExtractionAccountsApiArgs = {
+export type GetExtractionsUnfinishedApiPayload = {
+  data: {
+    extractions: Extraction[];
+  };
+};
+
+export type AddExtractionsApiArgs = {
   accountIds: UUID[];
 };
 
-export type GetExtractionStatusApiPayload = {
+export type GetMfaInfoApiPayload = {
   data: {
-    extraction?: Extraction;
     mfaInfos: MfaInfo[];
   };
+};
+
+export type SetMfaInfoApiArgs = {
+  bankId: string;
+  option?: string;
+  code?: string;
 };

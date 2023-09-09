@@ -1,37 +1,40 @@
 <script lang="ts">
-  import { Account, Extraction, ExtractionAccount } from "shared";
+  import { Account, Extraction } from "shared";
   import { prettyDate, prettyDurationBetweenDates } from "../utils";
 
-  export let extraction: Extraction;
+  export let extractions: Extraction[];
   export let accounts: Account[];
   export let isExpanded = false;
   export let now: Date;
   export let onClickToggleExpand: () => void;
 
-  const accountDisplay = (a: ExtractionAccount) => {
-    return accounts.find((o) => o._id === a.accountId)?.display;
+  $: sectionDateDisplay = prettyDate(extractions[0].queuedAt, {
+    includeTime: "hr:min",
+  });
+
+  const accountDisplay = (e: Extraction) => {
+    return accounts.find((o) => o._id === e.accountId)?.display;
   };
 
-  const durationDisplay = (
-    a: ExtractionAccount,
-    now: Date
-  ): string | undefined => {
-    if (a.finishedAt) {
-      return prettyDurationBetweenDates(a.startedAt, a.finishedAt);
-    } else if (a.startedAt) {
-      return prettyDurationBetweenDates(a.startedAt, now);
+  const durationDisplay = (e: Extraction, now: Date): string | undefined => {
+    if (e.finishedAt) {
+      return prettyDurationBetweenDates(e.startedAt, e.finishedAt);
+    } else if (e.startedAt) {
+      return prettyDurationBetweenDates(e.startedAt, now);
     } else {
       return undefined;
     }
   };
 
-  const statusDisplay = (a: ExtractionAccount) => {
-    if (a.finishedAt) {
-      return a.error ? a.error : "Complete";
-    } else if (a.startedAt) {
-      return extraction.finishedAt ? "Aborted" : "In progress";
+  const statusDisplay = (e: Extraction) => {
+    if (e.error) {
+      return e.error;
+    } else if (e.finishedAt) {
+      return "Complete";
+    } else if (e.startedAt) {
+      return "In progress";
     } else {
-      return extraction.finishedAt ? "Cancelled" : "Pending";
+      return "Pending";
     }
   };
 </script>
@@ -39,7 +42,7 @@
 <div>
   <button on:click={onClickToggleExpand}>
     <h3 class="section">
-      {prettyDate(extraction.queuedAt, { includeTime: "hr:min" })}
+      {sectionDateDisplay}
     </h3>
   </button>
 
@@ -51,16 +54,16 @@
       <div class="cell">Duration</div>
       <div class="cell">Status</div>
 
-      {#each Object.values(extraction.accounts) as account}
-        <div class="cell">{accountDisplay(account)}</div>
-        <div class="cell">{account.foundCt}</div>
-        <div class="cell">{account.addCt}</div>
-        {#if account.startedAt}
-          <div class="cell">{durationDisplay(account, now)}</div>
+      {#each extractions as e}
+        <div class="cell">{accountDisplay(e)}</div>
+        <div class="cell">{e.foundCt}</div>
+        <div class="cell">{e.addCt}</div>
+        {#if e.startedAt}
+          <div class="cell">{durationDisplay(e, now)}</div>
         {:else}
           <div class="cell faded">{"N/A"}</div>
         {/if}
-        <div class="cell h-scroll">{statusDisplay(account)}</div>
+        <div class="cell h-scroll">{statusDisplay(e)}</div>
       {/each}
     </div>
   {/if}

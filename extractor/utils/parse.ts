@@ -1,9 +1,12 @@
 import { parse } from "csv-parse";
-import { Account, Transaction } from "shared/types";
-import { Frame, FrameLocator } from "@playwright/test";
-import { toDate, toPrice } from "../utils";
-import { Extractor, ExtractorColumnMap, ExtractorColumnMapKey } from "types";
+import { Account, Transaction } from "shared";
 import { randomUUID } from "crypto";
+import { toDate, toPrice } from "./index.js";
+import {
+  Extractor,
+  ExtractorColumnMap,
+  ExtractorColumnMapKey,
+} from "../types.js";
 
 export const parseTransactions = async (
   transactionData: string,
@@ -112,18 +115,4 @@ const buildTransaction = (
     description: rowNorm.description,
   };
   return transaction;
-};
-
-export const getSelectorExists = async (
-  frame: Frame | FrameLocator,
-  selector: string,
-  timeout: number
-): Promise<boolean> => {
-  try {
-    const loc = frame.locator(selector);
-    await loc.waitFor({ state: "attached", timeout });
-    return true;
-  } catch (e) {
-    return false;
-  }
 };

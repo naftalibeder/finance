@@ -1,44 +1,67 @@
 <script lang="ts">
+  import { onDestroy, onMount } from "svelte";
+
   export let onPressDismiss: () => void;
 
-  let containerRef: HTMLDivElement;
+  let containerRef: HTMLButtonElement;
 
   const onClickBg = (evt: MouseEvent) => {
     if (evt.target === containerRef) {
       onPressDismiss();
     }
   };
+
+  const onKeyPress = (evt: KeyboardEvent) => {
+    if (evt.code === "Escape") {
+      onPressDismiss();
+    }
+  };
+
+  onMount(() => {
+    addEventListener("keydown", onKeyPress);
+  });
+
+  onDestroy(() => {
+    removeEventListener("keydown", onKeyPress);
+  });
 </script>
 
-<div
-  class="container"
-  on:click={onClickBg}
-  on:keypress={() => {}}
-  bind:this={containerRef}
->
+<button class="container" on:click={onClickBg} bind:this={containerRef}>
   <div class="box">
-    <slot />
+    <div class="box-inner">
+      <slot />
+    </div>
   </div>
-</div>
+</button>
 
 <style>
   .container {
+    all: unset;
     position: fixed;
-    width: 100%;
     top: 0px;
     bottom: 0px;
     left: 0px;
     right: 0px;
+    width: 100%;
+    height: 100%;
     display: grid;
-    grid-template-columns: 1fr 3fr 1fr;
-    grid-template-rows: 1fr auto 1fr;
+    grid-template-columns: 32px 1fr 32px;
+    grid-template-rows: 32px 1fr 32px;
     background-color: rgba(0, 0, 0, 0.5);
   }
 
   .box {
+    display: grid;
     grid-column: 2;
     grid-row: 2;
+    padding: 16px;
     background-color: var(--text-gray-800);
     cursor: default;
+    overflow-y: auto;
+  }
+
+  .box-inner {
+    display: grid;
+    overflow-y: scroll;
   }
 </style>

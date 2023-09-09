@@ -1,8 +1,6 @@
-import db from "./db.js";
 import router from "./router.js";
 
 const start = async () => {
-  db.migrate();
   router.start();
 };
 

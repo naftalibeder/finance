@@ -1,8 +1,8 @@
 import express from "express";
+import got from "got";
 import bodyParser from "body-parser";
 import bcrypt from "bcrypt";
-import extractor from "./extractor";
-import db from "./db";
+import { randomUUID } from "crypto";
 import {
   CreateAccountApiPayload,
   GetAccountsApiPayload,
@@ -17,14 +17,17 @@ import {
   VerifyDeviceApiArgs,
   DeleteAccountApiArgs,
   GetExtractionsApiPayload,
-  GetExtractionStatusApiPayload,
-  AddExtractionAccountsApiArgs,
+  GetExtractionsUnfinishedApiPayload,
+  AddExtractionsApiArgs,
+  GetMfaInfoApiPayload,
+  ExtractApiArgs,
+  ExtractApiPayloadChunk,
+  Bank,
 } from "shared";
-import env from "./env";
-import { randomUUID } from "crypto";
+import db from "./db.js";
 
 const app = express();
-const port = env.get("SERVER_PORT");
+const port = process.env.SERVER_PORT;
 
 const start = () => {
   app.use(bodyParser.json());
@@ -71,7 +74,7 @@ const start = () => {
     const name = randomUUID();
     const token = await bcrypt.hash(password, saltRounds);
     db.setDevice(name, token);
-    env.set("USER_PASSWORD", password);
+    process.env.USER_PASSWORD = password;
 
     const payload: SignInApiPayload = { name, token };
     res.status(200).send(payload);
@@ -81,7 +84,7 @@ const start = () => {
     const args = req.body as VerifyDeviceApiArgs;
     const { name, token } = args;
 
-    const userPassword = env.get("USER_PASSWORD");
+    const userPassword = process.env.USER_PASSWORD;
     if (!userPassword) {
       res.status(401).send({ error: "No password stored in memory" });
       return;
@@ -98,15 +101,19 @@ const start = () => {
     res.status(200).send({ message: "ok" });
   });
 
-  app.post("/extract", async (req, res) => {
-    extractor.check();
-    res.status(200).send({ message: "ok" });
-  });
-
   app.post("/banks", async (req, res) => {
-    const data = db.getBanks();
+    let banks: Bank[];
+    try {
+      const url = `${process.env.EXTRACTOR_URL_LOCALHOST}/banks`;
+      const res = await got.post(url).json<GetBanksApiPayload>();
+      banks = res.data.banks;
+    } catch (e) {
+      console.log("Error getting banks:", e);
+      res.status(501).send(e);
+      return;
+    }
 
-    const payload: GetBanksApiPayload = { data };
+    const payload: GetBanksApiPayload = { data: { banks } };
     res.status(200).send(payload);
   });
 
@@ -165,53 +172,167 @@ const start = () => {
     res.status(200).send(payload);
   });
 
-  app.post("/extractions", async (req, res) => {
-    const extractions = db.getExtractions();
-    const payload: GetExtractionsApiPayload = { data: { extractions } };
-    res.send(payload);
-  });
-
-  app.post("/extractions/add", async (req, res) => {
-    const args = req.body as AddExtractionAccountsApiArgs;
-    const extraction = db.getOrCreateExtractionInProgress();
-    db.updateExtractionWithPendingAccounts(extraction._id, args.accountIds);
-    res.status(200).send({ message: "ok" });
-  });
-
-  app.post("/status", async (req, res) => {
-    const extractions = db.getExtractions();
-    const extraction = extractions[extractions.length - 1];
-    if (!extraction || extraction.finishedAt) {
-      const payload: GetExtractionStatusApiPayload = {
-        data: {
-          extraction: undefined,
-          mfaInfos: [],
-        },
-      };
-      res.send(payload);
+  app.post("/extract", async (req, res) => {
+    const pendingExtractions = db.getExtractionsPending();
+    if (pendingExtractions.length === 0) {
+      res.status(401).send({ error: "No pending extractions found" });
       return;
     }
 
-    const mfaInfos = db.getMfaInfos();
-    const payload: GetExtractionStatusApiPayload = {
+    res.status(200).send({ message: "ok" });
+
+    for (const pendingExtraction of pendingExtractions) {
+      const promise = new Promise<void>((res, rej) => {
+        const extractionId = pendingExtraction._id;
+        const accountId = pendingExtraction.accountId;
+        const account = db.getAccount(accountId);
+        if (!account) {
+          rej(`No account found with id ${accountId}`);
+          return;
+        }
+
+        console.log(`Starting extraction for account ${account.display}`);
+
+        db.updateExtraction(extractionId, {
+          startedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+
+        const bankCredsMap = db.getBankCredsMap();
+        const bankCreds = bankCredsMap[account.bankId];
+        const args: ExtractApiArgs = {
+          account,
+          bankCreds,
+        };
+
+        const url = `${process.env.EXTRACTOR_URL_LOCALHOST}/extract`;
+        const stream = got.stream(url, { method: "POST", json: args });
+
+        const decoder = new TextDecoder("utf8");
+        let buffer = "";
+        stream.on("data", (d) => {
+          let chunk: ExtractApiPayloadChunk;
+          try {
+            buffer += decoder.decode(d);
+            chunk = JSON.parse(buffer);
+            buffer = "";
+          } catch (e) {
+            console.log("Error decoding progress chunk from extractor");
+            return;
+          }
+
+          if (chunk.extraction) {
+            console.log(
+              "Received extraction update:",
+              Object.keys(chunk.extraction)
+            );
+            db.updateExtraction(extractionId, chunk.extraction);
+          }
+
+          if (chunk.price) {
+            console.log("Received account update:", Object.keys(chunk.price));
+            db.updateAccount(account._id, {
+              ...account,
+              price: chunk.price,
+            });
+            db.updateExtraction(extractionId, {
+              updatedAt: new Date().toISOString(),
+            });
+          }
+
+          if (chunk.transactions) {
+            const foundCt = chunk.transactions.length;
+            const addCt = db.addTransactions(chunk.transactions);
+            console.log(
+              `Received transactions update: ${foundCt} total, ${addCt} new`
+            );
+            const extraction = db.getExtraction(extractionId);
+            db.updateExtraction(extractionId, {
+              foundCt: (extraction?.foundCt ?? 0) + foundCt,
+              addCt: (extraction?.addCt ?? 0) + addCt,
+              updatedAt: new Date().toISOString(),
+            });
+          }
+
+          if (chunk.needMfaCode) {
+            db.setMfaInfo({ bankId: account.bankId });
+          }
+
+          if (chunk.mfaFinish) {
+            db.deleteMfaInfo(account.bankId);
+          }
+        });
+        stream.on("end", () => {
+          console.log("Extraction ended");
+          db.updateExtraction(extractionId, {
+            finishedAt: new Date().toISOString(),
+          });
+          res();
+        });
+        stream.on("close", () => {
+          console.log("Extraction closed");
+          db.abortAllUnfinishedExtractions();
+          stream.destroy();
+          rej("Extraction closed");
+        });
+        stream.on("error", (e) => {
+          console.log("Extraction error:", e);
+          db.abortAllUnfinishedExtractions();
+          stream.destroy();
+          rej("Extraction closed");
+        });
+      });
+
+      try {
+        await promise;
+      } catch (e) {
+        console.log(`Unrecoverable error extracting account: ${e}`);
+        return;
+      }
+    }
+  });
+
+  app.post("/extractions", async (req, res) => {
+    const extractions = db.getExtractions();
+    const payload: GetExtractionsApiPayload = { data: { extractions } };
+    res.status(200).send(payload);
+  });
+
+  app.post("/extractions/unfinished", async (req, res) => {
+    const payload: GetExtractionsUnfinishedApiPayload = {
       data: {
-        extraction,
-        mfaInfos,
+        extractions: [],
       },
     };
 
-    res.send(payload);
+    const unfinishedExtractions = db.getExtractionsUnfinished();
+    payload.data.extractions = unfinishedExtractions;
+
+    res.status(200).send(payload);
   });
 
-  app.post("/mfa/option", async (req, res) => {
-    const args = req.body as { bankId: string; option: number };
-    const { bankId, option } = args;
-    db.setMfaInfo({ bankId, option });
-
+  app.post("/extractions/add", async (req, res) => {
+    const args = req.body as AddExtractionsApiArgs;
+    for (const accountId of args.accountIds) {
+      db.addExtractionPending(accountId);
+    }
     res.status(200).send({ message: "ok" });
   });
 
-  app.post("/mfa", async (req, res) => {
+  app.post("/mfa/current", async (req, res) => {
+    const payload: GetMfaInfoApiPayload = {
+      data: {
+        mfaInfos: [],
+      },
+    };
+
+    const mfaInfos = db.getMfaInfos();
+    payload.data.mfaInfos = mfaInfos;
+
+    res.status(200).send(payload);
+  });
+
+  app.post("/mfa/code", async (req, res) => {
     const args = req.body as { bankId: string; code: string };
     const { bankId, code } = args;
     db.setMfaInfo({ bankId, code });
@@ -221,9 +342,10 @@ const start = () => {
 };
 
 const stop = () => {
-  console.log("Server stopped");
-  db.closeExtractionInProgress();
+  db.abortAllUnfinishedExtractions();
+  console.log("Stopping server");
   server.close();
+  console.log("Server stopped");
 };
 
 const server = app.listen(port, () => {
