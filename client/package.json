@@ -4,7 +4,7 @@
   "scripts": {
     "build": "vite build && npx tsc -p ./tsconfig-main.json",
     "start": "set -a && . ../.env && export VITE_SERVER_URL=\"$SERVER_URL\" && set +a && npm run build && node dist/main.js",
-    "test": "npm run build && mocha dist/**/*_test.js"
+    "test": "npm run build && mocha \"**/*_test.js\""
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "2.4.2",
