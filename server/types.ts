@@ -1,21 +1,14 @@
-import { Account, Transaction, Extraction, MfaInfo } from "shared";
-
-export type Database = {
-  user: User;
-  bankCredentials: string;
-  accounts: Account[];
-  transactions: Transaction[];
-  extractions: Extraction[];
-  mfaInfos: MfaInfo[];
-};
+import { UUID } from "crypto";
 
 export type User = {
+  _id: UUID;
   email: string;
   password: string;
-  devices: {
-    [name: string]: {
-      token: string;
-      createdAt: string;
-    };
-  };
+  bankCredentials: string;
+};
+
+export type Device = {
+  _id: UUID;
+  _createdAt: string;
+  token: string;
 };

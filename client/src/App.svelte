@@ -14,9 +14,9 @@
   });
 
   const checkDevice = async (): Promise<boolean> => {
-    const name = localStorage.getItem("name");
+    const deviceId = localStorage.getItem("deviceId");
     const token = localStorage.getItem("token");
-    if (!name || !token) {
+    if (!deviceId || !token) {
       console.log("No token stored locally");
       return false;
     }
@@ -24,7 +24,7 @@
     try {
       console.log("Submitting token:", token);
       await post<VerifyDeviceApiArgs, undefined>("verifyDevice", {
-        name,
+        deviceId,
         token,
       });
       return true;

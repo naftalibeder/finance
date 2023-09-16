@@ -1,4 +1,16 @@
-import { Transaction, Price } from "shared";
+import { Transaction, Price, Account } from "shared";
+
+export const accountsSumPrice = (accounts: Account[]): Price => {
+  let sum: Price = {
+    amount: 0,
+    currency: "USD",
+  };
+  for (const account of accounts) {
+    sum.amount += account.price.amount;
+  }
+
+  return sum;
+};
 
 export const transactionsSumPrice = (transactions: Transaction[]): Price => {
   if (transactions.length === 0) {
@@ -37,6 +49,10 @@ export const transactionsMaxPrice = (transactions: Transaction[]): Price => {
   };
 };
 
-export const transactionsEarliestDate = (transactions: Transaction[]): string | undefined => {
-  return transactions.length > 0 ? transactions[transactions.length - 1].date : undefined;
-}
+export const transactionsEarliestDate = (
+  transactions: Transaction[]
+): string | undefined => {
+  return transactions.length > 0
+    ? transactions[transactions.length - 1].date
+    : undefined;
+};

@@ -8,6 +8,7 @@
   export let accounts: Account[];
   export let accountsSum: Price;
   export let banks: Bank[];
+  export let bankCredsExistMap: Record<string, boolean>;
   export let unfinishedExtractions: Extraction[];
   export let onClickCreate: () => void;
   export let onClickAccount: (accountId: UUID) => void;
@@ -41,6 +42,7 @@
       <AccountsListItem
         account={a}
         bank={banks.find((o) => o.id === a.bankId)}
+        hasCredsForBank={bankCredsExistMap[a.bankId]}
         extraction={unfinishedExtractions.find((o) => o.accountId === a._id)}
         onClickAccount={() => onClickAccount(a._id)}
         onClickExtract={() => onClickExtract([a._id])}

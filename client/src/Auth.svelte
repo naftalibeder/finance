@@ -14,8 +14,8 @@
         email,
         password,
       });
-      const { name, token } = payload;
-      localStorage.setItem("name", name);
+      const { deviceId, token } = payload;
+      localStorage.setItem("deviceId", deviceId);
       localStorage.setItem("token", token);
       onSuccess();
     } catch (e) {

@@ -5,13 +5,14 @@
 
   export let account: Account;
   export let bank: Bank | undefined;
+  export let hasCredsForBank: boolean;
   export let extraction: Extraction | undefined;
   export let onClickAccount: () => void;
   export let onClickExtract: () => void;
 
   $: displayName = account.display.length > 0 ? account.display : "New Account";
   $: bankDisplayName = bank?.displayName ?? "No bank selected";
-  $: allowHideExtractionStatus = account.bankHasCreds && !extraction;
+  $: allowHideExtractionStatus = hasCredsForBank && !extraction;
 </script>
 
 <div class="grid contents">
@@ -19,7 +20,7 @@
     {displayName}
   </button>
   <button
-    class={`cell bank ${account.bankHasCreds ? "" : "faded"}`}
+    class={`cell bank ${hasCredsForBank ? "" : "faded"}`}
     on:click={() => onClickAccount()}
   >
     {bankDisplayName}
@@ -28,7 +29,7 @@
     {prettyCurrency(account.price)}
   </div>
   <div class={`cell gutter-r ${allowHideExtractionStatus ? "hidden" : ""}`}>
-    {#if !account.bankHasCreds}
+    {#if !hasCredsForBank}
       <div style="color: var(--text-red)">
         <Icon kind="dot" size="small" />
       </div>

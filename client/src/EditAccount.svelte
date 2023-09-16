@@ -5,6 +5,7 @@
 
   export let account: Account;
   export let banks: Bank[];
+  export let hasCredsForBank: boolean;
   export let onSubmitAccount: (account: Account) => Promise<void>;
   export let onSubmitBankCreds: (
     bankId: string,
@@ -96,7 +97,7 @@
             }}
           >
             <option value="unselected">
-              {currentBank ? "Select one" : "No bank selected"}
+              {currentBank ? "Select one" : "No account kinds found for bank"}
             </option>
             {#if currentBank}
               {#each currentBank.supportedAccountKinds as kind}
@@ -140,16 +141,14 @@
           <input
             type="email"
             id={"bank-username"}
-            placeholder={account.bankHasCreds ? "************" : "Enter email"}
+            placeholder={hasCredsForBank ? "************" : "Enter username"}
             bind:value={bankUsername}
           />
           <label for="bank-password">Password</label>
           <input
             type="password"
             id={"bank-password"}
-            placeholder={account.bankHasCreds
-              ? "************"
-              : "Enter password"}
+            placeholder={hasCredsForBank ? "************" : "Enter password"}
             bind:value={bankPassword}
           />
         </div>

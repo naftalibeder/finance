@@ -12,7 +12,6 @@ describe("extract account value and transactions", () => {
       _createdAt: new Date().toISOString(),
       _updatedAt: new Date().toISOString(),
       bankId: "test-bank",
-      bankHasCreds: true,
       display: "Test Account",
       number: "1111-2222-3333-4444",
       type: "liabilities",
@@ -22,8 +21,8 @@ describe("extract account value and transactions", () => {
     };
 
     const bankCreds: BankCreds = {
-      username: "TODO",
-      password: "TODO",
+      username: "bankUsername123",
+      password: "bankPassword123",
     };
 
     try {
