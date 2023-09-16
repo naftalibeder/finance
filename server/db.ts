@@ -186,7 +186,16 @@ const migrate = async () => {
 };
 
 const close = async () => {
-  db.close();
+  await new Promise<void>(async (res, rej) => {
+    await abortAllUnfinishedExtractions();
+    db.close((e) => {
+      if (e) {
+        rej(e);
+      } else {
+        res();
+      }
+    });
+  });
   console.log("Database closed");
 };
 

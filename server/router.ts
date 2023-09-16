@@ -376,8 +376,6 @@ const start = async () => {
 };
 
 const stop = async () => {
-  await db.abortAllUnfinishedExtractions();
-  console.log("Stopping server");
   server.close();
   console.log("Server stopped");
 };
