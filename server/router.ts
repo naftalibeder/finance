@@ -2,7 +2,6 @@ import express from "express";
 import got from "got";
 import bodyParser from "body-parser";
 import bcrypt from "bcrypt";
-import { randomUUID } from "crypto";
 import {
   CreateAccountApiPayload,
   GetAccountsApiPayload,
@@ -23,6 +22,7 @@ import {
   ExtractApiArgs,
   ExtractApiPayloadChunk,
   Bank,
+  GetExtractorBanksApiPayload,
 } from "shared";
 import db from "./db.js";
 import { accountsSumPrice } from "./utils/math.js";
@@ -120,7 +120,7 @@ const start = async () => {
     let banks: Bank[];
     try {
       const url = `${process.env.EXTRACTOR_URL_LOCALHOST}/banks`;
-      const res = await got.post(url).json<GetBanksApiPayload>();
+      const res = await got.post(url).json<GetExtractorBanksApiPayload>();
       banks = res.data.banks;
     } catch (e) {
       console.log("Error getting banks:", e);

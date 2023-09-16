@@ -220,3 +220,9 @@ export type SetMfaInfoApiArgs = {
   option?: string;
   code?: string;
 };
+
+export type GetExtractorBanksApiPayload = {
+  data: {
+    banks: Bank[];
+  };
+};

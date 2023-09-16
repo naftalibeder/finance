@@ -5,7 +5,7 @@ import {
   Bank,
   ExtractApiArgs,
   ExtractApiPayloadChunk,
-  GetBanksApiPayload,
+  GetExtractorBanksApiPayload,
 } from "shared";
 import { runAccount } from "./extractor.js";
 import { extractors } from "./extractors/index.js";
@@ -64,7 +64,7 @@ const start = () => {
         supportedAccountKinds: o.supportedAccountKinds,
       };
     });
-    const payload: GetBanksApiPayload = {
+    const payload: GetExtractorBanksApiPayload = {
       data: {
         banks,
       },
