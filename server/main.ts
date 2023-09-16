@@ -1,13 +1,15 @@
 import db from "./db.js";
 import router from "./router.js";
+import { DB_SQL_PATH } from "./paths.js";
 
 const start = async () => {
-  db.migrate();
-  router.start();
+  await db.connect(DB_SQL_PATH);
+  await router.start();
 };
 
-const stop = () => {
-  router.stop();
+const stop = async () => {
+  await db.close();
+  await router.stop();
 };
 
 process.on("SIGINT", () => stop());

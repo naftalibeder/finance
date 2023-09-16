@@ -25,8 +25,6 @@ export type Account = {
   _updatedAt: string;
   /** A unique id that matches one of the available extractors. */
   bankId: string;
-  /** Whether the user has saved login credentials for the bank. */
-  bankHasCreds: boolean;
   /** The display name or nickname of the account. */
   display: string;
   /** The account number. */
@@ -118,12 +116,12 @@ export type SignInApiArgs = {
 };
 
 export type SignInApiPayload = {
-  name: string;
+  deviceId: string;
   token: string;
 };
 
 export type VerifyDeviceApiArgs = {
-  name: string;
+  deviceId: string;
   token: string;
 };
 
@@ -151,10 +149,7 @@ export type CreateAccountApiPayload = {
 };
 
 export type UpdateAccountApiArgs = {
-  account: Omit<
-    Account,
-    "_pending" | "_createdAt" | "_updatedAt" | "bankHasCreds" | "price"
-  >;
+  account: Omit<Account, "_pending" | "_createdAt" | "_updatedAt" | "price">;
 };
 
 export type UpdateAccountApiPayload = {

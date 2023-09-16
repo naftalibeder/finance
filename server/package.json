@@ -4,7 +4,7 @@
   "scripts": {
     "build": "npx tsc",
     "start": "set -a && . ../.env && set +a && npm run build && node dist/main.js",
-    "test": "npm run build && mocha dist/**/*_test.js"
+    "test": "npm run build && mocha \"**/*_test.js\""
   },
   "devDependencies": {
     "@types/bcrypt": "5.0.0",
@@ -14,6 +14,7 @@
     "express": "4.18.2",
     "got": "13.0.0",
     "shared": "file:../shared",
+    "sqlite3": "5.1.6",
     "typescript": "5.0.4"
   }
 }

@@ -52,6 +52,7 @@
     }
     return dict;
   })(accounts);
+  let bankCredsMap: Record<string, boolean> = {};
 
   let transactionsFiltered: Transaction[] = [];
   let transactionsFilteredCt = 0;
@@ -407,6 +408,7 @@
       <EditAccount
         account={accountShowingDetail}
         {banks}
+        hasCredsForBank={bankCredsMap[accountIdShowingDetail]}
         onSubmitAccount={updateAccount}
         onSubmitBankCreds={updateBankCreds}
         onSelectDeleteAccount={deleteAccount}

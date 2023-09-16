@@ -2,6 +2,7 @@
 data/extractions/*
 data/db.json
 *.sql
+*.sql*
 tmp/
 node_modules/
 dist/
