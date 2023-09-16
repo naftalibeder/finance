@@ -52,7 +52,7 @@
     }
     return dict;
   })(accounts);
-  let bankCredsMap: Record<string, boolean> = {};
+  let bankCredsExistMap: Record<string, boolean> = {};
 
   let transactionsFiltered: Transaction[] = [];
   let transactionsFilteredCt = 0;
@@ -128,6 +128,7 @@
     try {
       const payload = await post<undefined, GetBanksApiPayload>("banks");
       banks = payload.data.banks;
+      bankCredsExistMap = payload.data.credsExistMap;
       console.log(`Fetched ${banks.length} banks`);
     } catch (e) {
       console.log("Error fetching banks:", e);
@@ -380,6 +381,7 @@
       {accounts}
       {accountsSum}
       {banks}
+      {bankCredsExistMap}
       {unfinishedExtractions}
       onClickCreate={createAccount}
       onClickAccount={(id) => {
@@ -408,7 +410,7 @@
       <EditAccount
         account={accountShowingDetail}
         {banks}
-        hasCredsForBank={bankCredsMap[accountIdShowingDetail]}
+        hasCredsForBank={bankCredsExistMap[accountIdShowingDetail]}
         onSubmitAccount={updateAccount}
         onSubmitBankCreds={updateBankCreds}
         onSelectDeleteAccount={deleteAccount}

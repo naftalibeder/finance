@@ -128,6 +128,7 @@ export type VerifyDeviceApiArgs = {
 export type GetBanksApiPayload = {
   data: {
     banks: Bank[];
+    credsExistMap: Record<string, boolean>;
   };
 };
 
