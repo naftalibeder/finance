@@ -1,23 +1,27 @@
+import { SignInApiPayload } from "shared";
+
 // @ts-ignore
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 
-export const post = async <
-  Args = Record<string, any>,
-  Payload = Record<string, any>
->(
+type DefaultArgs = Record<string, any> & SignInApiPayload;
+type DefaultPayload = Record<string, any>;
+
+export const post = async <Args = DefaultArgs, Payload = DefaultPayload>(
   path: string,
   args?: Args
 ): Promise<Payload> => {
-  const body: Record<string, any> = { ...args };
-  const name = localStorage.getItem("name");
+  const url = `${serverUrl}/${path}`;
+
+  const body: Partial<DefaultArgs> = { ...args };
+  const deviceId = localStorage.getItem("deviceId");
   const token = localStorage.getItem("token");
-  if (name && token) {
-    body.name = name;
+  if (deviceId && token) {
+    body.deviceId = deviceId;
     body.token = token;
   }
 
-  const url = `${serverUrl}/${path}`;
   console.log("Request:", url, JSON.stringify(body));
+
   const res = await fetch(url, {
     method: "POST",
     headers: {
