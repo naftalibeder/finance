@@ -12,8 +12,6 @@
   export let query: string;
   export let accountsDict: Record<UUID, Account>;
 
-  const limit = 200;
-
   $: sectionText = buildSectionText(
     transactions.length,
     transactionsTotalCt,
@@ -82,7 +80,7 @@
         />
       {/each}
     {:else}
-      {#each transactions.slice(0, limit) as t}
+      {#each transactions as t}
         <TransactionsListItem
           transaction={t}
           account={accountsDict[t.accountId]}
