@@ -184,6 +184,9 @@ export const getAccountData = async (
       let skipCt = 0;
 
       try {
+        // Reloading prevents weird file download misbehavior on some sites.
+        await page.reload();
+
         await extractor.goToDashboardPage(args);
 
         onEvent({ message: `Scraping transactions for range ${prettyRange}` });
@@ -204,14 +207,10 @@ export const getAccountData = async (
         transactionsChunk = res.transactions;
         skipCt = res.skipCt;
       } catch (e) {
-        if (transactions.length === 0) {
-          throw `Error getting transaction data for range ${prettyRange}: ${e}`;
-        } else {
-          onEvent({
-            message: `Passed earliest allowed transaction range with ${prettyRange}; stopping loop`,
-          });
-          break;
-        }
+        onEvent({
+          message: `Error getting transaction data for range ${prettyRange}; stopping loop; error: ${e}`,
+        });
+        break;
       }
 
       if (transactionsChunk.length === 0) {

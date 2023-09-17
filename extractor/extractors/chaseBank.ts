@@ -41,7 +41,7 @@ class ChaseBankExtractor implements Extractor {
   };
 
   getMaxDateRangeMonths = (accountKind: Account["kind"]): number => {
-    return 6;
+    return 3;
   };
 
   goToLoginPage = async (args: ExtractorFuncArgs) => {
@@ -162,6 +162,19 @@ class ChaseBankExtractor implements Extractor {
     loc = await findFirst(page, `[text*="${lastFour}"]`);
     await loc?.click();
 
+    loc = await findFirst(page, "#header-transactionTypeOptions", {
+      timeout: 3000,
+      forceTimeout: true,
+    });
+    await loc?.click();
+
+    loc = await findFirst(page, "#transactionTypeOptions-list li", {
+      timeout: 3000,
+      forceTimeout: true,
+    });
+    loc = loc?.filter({ hasText: "All transactions" }).first();
+    await loc?.click();
+
     loc = await findFirst(page, "#downloadActivityIcon", {
       timeout: 3000,
       forceTimeout: true,
@@ -172,7 +185,10 @@ class ChaseBankExtractor implements Extractor {
 
     // Clear filters if any are set.
 
-    loc = await findFirst(page, "#downloadOtherActivity");
+    loc = await findFirst(page, "#downloadOtherActivity", {
+      timeout: 3000,
+      forceTimeout: true,
+    });
     await loc?.click();
     await page.waitForTimeout(3000);
 
@@ -192,8 +208,6 @@ class ChaseBankExtractor implements Extractor {
     await loc?.fill(range.end.toLocaleDateString("en-US"));
     await loc?.blur();
 
-    await page.waitForTimeout(1000);
-
     // Export data.
 
     const downloadPromise = page.waitForEvent("download", { timeout: 6000 });
@@ -207,11 +221,9 @@ class ChaseBankExtractor implements Extractor {
     try {
       const download = await downloadPromise;
       const downloadPath = await download.path();
-      transactionData = fs.readFileSync(downloadPath!, {
-        encoding: "utf-8",
-      });
+      transactionData = fs.readFileSync(downloadPath!, { encoding: "utf-8" });
     } catch (e) {
-      throw "Invalid date range";
+      throw `Error downloading transactions file: ${e}`;
     }
 
     return transactionData;
