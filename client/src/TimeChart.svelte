@@ -5,8 +5,8 @@
   import { TimeChartBar, TimeChartInfo } from ".";
 
   export let transactions: Transaction[];
-  export let transactionsOverallMaxPrice: Price;
-  export let transactionsOverallEarliestDate: string | undefined;
+  export let transactionsTotalMaxPrice: Price;
+  export let transactionsTotalEarliestDate: string | undefined;
   export let onHoverGroup: (group?: TransactionDateGroup) => void;
 
   let transactionDateGroups: TransactionDateGroup[] = [];
@@ -15,12 +15,12 @@
       transactions.length > 0
         ? buildTransactionsDateGroups(
             transactions,
-            transactionsOverallEarliestDate
+            transactionsTotalEarliestDate
           )
         : [];
   }
 
-  $: earliestDate = transactionsOverallEarliestDate;
+  $: earliestDate = transactionsTotalEarliestDate;
   $: latestDate = new Date().toISOString();
 
   let barHoverIndex: number | undefined;
@@ -75,12 +75,12 @@
     on:blur={() => {}}
   >
     {#each transactionDateGroups as item, i}
-      <TimeChartBar {item} {transactionsOverallMaxPrice} faded={isHover} />
+      <TimeChartBar {item} {transactionsTotalMaxPrice} faded={isHover} />
     {/each}
     {#if isHover}
       <TimeChartBar
         item={hoverGroup}
-        {transactionsOverallMaxPrice}
+        {transactionsTotalMaxPrice}
         faded={false}
       />
     {/if}

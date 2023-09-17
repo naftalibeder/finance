@@ -6,9 +6,8 @@
   import { TransactionsListItem } from ".";
 
   export let transactions: Transaction[];
+  export let transactionsTotalCt: number;
   export let transactionsSumPrice: Price;
-  export let transactionsCt: number;
-  export let transactionsOverallCt: number;
   export let activeGroup: TransactionDateGroup | undefined;
   export let query: string;
   export let accountsDict: Record<UUID, Account>;
@@ -16,33 +15,30 @@
   const limit = 200;
 
   $: sectionText = buildSectionText(
-    transactionsCt,
-    transactionsOverallCt,
+    transactions.length,
+    transactionsTotalCt,
     query,
     activeGroup
   );
 
   const buildSectionText = (
     ct: number,
-    overallCt: number,
+    totalCt: number,
     query: string,
     group?: TransactionDateGroup
   ): string => {
-    if (group) {
-      return `${group.transactions.length} of ${overallCt} transactions`;
-    } else {
-      let base: string;
-      if (ct === overallCt) {
-        base = `${prettyNumber(overallCt)} transactions`;
-      } else {
-        base = `${prettyNumber(ct)} of ${prettyNumber(overallCt)} transactions`;
-      }
+    const prettyCt = prettyNumber(ct);
+    const prettyTotalCt = prettyNumber(totalCt);
 
-      if (query.length > 0) {
-        return `${base} (matching "${query}")`;
-      } else {
-        return base;
-      }
+    if (group) {
+      const prettyGroupCt = prettyNumber(group.transactions.length);
+      return `${prettyGroupCt} of ${prettyTotalCt} transactions`;
+    } else if (query.length > 0 && ct < totalCt) {
+      return `${prettyCt} of ${prettyTotalCt} transactions (matching "${query}")`;
+    } else if (query.length > 0 && ct === totalCt) {
+      return `${prettyCt} transactions (matching "${query}")`;
+    } else {
+      return `${prettyTotalCt} transactions`;
     }
   };
 

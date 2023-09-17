@@ -110,6 +110,17 @@ export interface PriceFilter extends ComparisonFilter<Price> {
 
 export type Filter = TextFilter | PriceFilter | DateFilter;
 
+export type PaginationApiArg = {
+  start: number;
+  limit: number;
+};
+
+export type PaginationApiPayload = {
+  start: number;
+  ct: number;
+  totalCt: number;
+};
+
 export type SignInApiArgs = {
   email: string;
   password: string;
@@ -165,17 +176,17 @@ export type DeleteAccountApiArgs = {
 
 export type GetTransactionsApiArgs = {
   query: string;
+  pagination: PaginationApiArg;
 };
 
 export type GetTransactionsApiPayload = {
   data: {
-    filteredTransactions: Transaction[];
-    filteredCt: number;
-    filteredSumPrice: Price;
-    overallCt: number;
-    overallSumPrice: Price;
-    overallMaxPrice: Price;
-    overallEarliestDate?: string;
+    transactions: Transaction[];
+    sum: Price;
+    totalSum: Price;
+    totalMax: Price;
+    totalEarliest?: string;
+    pagination: PaginationApiPayload;
   };
 };
 

@@ -3,14 +3,14 @@
   import { TransactionDateGroup } from "../types";
 
   export let item: TransactionDateGroup;
-  export let transactionsOverallMaxPrice: Price;
+  export let transactionsTotalMaxPrice: Price;
   export let faded: boolean;
 
   const barWidth = 1.2;
   $: barOpacity = faded ? 0.5 : 1;
 
   const percentFromSum = (sum: number): number => {
-    const ratio = sum / transactionsOverallMaxPrice.amount;
+    const ratio = sum / transactionsTotalMaxPrice.amount;
     const absRatio = Math.abs(ratio);
     const skewedRatio = (1.2 / (1 + Math.pow(Math.E, -absRatio)) - 0.5) * 2;
     return (skewedRatio * 100) / 2;

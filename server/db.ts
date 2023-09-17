@@ -389,44 +389,83 @@ const deleteAccount = async (id: UUID) => {
 };
 
 const getTransactions = async (
-  query: string
+  query: string,
+  start: number,
+  limit: number
 ): Promise<GetTransactionsApiPayload["data"]> => {
   const transactions = await new Promise<Transaction[]>((res, rej) => {
-    db.all<Record<string, any>[]>(`select * from transactions`, (e, rows) => {
-      if (e) {
-        rej(e);
-      } else {
-        res(rows.map(transactionFromRow));
+    db.all<Record<string, any>[]>(
+      `select * from transactions limit $limit offset $offset`,
+      {
+        $offset: start,
+        $limit: limit,
+      },
+      (e, rows) => {
+        if (e) {
+          rej(e);
+        } else {
+          res(rows.map(transactionFromRow));
+        }
       }
-    });
+    );
   });
 
-  let payload: GetTransactionsApiPayload["data"] = {
-    filteredTransactions: [],
-    filteredCt: 0,
-    filteredSumPrice: {
-      amount: 0,
-      currency: "USD",
-    },
-    overallCt: transactions.length,
-    overallSumPrice: transactionsSumPrice(transactions),
-    overallMaxPrice: transactionsMaxPrice(transactions),
-    overallEarliestDate: transactionsEarliestDate(transactions),
-  };
+  const totals = await new Promise<{
+    ct: number;
+    maxPrice: number;
+    sumPrice: number;
+    earliestDate: string;
+  }>((res, rej) => {
+    db.get<{
+      ct: number;
+      max_price: number;
+      sum_price: number;
+      earliest_date: string;
+    }>(
+      `select
+        count(*) as ct,
+        max(price_amount) as max_price,
+        min(date) as earliest_date
+      from transactions;`,
+      (e, row) => {
+        if (e) {
+          rej(e);
+        } else {
+          res({
+            ct: row.ct,
+            maxPrice: row.max_price,
+            sumPrice: row.sum_price,
+            earliestDate: row.earliest_date,
+          });
+        }
+      }
+    );
+  });
 
+  let filtered = [...transactions];
   if (query.length > 0) {
+    filtered = [];
     // TODO: Filter transactions in sql query instead.
     const filters = buildFiltersFromQuery(query);
     for (const t of transactions) {
       if (transactionMatchesFilters(t, filters)) {
-        payload.filteredTransactions.push(t);
+        filtered.push(t);
       }
     }
-  } else {
-    payload.filteredTransactions = transactions;
   }
-  payload.filteredCt = payload.filteredTransactions.length;
-  payload.filteredSumPrice = transactionsSumPrice(payload.filteredTransactions);
+
+  let payload: GetTransactionsApiPayload["data"] = {
+    transactions: filtered,
+    sum: transactionsSumPrice(transactions),
+    totalSum: { amount: totals.sumPrice, currency: "USD" },
+    totalMax: { amount: totals.maxPrice, currency: "USD" },
+    totalEarliest: totals.earliestDate,
+    pagination: {
+      start,
+      ct: filtered.length,
+      totalCt: totals.ct,
+    },
+  };
 
   return payload;
 };

@@ -54,13 +54,14 @@
   })(accounts);
   let bankCredsExistMap: Record<string, boolean> = {};
 
-  let transactionsFiltered: Transaction[] = [];
-  let transactionsFilteredCt = 0;
-  let transactionsFilteredSumPrice: Price = zeroPrice;
-  let transactionsOverallCt = 0;
-  let transactionsOverallSumPrice: Price = zeroPrice;
-  let transactionsOverallMaxPrice: Price = zeroPrice;
-  let transactionsOverallEarliestDate: string | undefined;
+  let transactions: Transaction[] = [];
+  let transactionsCt = 0;
+  let transactionsSumPrice: Price = zeroPrice;
+  let transactionsTotalCt = 0;
+  let transactionsTotalSumPrice: Price = zeroPrice;
+  let transactionsTotalMaxPrice: Price = zeroPrice;
+  let transactionsTotalEarliestDate: string | undefined;
+  let transactionsResponseQuery: string = "";
 
   let isLoading = false;
 
@@ -208,18 +209,26 @@
       const payload = await post<
         GetTransactionsApiArgs,
         GetTransactionsApiPayload
-      >("transactions", { query: q });
-      transactionsFiltered = payload.data.filteredTransactions;
-      transactionsFilteredCt = payload.data.filteredCt;
-      transactionsFilteredSumPrice = payload.data.filteredSumPrice;
-      transactionsOverallCt = payload.data.overallCt;
-      transactionsOverallSumPrice = payload.data.filteredSumPrice;
-      transactionsOverallMaxPrice = payload.data.overallMaxPrice;
-      transactionsOverallEarliestDate = payload.data.overallEarliestDate;
+      >("transactions", {
+        query: q,
+        pagination: {
+          start: 0,
+          limit: 1000,
+        },
+      });
+      transactions = payload.data.transactions;
+      transactionsCt = payload.data.pagination.ct;
+      transactionsSumPrice = payload.data.sum;
+      transactionsTotalCt = payload.data.pagination.totalCt;
+      transactionsTotalSumPrice = payload.data.totalSum;
+      transactionsTotalMaxPrice = payload.data.totalMax;
+      transactionsTotalEarliestDate = payload.data.totalEarliest;
+      transactionsResponseQuery = q;
       console.log(
-        `Fetched ${transactionsFiltered.length} transactions with a sum of ${transactionsFilteredSumPrice.amount}`
+        `Fetched ${transactions.length} of ${transactionsTotalCt} transactions with a sum of ${transactionsSumPrice.amount}`
       );
     } catch (e) {
+      transactionsResponseQuery = q;
       console.log("Error fetching transactions:", e);
     }
   };
@@ -369,9 +378,9 @@
     {/if}
 
     <TimeChart
-      transactions={transactionsFiltered}
-      {transactionsOverallMaxPrice}
-      {transactionsOverallEarliestDate}
+      {transactions}
+      {transactionsTotalMaxPrice}
+      {transactionsTotalEarliestDate}
       onHoverGroup={(group) => {
         hoverGroup = group;
       }}
@@ -391,12 +400,11 @@
     />
 
     <TransactionsList
-      transactions={transactionsFiltered}
-      transactionsSumPrice={transactionsFilteredSumPrice}
-      transactionsCt={transactionsFilteredCt}
-      {transactionsOverallCt}
+      {transactions}
+      {transactionsTotalCt}
+      {transactionsSumPrice}
       activeGroup={hoverGroup}
-      {query}
+      query={transactionsResponseQuery}
       {accountsDict}
     />
   </div>
