@@ -250,6 +250,7 @@ const start = async () => {
             buffer += decoder.decode(d);
             chunk = JSON.parse(buffer);
             buffer = "";
+            console.log("Received chunk:", Object.keys(chunk));
           } catch (e) {
             console.log("Error decoding progress chunk from extractor");
             return;
@@ -260,7 +261,11 @@ const start = async () => {
               "Received extraction update:",
               Object.keys(chunk.extraction)
             );
-            await db.updateExtraction(extractionId, chunk.extraction);
+            try {
+              await db.updateExtraction(extractionId, chunk.extraction);
+            } catch (e) {
+              console.log(`Error updating extraction: ${e}`);
+            }
           }
 
           if (chunk.price) {

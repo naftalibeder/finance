@@ -733,12 +733,19 @@ const setMfaInfo = async (
   return updated;
 };
 
-const deleteMfaInfo = async (bankId: string) => {
-  await new Promise((res, rej) => {
+const deleteMfaInfo = async (bankId: string): Promise<void> => {
+  await new Promise<void>((res, rej) => {
     db.get<Record<string, any>[]>(
       `delete from mfa_infos where bank_id = $bank_id`,
       {
-        $bankId: bankId,
+        $bank_id: bankId,
+      },
+      (e) => {
+        if (e) {
+          rej(e);
+        } else {
+          res();
+        }
       }
     );
   });
