@@ -37,6 +37,8 @@ export type ExtractorColumnMap = Record<
 >;
 
 export interface Extractor {
+  /** Whether the extractor is included in a request for all extractors. */
+  public: boolean;
   bankId: string;
   bankDisplayName: string;
   bankDisplayNameShort: string;

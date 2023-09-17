@@ -11,6 +11,7 @@ import {
 import { toPrice, findFirst } from "../utils/index.js";
 
 class CharlesSchwabBankExtractor implements Extractor {
+  public = true;
   bankId = "charles-schwab-bank";
   bankDisplayName = "Charles Schwab Bank";
   bankDisplayNameShort = "Schwab";

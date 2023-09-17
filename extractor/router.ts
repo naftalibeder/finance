@@ -56,7 +56,10 @@ const start = () => {
   });
 
   expressApp.post("/banks", async (req, res) => {
-    const banks: Bank[] = Object.values(extractors).map((o) => {
+    const publicExtractors = Object.values(extractors).filter(
+      (o) => o.public === true
+    );
+    const banks: Bank[] = Object.values(publicExtractors).map((o) => {
       return {
         id: o.bankId,
         displayName: o.bankDisplayName,

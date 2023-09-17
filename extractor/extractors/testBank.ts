@@ -10,6 +10,7 @@ import {
 } from "../types.js";
 
 class TestBankExtractor implements Extractor {
+  public = false;
   bankId = "test-bank";
   bankDisplayName = "Test Bank";
   bankDisplayNameShort = "Test";
