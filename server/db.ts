@@ -395,7 +395,11 @@ const getTransactions = async (
 ): Promise<GetTransactionsApiPayload["data"]> => {
   const transactions = await new Promise<Transaction[]>((res, rej) => {
     db.all<Record<string, any>[]>(
-      `select * from transactions limit $limit offset $offset`,
+      `
+      select * from transactions 
+      order by date desc
+      limit $limit offset $offset
+      `,
       {
         $offset: start,
         $limit: limit,
