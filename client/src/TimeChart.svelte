@@ -5,23 +5,43 @@
   import { TimeChartBar, TimeChartInfo } from ".";
 
   export let transactions: Transaction[];
-  export let transactionsTotalMaxPrice: Price;
-  export let transactionsTotalEarliestDate: string | undefined;
   export let onHoverGroup: (group?: TransactionDateGroup) => void;
 
-  let transactionDateGroups: TransactionDateGroup[] = [];
-  $: {
-    transactionDateGroups =
-      transactions.length > 0
-        ? buildTransactionsDateGroups(
-            transactions,
-            transactionsTotalEarliestDate
-          )
-        : [];
-  }
+  $: latestDate = ((_date) => {
+    _date.setHours(0);
+    _date.setMinutes(0);
+    _date.setSeconds(0);
+    _date.setMilliseconds(0);
+    return _date.toISOString();
+  })(new Date());
+  $: earliestDate = ((_date) => {
+    _date.setDate(_date.getDate() - 30);
+    _date.setHours(0);
+    _date.setMinutes(0);
+    _date.setSeconds(0);
+    _date.setMilliseconds(0);
+    return _date.toISOString();
+  })(new Date());
 
-  $: earliestDate = transactionsTotalEarliestDate;
-  $: latestDate = new Date().toISOString();
+  $: transactionDateGroups = buildTransactionsDateGroups(
+    transactions,
+    earliestDate,
+    latestDate
+  );
+
+  $: maxPrice = ((_transactions: Transaction[]): Price | undefined => {
+    let m = _transactions[transactions.length - 1];
+    if (!m) {
+      return undefined;
+    }
+
+    for (const t of _transactions) {
+      if (t.price.amount > m.price.amount) {
+        m = t;
+      }
+    }
+    return m.price;
+  })(transactions);
 
   let barHoverIndex: number | undefined;
   $: hoverGroup = transactionDateGroups[barHoverIndex] ?? undefined;
@@ -41,7 +61,7 @@
     const containerRect = target.getBoundingClientRect();
     const containerPosX = containerRect.x;
     const containerWidth = containerRect.width;
-    //@ts-ignore
+    // @ts-ignore
     const hoverPosX = evt.layerX - containerPosX;
     const ratio = hoverPosX / containerWidth;
 
@@ -69,20 +89,17 @@
     width="100%"
     height="60"
     overflow="visible"
+    role="table"
     on:mousemove={onHoverMove}
     on:mouseout={onHoverLeave}
     on:focus={() => {}}
     on:blur={() => {}}
   >
     {#each transactionDateGroups as item, i}
-      <TimeChartBar {item} {transactionsTotalMaxPrice} faded={isHover} />
+      <TimeChartBar {item} {maxPrice} faded={isHover} />
     {/each}
     {#if isHover}
-      <TimeChartBar
-        item={hoverGroup}
-        {transactionsTotalMaxPrice}
-        faded={false}
-      />
+      <TimeChartBar item={hoverGroup} {maxPrice} faded={false} />
     {/if}
     <line
       class="axis"

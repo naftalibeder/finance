@@ -379,8 +379,6 @@
 
     <TimeChart
       {transactions}
-      {transactionsTotalMaxPrice}
-      {transactionsTotalEarliestDate}
       onHoverGroup={(group) => {
         hoverGroup = group;
       }}

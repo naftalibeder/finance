@@ -106,14 +106,19 @@ export const datesInRange = (start: Date, end: Date): Date[] => {
 
 export const buildTransactionsDateGroups = (
   transactions: Transaction[],
-  transactionsEarliestDate: string
+  earliestDate: string,
+  latestDate: string
 ): TransactionDateGroup[] => {
+  if (transactions.length === 0) {
+    return [];
+  }
+
   const entireRangeMs =
-    new Date().valueOf() - new Date(transactionsEarliestDate).valueOf();
+    new Date(latestDate).valueOf() - new Date(earliestDate).valueOf();
 
   const list: TransactionDateGroup[] = [
     {
-      date: transactionsEarliestDate,
+      date: earliestDate,
       ratioAlongRange: 0,
       transactions: [],
     },
@@ -124,12 +129,12 @@ export const buildTransactionsDateGroups = (
     const t = transactions[i];
     latest = list[list.length - 1];
 
+    const progressRangeMs =
+      new Date(t.date).valueOf() - new Date(earliestDate).valueOf();
+
     if (t.date === latest.date) {
       latest.transactions.push(t);
-    } else {
-      const progressRangeMs =
-        new Date(t.date).valueOf() -
-        new Date(transactionsEarliestDate).valueOf();
+    } else if (progressRangeMs > 0) {
       list.push({
         date: t.date,
         ratioAlongRange: progressRangeMs / entireRangeMs,
