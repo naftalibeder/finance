@@ -56,8 +56,12 @@ export const findFirst = async (
     }
 
     const l = res.value;
-    const ct = await l.count();
-    if (ct === 0) {
+    try {
+      const ct = await l.count();
+      if (ct === 0) {
+        throw "No elements";
+      }
+    } catch (e) {
       continue;
     }
 
@@ -76,27 +80,38 @@ export const getPageKind = async (
   map: Record<ExtractorPageKind, string[]>,
   options?: Options
 ): Promise<ExtractorPageKind> => {
-  const promises: Promise<ExtractorPageKind>[] = [];
-  for (const [kind, sels] of Object.entries(map)) {
-    for (const sel of sels) {
-      const promise = new Promise<ExtractorPageKind>(async (res, rej) => {
-        const loc = await findFirst(page, sel, options);
-        if (loc) {
-          res(kind as ExtractorPageKind);
-        } else {
-          rej();
-        }
-      });
-      promises.push(promise);
-    }
-  }
+  let attemptCt = 1;
+  let maxCt = 3;
 
-  try {
-    const kind = await Promise.any(promises);
-    console.log(`Current page kind: ${kind}`);
-    return kind;
-  } catch (e) {
-    console.log("Unable to find current page kind");
-    return getPageKind(page, map);
+  while (true) {
+    console.log(
+      `Trying to find current page kind (attempt ${attemptCt} of ${maxCt})`
+    );
+
+    const promises: Promise<ExtractorPageKind>[] = [];
+    for (const [kind, sels] of Object.entries(map)) {
+      for (const sel of sels) {
+        const promise = new Promise<ExtractorPageKind>(async (res, rej) => {
+          const loc = await findFirst(page, sel, options);
+          if (loc) {
+            res(kind as ExtractorPageKind);
+          } else {
+            rej();
+          }
+        });
+        promises.push(promise);
+      }
+    }
+
+    try {
+      const kind = await Promise.any(promises);
+      return kind;
+    } catch (e) {}
+
+    if (attemptCt === maxCt) {
+      throw "Unable to find current page kind";
+    }
+
+    attemptCt += 1;
   }
 };

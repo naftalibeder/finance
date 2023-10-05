@@ -1,36 +1,69 @@
+import path from "path";
+import { Browser, Page, firefox } from "@playwright/test";
 import mocha from "mocha";
-import { randomUUID } from "crypto";
-import { Account, BankCreds } from "shared";
-import { runAccount } from "./extractor.js";
+import { getPageKind } from "./utils/browser.js";
+import { ExtractorPageKind } from "./types.js";
+import { ChaseBankExtractor } from "./extractors/chaseBank.js";
 
-const { describe, it } = mocha;
+const { setup, teardown, describe, it } = mocha;
 
-describe("extract account value and transactions", () => {
-  it("extract", async () => {
-    const account: Account = {
-      _id: randomUUID(),
-      _createdAt: new Date().toISOString(),
-      _updatedAt: new Date().toISOString(),
-      bankId: "test-bank",
-      display: "Test Account",
-      number: "1111-2222-3333-4444",
-      type: "liabilities",
-      kind: "credit",
-      preferredMfaOption: "sms",
-      price: { amount: 0, currency: "USD" },
-    };
+const extractor = new ChaseBankExtractor();
 
-    const bankCreds: BankCreds = {
-      username: "bankUsername123",
-      password: "bankPassword123",
-    };
+const buildUrl = (file: string) => {
+  return path.join(
+    import.meta.url,
+    "..",
+    "..", // Back out of `dist` directory.
+    "extractors",
+    "fixtures",
+    file
+  );
+};
 
-    try {
-      await runAccount(account, bankCreds, (event) => {
-        console.log(event);
-      });
-    } catch (e) {
-      throw new Error(`${e}`);
-    }
-  }).timeout(0);
+/**
+ * A dictionary mapping an html file's name (in the fixtures directory) to the
+ * expected page kind.
+ */
+const dict: Record<string, ExtractorPageKind> = {
+  "chaseBankLogin.html": "login",
+  "chaseBankMfa.html": "mfa",
+  "chaseBankDashboard.html": "dashboard",
+};
+
+let browser: Browser;
+let page: Page;
+
+setup(async () => {
+  browser = await firefox.launch({ headless: true });
+  page = await browser.newPage();
+});
+
+describe("Identify page kinds", () => {
+  for (const [file, kind] of Object.entries(dict)) {
+    it(`Identify ${kind} page`, async () => {
+      try {
+        const url = buildUrl(file);
+        console.log(`Checking page at ${url}`);
+        await page.goto(url);
+      } catch (e) {
+        throw new Error(`${e}`);
+      }
+
+      let pageKind: ExtractorPageKind;
+      try {
+        pageKind = await getPageKind(page, extractor.currentPageMap);
+        console.log(`Found page kind: ${pageKind}`);
+      } catch (e) {
+        throw new Error(`${e}`);
+      }
+
+      if (pageKind !== kind) {
+        throw new Error(`Found incorrect page kind of '${pageKind}'`);
+      }
+    }).timeout(0);
+  }
+});
+
+teardown(async () => {
+  await browser?.close();
 });

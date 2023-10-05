@@ -18,8 +18,8 @@ class ChaseBankExtractor implements Extractor {
   supportedAccountKinds: Account["kind"][] = ["credit"];
   supportedMfaOptions: MfaOption[] = ["sms", "email"];
   currentPageMap: Record<ExtractorPageKind, string[]> = {
-    login: ["#welcomeHeader", "#logonbox", ".siginbox-button"],
-    mfa: ["input[value=otpMethod]"],
+    login: ["#login-form", ".siginbox-button"],
+    mfa: [".msd.password-reset"],
     dashboard: [".global-nav-position-container"],
   };
 
@@ -105,7 +105,7 @@ class ChaseBankExtractor implements Extractor {
     await loc?.click();
 
     loc = await findFirst(page, "#requestIdentificationCode-sm");
-    await loc?.click();
+    await loc?.first().click();
 
     const code = await args.getMfaCode();
 

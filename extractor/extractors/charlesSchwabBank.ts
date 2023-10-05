@@ -58,7 +58,10 @@ class CharlesSchwabBankExtractor implements Extractor {
 
   goToLoginPage = async (args: ExtractorFuncArgs) => {
     const { extractor, account, bankCreds, page } = args;
-    await page.goto("https://schwab.com", { timeout: 6000 });
+    await page.goto("https://schwab.com", {
+      timeout: 6000,
+      waitUntil: "domcontentloaded",
+    });
   };
 
   goToDashboardPage = async (args: ExtractorFuncArgs) => {
@@ -160,10 +163,12 @@ class CharlesSchwabBankExtractor implements Extractor {
     await loc?.click();
     await page.waitForTimeout(1000);
 
-    // TODO: This works with `page.locator` but fails with `findFirst`. Try `forceTimeout`?
+    // TODO: This works with `page.locator` but fails with `findFirst`.
+    // Can we do a more custom filter, like:
+    // page.locator(...).filter(node => node.replace('-', '') === ${account.number})
     loc = page
       .locator(".sdps-account-selector__list-item")
-      .filter({ hasText: account.number });
+      .filter({ hasText: account.display });
     await loc?.click();
     await page.waitForTimeout(1000);
 

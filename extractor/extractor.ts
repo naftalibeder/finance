@@ -236,26 +236,44 @@ export const getAccountData = async (
   const authenticate = async (): Promise<void> => {
     onEvent({ message: "Checking authentication status" });
 
+    let attemptCt = 1;
+    let maxCt = 10;
+
     while (true) {
-      const pageKind = await getPageKind(args.page, extractor.currentPageMap);
+      console.log(`Trying to authenticate (attempt ${attemptCt} of ${maxCt})`);
 
-      if (pageKind === "dashboard") {
-        onEvent({ message: "Authenticated" });
-        await page.waitForTimeout(2000);
-        break;
+      try {
+        const pageKind = await getPageKind(args.page, extractor.currentPageMap);
+        onEvent({ message: `Detected page kind: ${pageKind}` });
+
+        if (pageKind === "dashboard") {
+          onEvent({ message: "Authenticated" });
+          await page.waitForTimeout(2000);
+          break;
+        }
+
+        if (pageKind === "login") {
+          onEvent({ message: "Entering bank credentials" });
+          await extractor.enterCredentials(args);
+          await page.waitForTimeout(2000);
+        }
+
+        if (pageKind === "mfa") {
+          onEvent({ message: "Entering two-factor code" });
+          await extractor.enterMfaCode(args);
+          await page.waitForTimeout(2000);
+        }
+      } catch (e) {
+        onEvent({ message: `Error authenticating: ${e}` });
+        await page.reload();
+        await page.waitForTimeout(3000);
       }
 
-      if (pageKind === "login") {
-        onEvent({ message: "Entering bank credentials" });
-        await extractor.enterCredentials(args);
-        await page.waitForTimeout(2000);
+      if (attemptCt === maxCt) {
+        throw `Unable to authenticate after ${maxCt} attempts`;
       }
 
-      if (pageKind === "mfa") {
-        onEvent({ message: "Entering two-factor code" });
-        await extractor.enterMfaCode(args);
-        await page.waitForTimeout(2000);
-      }
+      attemptCt += 1;
     }
   };
 
