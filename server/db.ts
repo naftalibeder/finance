@@ -188,6 +188,7 @@ const migrate = async () => {
 const close = async () => {
   await new Promise<void>(async (res, rej) => {
     await abortAllUnfinishedExtractions();
+    await deleteAllMfaInfos();
     db.close((e) => {
       if (e) {
         rej(e);
@@ -522,7 +523,9 @@ const addTransactions = async (
       });
       addCt += 1;
     } catch (e) {
-      console.log("Transaction error:", e);
+      if (!`${e}`.includes("SQLITE_CONSTRAINT")) {
+        console.log("Transaction error:", e);
+      }
     }
   }
 
@@ -794,6 +797,18 @@ const deleteMfaInfo = async (bankId: string): Promise<void> => {
   });
 };
 
+const deleteAllMfaInfos = async (): Promise<void> => {
+  await new Promise<void>((res, rej) => {
+    db.get<Record<string, any>[]>(`delete from mfa_infos`, (e) => {
+      if (e) {
+        rej(e);
+      } else {
+        res();
+      }
+    });
+  });
+};
+
 const getUser = async (): Promise<User> => {
   const user = await new Promise<User>((res, rej) => {
     db.get<Record<string, any>>(`select * from users limit 1`, (e, row) => {
@@ -1028,6 +1043,7 @@ export default {
   getMfaInfo,
   setMfaInfo,
   deleteMfaInfo,
+  deleteAllMfaInfos,
   getUser,
   addUser,
   updateUser,
