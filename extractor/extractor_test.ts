@@ -43,7 +43,7 @@ describe("Identify page kinds", () => {
     it(`Identify ${kind} page`, async () => {
       try {
         const url = buildUrl(file);
-        console.log(`Checking page at ${url}; expecting '${kind}'`);
+        console.log(`Checking page at ${file}; expecting '${kind}'`);
         await page.goto(url);
       } catch (e) {
         throw new Error(`${e}`);
