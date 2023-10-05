@@ -43,7 +43,7 @@ describe("Identify page kinds", () => {
     it(`Identify ${kind} page`, async () => {
       try {
         const url = buildUrl(file);
-        console.log(`Checking page at ${url}`);
+        console.log(`Checking page at ${url}; expecting '${kind}'`);
         await page.goto(url);
       } catch (e) {
         throw new Error(`${e}`);
@@ -58,7 +58,9 @@ describe("Identify page kinds", () => {
       }
 
       if (pageKind !== kind) {
-        throw new Error(`Found incorrect page kind of '${pageKind}'`);
+        throw new Error(
+          `Found incorrect page kind of '${pageKind}'; expected '${kind}'`
+        );
       }
     }).timeout(0);
   }
