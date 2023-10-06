@@ -39,7 +39,7 @@ export type Account = {
     | "unselected";
   /** The type of resource stored in the account. */
   type: "assets" | "liabilities" | "equity" | "revenue" | "expenses";
-  /** The preferred place to receive multi-factor codes. */
+  /** The user's preferred mode for receiving multi-factor codes. */
   preferredMfaOption: MfaOption;
   /** The current value of the account's assets. */
   price: Price;
