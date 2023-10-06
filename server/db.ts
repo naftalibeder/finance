@@ -361,7 +361,7 @@ const updateAccount = async (
     `,
       {
         $id: id,
-        $updated_at: update._updatedAt,
+        $updated_at: new Date().toISOString(),
         $bank_id: update.bankId,
         $display: update.display,
         $number: update.number,
