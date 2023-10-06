@@ -2,7 +2,7 @@
   "name": "server",
   "type": "module",
   "scripts": {
-    "build": "npx tsc",
+    "build": "rm -rf dist && npx tsc",
     "start": "set -a && . ../.env && set +a && npm run build && node dist/main.js",
     "test": "npm run build && mocha \"**/*_test.js\""
   },
