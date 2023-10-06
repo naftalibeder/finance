@@ -54,12 +54,8 @@
   let bankCredsExistMap: Record<string, boolean> = {};
 
   let transactions: Transaction[] = [];
-  let transactionsCt = 0;
   let transactionsSumPrice: Price = zeroPrice;
   let transactionsTotalCt = 0;
-  let transactionsTotalSumPrice: Price = zeroPrice;
-  let transactionsTotalMaxPrice: Price = zeroPrice;
-  let transactionsTotalEarliestDate: string | undefined;
   let transactionsResponseQuery: string = "";
 
   let isLoading = false;
@@ -214,12 +210,8 @@
         },
       });
       transactions = payload.data.transactions;
-      transactionsCt = payload.data.pagination.ct;
       transactionsSumPrice = payload.data.sum;
       transactionsTotalCt = payload.data.pagination.totalCt;
-      transactionsTotalSumPrice = payload.data.totalSum;
-      transactionsTotalMaxPrice = payload.data.totalMax;
-      transactionsTotalEarliestDate = payload.data.totalEarliest;
       transactionsResponseQuery = q;
       console.log(
         `Fetched ${transactions.length} of ${transactionsTotalCt} transactions with a sum of ${transactionsSumPrice.amount}`
