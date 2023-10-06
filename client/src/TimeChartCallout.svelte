@@ -39,7 +39,7 @@
 <svg x={`${posX}%`} overflow="visible">
   <text>
     <tspan
-      y="0"
+      y="10"
       text-anchor="middle"
       dominant-baseline="hanging"
       class="default"
@@ -47,35 +47,20 @@
       {dateDisp}
     </tspan>
   </text>
-  {#each [{ isPos: true, y: 20, class: "default" }, { isPos: false, y: 40, class: "red" }] as item}
-    <text>
-      <tspan
-        dx="-50"
-        y={item.y}
-        text-anchor="start"
-        dominant-baseline="hanging"
-        class={item.class}
-      >
-        {item.isPos ? "+" : "-"}
-      </tspan>
-    </text>
-    <text>
-      <tspan
-        dx="50"
-        y={item.y}
-        text-anchor="end"
-        dominant-baseline="hanging"
-        class={item.class}
-      >
-        {item.isPos ? posSumDisp : negSumDisp}
-      </tspan>
-    </text>
-  {/each}
+
+  <text y={36} text-anchor="middle" dominant-baseline="hanging">
+    <tspan class="default">
+      +{posSumDisp}
+    </tspan>
+    <tspan class="red">
+      -{negSumDisp}
+    </tspan>
+  </text>
 </svg>
 
 <style>
   tspan.default {
-    fill: var(--text-gray-100);
+    fill: var(--text-gray-900);
   }
 
   tspan.red {

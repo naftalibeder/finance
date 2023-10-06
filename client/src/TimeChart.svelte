@@ -1,11 +1,9 @@
 <script lang="ts">
   import { Price, Transaction } from "shared";
-  import { TransactionDateGroup } from "../types";
-  import { buildTransactionsDateGroups, prettyDate } from "../utils";
-  import { TimeChartBar, TimeChartInfo } from ".";
+  import { buildTransactionsDateGroups } from "../utils";
+  import { TimeChartBar, TimeChartCallout } from ".";
 
   export let transactions: Transaction[];
-  export let onHoverGroup: (group?: TransactionDateGroup) => void;
 
   $: latestDate = ((_date) => {
     _date.setHours(0);
@@ -50,11 +48,9 @@
   const onHoverMove = (evt: MouseEvent) => {
     const target = evt.target as HTMLElement;
     if (!target || target.tagName !== "svg") {
-      onHoverGroup(undefined);
       return;
     }
     if (transactionDateGroups.length === 0) {
-      onHoverGroup(undefined);
       return;
     }
 
@@ -75,19 +71,17 @@
       }
     });
     barHoverIndex = minIndex;
-    onHoverGroup(transactionDateGroups[barHoverIndex]);
   };
 
   const onHoverLeave = (evt: MouseEvent) => {
     barHoverIndex = undefined;
-    onHoverGroup(undefined);
   };
 </script>
 
 <div class="container">
   <svg
     width="100%"
-    height="60"
+    height="40"
     overflow="visible"
     role="table"
     on:mousemove={onHoverMove}
@@ -115,18 +109,7 @@
   {#if transactionDateGroups.length > 0}
     <svg width="100%" height="20" overflow="visible">
       {#if isHover}
-        <TimeChartInfo item={hoverGroup} />
-      {:else}
-        <text class="default faded" x="0%" text-anchor="start">
-          <tspan dominant-baseline="hanging">
-            {prettyDate(earliestDate) ?? ""}
-          </tspan>
-        </text>
-        <text class="default faded" x="100%" text-anchor="end">
-          <tspan dominant-baseline="hanging">
-            {prettyDate(latestDate)}
-          </tspan>
-        </text>
+        <TimeChartCallout item={hoverGroup} />
       {/if}
     </svg>
   {/if}
@@ -141,10 +124,6 @@
   }
 
   line.axis {
-    stroke: var(--text-gray-100);
-  }
-
-  text.default {
-    fill: var(--text-gray-100);
+    stroke: var(--text-gray-900);
   }
 </style>

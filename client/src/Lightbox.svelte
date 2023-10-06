@@ -47,7 +47,7 @@
     display: grid;
     grid-template-columns: 32px 1fr 32px;
     grid-template-rows: 32px 1fr 32px;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.2);
   }
 
   .box {
@@ -55,7 +55,7 @@
     grid-column: 2;
     grid-row: 2;
     padding: 16px;
-    background-color: var(--text-gray-800);
+    background-color: white;
     cursor: default;
     overflow-y: auto;
   }

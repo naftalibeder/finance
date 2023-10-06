@@ -1,17 +1,27 @@
 :root {
   --gutter: 60px;
 
-  --text-gray-100: #e7e7e7;
-  --text-gray-500: #979797;
-  --text-gray-800: #2a2a2a;
-  --text-red: #ff6d94;
-  --text-blue: #90cbff;
-
   margin: 0px;
   padding: 16px;
+
+  --text-gray-100: #f7fafc;
+  --text-gray-200: #edf2f7;
+  --text-gray-300: #e2e8f0;
+  --text-gray-400: #cbd5e0;
+  --text-gray-500: #a0aec0;
+  --text-gray-600: #718096;
+  --text-gray-700: #4a5568;
+  --text-gray-800: #2d3748;
+  --text-gray-900: #1a202c;
+  --text-red: #ea4b36;
+  --text-blue: #90cbff;
+
+  --font-display: "Inter", sans-serif;
+  --font-body: "Inter", sans-serif;
+
   color-scheme: light dark;
-  color: white;
-  background-color: var(--text-gray-800);
+  color: var(--text-gray-900);
+  background-color: white;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -27,7 +37,7 @@
 }
 
 h1 {
-  font-family: "PT Mono", monospace;
+  font-family: var(--font-display);
   margin: 8px 0px;
 }
 
@@ -35,6 +45,7 @@ h1,
 h2,
 h3,
 h4 {
+  font-family: var(--font-display);
   text-align: left;
 }
 
@@ -43,7 +54,7 @@ p,
 button,
 input,
 textarea {
-  font-family: "PT Mono", monospace;
+  font-family: var(--font-body);
   font-size: 14px;
   margin: 0px;
   padding: 0px;
@@ -52,16 +63,16 @@ textarea {
 input,
 textarea,
 select {
-  font-family: "PT Mono", monospace;
-  color: white;
+  font-family: var(--font-body);
+  color: var(--text-gray-900);
   background-color: transparent;
   border: 0px;
   padding: 8px;
-  outline: rgb(190, 190, 190) solid 1px;
+  outline: var(--text-gray-600) solid 1px;
 }
 
 select {
-  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="white" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>');
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="black" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>');
   background-size: 16px;
   background-position: right 8px center;
   background-repeat: no-repeat;
@@ -79,8 +90,8 @@ textarea:disabled {
 
 button {
   display: flex;
-  font-family: "PT Mono", monospace;
-  color: white;
+  font-family: var(--font-body);
+  color: var(--text-gray-900);
   background-color: transparent;
   border: 0px;
   border-radius: 0px;
@@ -94,7 +105,7 @@ button:disabled {
 
 button.outline {
   padding: 8px;
-  outline: rgb(190, 190, 190) solid 1px;
+  outline: var(--text-gray-600) solid 1px;
 }
 
 button.outline:hover {

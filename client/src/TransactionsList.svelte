@@ -2,36 +2,29 @@
   import { UUID } from "crypto";
   import { Transaction, Price, Account } from "shared";
   import { prettyCurrency, prettyNumber } from "../utils";
-  import { TransactionDateGroup } from "../types";
   import { TransactionsListItem } from ".";
 
   export let transactions: Transaction[];
   export let transactionsTotalCt: number;
   export let transactionsSumPrice: Price;
-  export let activeGroup: TransactionDateGroup | undefined;
   export let query: string;
   export let accountsDict: Record<UUID, Account>;
 
   $: sectionText = buildSectionText(
     transactions.length,
     transactionsTotalCt,
-    query,
-    activeGroup
+    query
   );
 
   const buildSectionText = (
     ct: number,
     totalCt: number,
-    query: string,
-    group?: TransactionDateGroup
+    query: string
   ): string => {
     const prettyCt = prettyNumber(ct);
     const prettyTotalCt = prettyNumber(totalCt);
 
-    if (group) {
-      const prettyGroupCt = prettyNumber(group.transactions.length);
-      return `${prettyGroupCt} of ${prettyTotalCt} transactions`;
-    } else if (query.length > 0 && ct < totalCt) {
+    if (query.length > 0 && ct < totalCt) {
       return `${prettyCt} of ${prettyTotalCt} transactions (matching "${query}")`;
     } else if (query.length > 0 && ct === totalCt) {
       return `${prettyCt} transactions (matching "${query}")`;
@@ -40,25 +33,7 @@
     }
   };
 
-  $: sumPriceDisp = buildSumPriceDisp(transactionsSumPrice, activeGroup);
-
-  const buildSumPriceDisp = (
-    sumPrice: Price,
-    group?: TransactionDateGroup
-  ): string => {
-    if (group) {
-      const sum = activeGroup.transactions.reduce(
-        (a, c) => a + c.price.amount,
-        0
-      );
-      return prettyCurrency({
-        amount: sum,
-        currency: "USD",
-      });
-    } else {
-      return prettyCurrency(sumPrice);
-    }
-  };
+  $: sumPriceDisp = prettyCurrency(transactionsSumPrice);
 </script>
 
 <div class="section">
@@ -72,21 +47,12 @@
       </div>
     </div>
 
-    {#if activeGroup}
-      {#each activeGroup.transactions as t}
-        <TransactionsListItem
-          transaction={t}
-          account={accountsDict[t.accountId]}
-        />
-      {/each}
-    {:else}
-      {#each transactions as t}
-        <TransactionsListItem
-          transaction={t}
-          account={accountsDict[t.accountId]}
-        />
-      {/each}
-    {/if}
+    {#each transactions as t}
+      <TransactionsListItem
+        transaction={t}
+        account={accountsDict[t.accountId]}
+      />
+    {/each}
   </div>
 </div>
 

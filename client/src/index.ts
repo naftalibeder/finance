@@ -10,6 +10,6 @@ export { default as Lightbox } from "./Lightbox.svelte";
 export { default as MfaInputList } from "./MfaInputList.svelte";
 export { default as TimeChart } from "./TimeChart.svelte";
 export { default as TimeChartBar } from "./TimeChartBar.svelte";
-export { default as TimeChartInfo } from "./TimeChartInfo.svelte";
+export { default as TimeChartCallout } from "./TimeChartCallout.svelte";
 export { default as TransactionsList } from "./TransactionsList.svelte";
 export { default as TransactionsListItem } from "./TransactionsListItem.svelte";

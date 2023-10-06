@@ -6,7 +6,7 @@
   export let maxPrice: Price;
   export let faded: boolean;
 
-  const barWidth = 1.2;
+  const barWidth = 4;
   $: barOpacity = faded ? 0.5 : 1;
 
   const percentFromSum = (sum: number): number => {
@@ -43,7 +43,6 @@
     id={item.date}
     x={`${item.ratioAlongRange * 100}%`}
     y={`${50 - posBarHeightPercent}%`}
-    rx={barWidth / 2}
     width={barWidth}
     height={`${posBarHeightPercent}%`}
     opacity={barOpacity}
@@ -57,7 +56,6 @@
     id={item.date}
     x={`${item.ratioAlongRange * 100}%`}
     y={`50%`}
-    rx={barWidth / 2}
     width={barWidth}
     height={`${negBarHeightPercent}%`}
     opacity={barOpacity}
@@ -67,7 +65,7 @@
 
 <style>
   rect.pos {
-    fill: var(--text-gray-100);
+    fill: var(--text-gray-900);
   }
 
   rect.neg {

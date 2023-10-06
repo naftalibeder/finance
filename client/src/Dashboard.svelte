@@ -34,7 +34,6 @@
     Extractions,
     Icon,
   } from ".";
-  import { TransactionDateGroup } from "../types";
   import { delay } from "../utils";
 
   const zeroPrice: Price = {
@@ -98,8 +97,6 @@
   }
 
   let isShowingExtractionsHistory = false;
-
-  let hoverGroup: TransactionDateGroup | undefined;
 
   let accountIdShowingDetail: UUID | undefined = undefined;
   $: accountShowingDetail = accounts.find(
@@ -377,12 +374,7 @@
       />
     {/if}
 
-    <TimeChart
-      {transactions}
-      onHoverGroup={(group) => {
-        hoverGroup = group;
-      }}
-    />
+    <TimeChart {transactions} />
 
     <AccountsList
       {accounts}
@@ -401,7 +393,6 @@
       {transactions}
       {transactionsTotalCt}
       {transactionsSumPrice}
-      activeGroup={hoverGroup}
       query={transactionsResponseQuery}
       {accountsDict}
     />

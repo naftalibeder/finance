@@ -222,6 +222,6 @@
   }
 
   select.faded-text {
-    color: var(--text-gray-500);
+    color: var(--text-gray-600);
   }
 </style>
