@@ -83,14 +83,4 @@
   .timestamp {
     margin-left: 6px;
   }
-
-  @keyframes rotate {
-    from {
-      rotate: 360deg;
-    }
-  }
-
-  .spin {
-    animation: rotate 1s infinite linear reverse;
-  }
 </style>

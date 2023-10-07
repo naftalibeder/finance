@@ -36,6 +36,19 @@
   }
 }
 
+@keyframes rotate {
+  from {
+    rotate: 360deg;
+  }
+}
+
+.spin {
+  animation: rotate 1s infinite linear reverse;
+  display: grid;
+  justify-content: center;
+  align-items: center;
+}
+
 h1 {
   font-family: var(--font-display);
   margin: 8px 0px;
