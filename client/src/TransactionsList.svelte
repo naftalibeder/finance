@@ -39,12 +39,12 @@
 <div class="section">
   <div class="grid transactions">
     <div class="grid contents tall">
-      <div class="cell transaction-section title">
+      <h3 class="cell transaction-section title">
         {sectionText}
-      </div>
-      <div class="cell transaction-section action">
+      </h3>
+      <h3 class="cell transaction-section action">
         {sumPriceDisp}
-      </div>
+      </h3>
     </div>
 
     {#each transactions as t}
@@ -70,6 +70,6 @@
 
   .cell.transaction-section.action {
     grid-column: price;
-    justify-content: flex-end;
+    justify-content: end;
   }
 </style>

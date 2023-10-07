@@ -84,5 +84,6 @@
   .list {
     display: grid;
     grid-template-rows: auto 1fr;
+    row-gap: 16px;
   }
 </style>

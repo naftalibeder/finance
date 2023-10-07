@@ -69,6 +69,7 @@ select {
   border: 0px;
   padding: 8px;
   outline: var(--text-gray-600) solid 1px;
+  outline-offset: -1px;
 }
 
 select {
@@ -89,13 +90,17 @@ textarea:disabled {
 }
 
 button {
-  display: flex;
+  display: grid;
   font-family: var(--font-body);
   color: var(--text-gray-900);
   background-color: transparent;
   border: 0px;
   border-radius: 0px;
   cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.8;
 }
 
 button:disabled {
@@ -130,20 +135,6 @@ button.destructive {
 
 .faded {
   opacity: 0.5;
-}
-
-.container {
-  display: flex;
-  justify-content: center;
-}
-
-.content {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  row-gap: 48px;
-  max-width: 1440px;
-  padding: 0px 0px;
 }
 
 .section {

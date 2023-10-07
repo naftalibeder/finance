@@ -48,11 +48,11 @@
 
   {#if isExpanded}
     <div class="list">
-      <div class="cell">Account</div>
-      <div class="cell">Found</div>
-      <div class="cell">New</div>
-      <div class="cell">Duration</div>
-      <div class="cell">Status</div>
+      <div class="cell faded">Account</div>
+      <div class="cell faded">Found</div>
+      <div class="cell faded">New</div>
+      <div class="cell faded">Duration</div>
+      <div class="cell faded">Status</div>
 
       {#each extractions as e}
         <div class="cell">{accountDisplay(e)}</div>
@@ -78,8 +78,6 @@
 
   .section {
     grid-column: 1 / 6;
-    margin-top: 24px;
-    margin-bottom: 8px;
     cursor: pointer;
   }
 

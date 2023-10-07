@@ -89,6 +89,7 @@
 
   .scroll-area {
     display: grid;
+    align-items: start;
     overflow-y: scroll;
   }
 </style>

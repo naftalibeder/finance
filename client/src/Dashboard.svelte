@@ -398,9 +398,7 @@
 
   {#if accountShowingDetail}
     <Lightbox
-      title={accountShowingDetail.display.length > 0
-        ? accountShowingDetail.display
-        : "Edit account"}
+      title={"Edit account"}
       onPressDismiss={() => {
         accountIdShowingDetail = undefined;
       }}
@@ -408,9 +406,7 @@
       <EditAccount
         account={accountShowingDetail}
         {banks}
-        hasCredsForBank={bankCredsExistMap[accountIdShowingDetail]}
         onSubmitAccount={updateAccount}
-        onSubmitBankCreds={updateBankCreds}
         onSelectDeleteAccount={deleteAccount}
       />
     </Lightbox>
@@ -432,18 +428,28 @@
         isShowingSettings = false;
       }}
     >
-      <Settings />
+      <Settings
+        {banks}
+        {bankCredsExistMap}
+        onSubmitBankCreds={updateBankCreds}
+      />
     </Lightbox>
   {/if}
 </div>
 
 <style>
+  .content {
+    display: grid;
+    grid-template-columns: 1fr;
+    max-width: 1440px;
+  }
+
   .header {
     display: grid;
     grid-template-columns: 2fr 1fr auto auto;
     column-gap: 16px;
     align-items: center;
-    padding: 0px var(--gutter);
+    padding: 0px var(--gutter) 32px var(--gutter);
   }
 
   a.title {

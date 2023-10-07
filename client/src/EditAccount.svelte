@@ -1,24 +1,16 @@
 <script lang="ts">
   import { UUID } from "crypto";
-  import { Account, Bank, BankCreds } from "shared";
+  import { Account, Bank } from "shared";
   import { titleCase } from "../utils";
 
   export let account: Account;
   export let banks: Bank[];
-  export let hasCredsForBank: boolean;
   export let onSubmitAccount: (account: Account) => Promise<void>;
-  export let onSubmitBankCreds: (
-    bankId: string,
-    creds: BankCreds
-  ) => Promise<void>;
   export let onSelectDeleteAccount: (accountId: UUID) => Promise<void>;
 
   $: currentBank = banks.find((o) => o.id === account.bankId);
   $: kindIsDisabled =
     !currentBank || currentBank.supportedAccountKinds.length === 0;
-
-  let bankUsername = "";
-  let bankPassword = "";
 
   let deleteClickCt = 0;
   const deleteConfirmClickCt = 5;
@@ -47,112 +39,75 @@
 <div class="container">
   <div class="scroll">
     <div class="sections">
-      <div class="section-container">
-        <h3>Account info</h3>
-        <div class="inputs">
-          <label for={elemId("display")}>Display</label>
-          <input
-            id={elemId("display")}
-            placeholder={"Enter display name"}
-            value={account.display}
-            on:change={(evt) => {
-              onChangeProperty("display", evt.target["value"]);
-            }}
-          />
-          <label for={elemId("number")}>Number</label>
-          <input
-            id={elemId("number")}
-            placeholder={"Enter account number"}
-            value={account.number}
-            on:change={(evt) => {
-              onChangeProperty("number", evt.target["value"]);
-            }}
-          />
-          <label for={elemId("bankId")}>Bank</label>
-          <select
-            id={elemId("bankId")}
-            class={!currentBank ? "faded-text" : ""}
-            value={currentBank?.id ?? ""}
-            on:change={(evt) => {
-              onChangeProperty("bankId", evt.target["value"]);
-            }}
-          >
-            <option value="">Select one</option>
-            {#each banks as bank}
-              <option value={bank.id}>{bank.displayName}</option>
+      <div class="inputs">
+        <label for={elemId("display")}>Display</label>
+        <input
+          id={elemId("display")}
+          placeholder={"Enter display name"}
+          value={account.display}
+          on:change={(evt) => {
+            onChangeProperty("display", evt.target["value"]);
+          }}
+        />
+        <label for={elemId("number")}>Number</label>
+        <input
+          id={elemId("number")}
+          placeholder={"Enter account number"}
+          value={account.number}
+          on:change={(evt) => {
+            onChangeProperty("number", evt.target["value"]);
+          }}
+        />
+        <label for={elemId("bankId")}>Bank</label>
+        <select
+          id={elemId("bankId")}
+          class={!currentBank ? "faded-text" : ""}
+          value={currentBank?.id ?? ""}
+          on:change={(evt) => {
+            onChangeProperty("bankId", evt.target["value"]);
+          }}
+        >
+          <option value="">Select one</option>
+          {#each banks as bank}
+            <option value={bank.id}>{bank.displayName}</option>
+          {/each}
+        </select>
+        <label for={elemId("kind")}>Kind</label>
+        <select
+          id={elemId("kind")}
+          class={kindIsDisabled || account.kind === "unselected"
+            ? "faded-text"
+            : ""}
+          value={kindIsDisabled ? "unselected" : account.kind}
+          disabled={kindIsDisabled}
+          on:change={(evt) => {
+            onChangeProperty("kind", evt.target["value"]);
+          }}
+        >
+          <option value="unselected">
+            {currentBank ? "Select one" : "No account kinds found for bank"}
+          </option>
+          {#if currentBank}
+            {#each currentBank.supportedAccountKinds as kind}
+              <option value={kind}>{titleCase(kind)}</option>
             {/each}
-          </select>
-          <label for={elemId("kind")}>Kind</label>
-          <select
-            id={elemId("kind")}
-            class={kindIsDisabled || account.kind === "unselected"
-              ? "faded-text"
-              : ""}
-            value={kindIsDisabled ? "unselected" : account.kind}
-            disabled={kindIsDisabled}
-            on:change={(evt) => {
-              onChangeProperty("kind", evt.target["value"]);
-            }}
-          >
-            <option value="unselected">
-              {currentBank ? "Select one" : "No account kinds found for bank"}
-            </option>
-            {#if currentBank}
-              {#each currentBank.supportedAccountKinds as kind}
-                <option value={kind}>{titleCase(kind)}</option>
-              {/each}
-            {/if}
-          </select>
-          <label for={elemId("type")}>Type</label>
-          <select
-            id={elemId("type")}
-            value={account.type}
-            on:change={(evt) => {
-              onChangeProperty("type", evt.target["value"]);
-            }}
-          >
-            {#each types as type}
-              <option value={type}>{titleCase(type)}</option>
-            {/each}
-          </select>
-        </div>
+          {/if}
+        </select>
+        <label for={elemId("type")}>Type</label>
+        <select
+          id={elemId("type")}
+          value={account.type}
+          on:change={(evt) => {
+            onChangeProperty("type", evt.target["value"]);
+          }}
+        >
+          {#each types as type}
+            <option value={type}>{titleCase(type)}</option>
+          {/each}
+        </select>
       </div>
 
-      <div class="section-container">
-        <div class="section-row">
-          <h3>{currentBank?.displayNameShort ?? "Bank"} credentials</h3>
-          <button
-            on:click={async () => {
-              await onSubmitBankCreds(account.bankId, {
-                username: bankUsername,
-                password: bankPassword,
-              });
-              bankUsername = "";
-              bankPassword = "";
-            }}
-          >
-            Save
-          </button>
-        </div>
-        <div class="inputs">
-          <label for="bank-username">Username</label>
-          <input
-            type="email"
-            id={"bank-username"}
-            placeholder={hasCredsForBank ? "************" : "Enter username"}
-            bind:value={bankUsername}
-          />
-          <label for="bank-password">Password</label>
-          <input
-            type="password"
-            id={"bank-password"}
-            placeholder={hasCredsForBank ? "************" : "Enter password"}
-            bind:value={bankPassword}
-          />
-        </div>
-      </div>
-
-      <div class="button-container">
+      <div class="delete">
         <button
           class="destructive"
           on:click={async () => {
@@ -182,39 +137,26 @@
   .scroll {
     display: grid;
     grid-template-columns: 1fr;
-    height: 600px;
-    overflow-y: scroll;
   }
 
   .sections {
     display: grid;
-    row-gap: 24px;
-  }
-
-  .section-container {
-    display: grid;
-    row-gap: 12px;
-  }
-
-  .section-row {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: center;
+    row-gap: 32px;
   }
 
   .inputs {
     display: grid;
-    grid-template-columns: auto 3fr;
-    align-items: center;
-    column-gap: 24px;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: repeat(5, auto);
+    column-gap: 32px;
     row-gap: 16px;
+    align-items: center;
     text-align: left;
   }
 
-  .button-container {
+  .delete {
     display: grid;
-    align-items: start;
-    margin-top: 16px;
+    justify-content: end;
   }
 
   select.faded-text {

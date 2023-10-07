@@ -61,7 +61,7 @@
 
   .price {
     grid-column-start: price;
-    justify-content: flex-end;
+    justify-content: end;
   }
 
   .price.neg {

@@ -19,16 +19,16 @@
   <div class="grid accounts">
     <div class="grid contents tall">
       <div class="cell account-section title">
-        <div>
+        <h3>
           {accounts.length} accounts
-        </div>
+        </h3>
         <button class="add hover-fade" on:click={(evt) => onClickCreate()}>
           <Icon kind="plus" />
         </button>
       </div>
-      <div class="cell account-section action">
+      <h3 class="cell account-section action">
         {prettyCurrency(accountsSum)}
-      </div>
+      </h3>
       <div class="cell account gutter-r">
         {#if unfinishedExtractions.length === 0}
           <button class="hover-fade" on:click={() => onClickExtract()}>
@@ -63,7 +63,7 @@
 
   .cell.account-section.action {
     grid-column: price;
-    justify-content: flex-end;
+    justify-content: end;
   }
 
   .gutter-r {
