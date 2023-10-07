@@ -131,8 +131,8 @@ const start = async () => {
     const credsMap = await db.getBankCredsMap(process.env.USER_PASSWORD);
     const credsExistMap: Record<string, boolean> = {};
     for (const [bankId, creds] of Object.entries(credsMap)) {
-      credsExistMap[bankId] =
-        creds.username.length > 0 && creds.password.length > 0;
+      const { username, password } = creds;
+      credsExistMap[bankId] = username.length > 0 && password.length > 0;
     }
 
     const payload: GetBanksApiPayload = {
