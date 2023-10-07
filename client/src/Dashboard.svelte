@@ -438,10 +438,15 @@
 </div>
 
 <style>
+  .container {
+    display: grid;
+    justify-content: center;
+    grid-template-columns: 1fr;
+  }
+
   .content {
     display: grid;
     grid-template-columns: 1fr;
-    max-width: 1440px;
   }
 
   .header {
