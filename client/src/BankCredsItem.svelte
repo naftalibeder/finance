@@ -74,7 +74,7 @@
   </div>
 
   <div class="actions">
-    {#if !isSubmitting}
+    {#if isSubmitting}
       <div class="spin faded">
         <Icon kind={"reload"} size={"small"} />
       </div>
