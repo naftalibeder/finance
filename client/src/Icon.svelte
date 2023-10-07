@@ -1,5 +1,7 @@
 <script lang="ts">
-  export let kind: "plus" | "reload" | "dot" | "clock";
+  // Icon svg data is copied from https://heroicons.com/.
+
+  export let kind: "plus" | "reload" | "dot" | "clock" | "menu" | "x";
   export let size: "default" | "small" = "default";
 </script>
 
@@ -48,6 +50,36 @@
     </svg>
   {:else if kind === "dot"}
     <div class="dot">•</div>
+  {:else if kind === "menu"}
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke-width="1.5"
+      stroke="currentColor"
+      class="w-6 h-6"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+      />
+    </svg>
+  {:else if kind === "x"}
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke-width="1.5"
+      stroke="currentColor"
+      class="w-6 h-6"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M6 18L18 6M6 6l12 12"
+      />
+    </svg>
   {/if}
 </div>
 

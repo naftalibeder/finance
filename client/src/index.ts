@@ -8,6 +8,7 @@ export { default as Extractions } from "./Extractions.svelte";
 export { default as Icon } from "./Icon.svelte";
 export { default as Lightbox } from "./Lightbox.svelte";
 export { default as MfaInputList } from "./MfaInputList.svelte";
+export { default as Settings } from "./Settings.svelte";
 export { default as TimeChart } from "./TimeChart.svelte";
 export { default as TimeChartBar } from "./TimeChartBar.svelte";
 export { default as TimeChartCallout } from "./TimeChartCallout.svelte";

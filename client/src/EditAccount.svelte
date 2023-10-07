@@ -46,8 +46,6 @@
 
 <div class="container">
   <div class="scroll">
-    <h2>{account.display.length > 0 ? account.display : "Edit account"}</h2>
-
     <div class="sections">
       <div class="section-container">
         <h3>Account info</h3>
@@ -179,13 +177,11 @@
   .container {
     display: grid;
     grid-template-columns: 1fr;
-    padding: 8px;
   }
 
   .scroll {
     display: grid;
     grid-template-columns: 1fr;
-    padding: 36px;
     height: 600px;
     overflow-y: scroll;
   }

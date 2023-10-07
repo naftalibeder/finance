@@ -146,22 +146,10 @@ button.destructive {
   padding: 0px 0px;
 }
 
-.header {
-  padding: 0px var(--gutter);
-}
-
 .section {
   display: flex;
   flex-direction: column;
   row-gap: 24px;
-}
-
-.row {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  column-gap: 16px;
 }
 
 .grid {

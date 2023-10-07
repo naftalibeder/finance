@@ -51,7 +51,6 @@
 </script>
 
 <div class="container">
-  <h2>Extraction history</h2>
   {#if extractionsGrouped.length > 0}
     <div class="list">
       {#each extractionsGrouped as group, i}
@@ -80,7 +79,6 @@
     display: grid;
     grid-template-columns: 1fr;
     grid-template-rows: 1fr;
-    padding: 16px;
   }
 
   .list {

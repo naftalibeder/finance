@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onDestroy, onMount } from "svelte";
+  import { Icon } from ".";
 
+  export let title: string;
   export let onPressDismiss: () => void;
 
   let containerRef: HTMLButtonElement;
@@ -26,16 +28,26 @@
   });
 </script>
 
-<button class="container" on:click={onClickBg} bind:this={containerRef}>
-  <div class="box">
-    <div class="box-inner">
+<button
+  class="lightbox-container"
+  on:click={onClickBg}
+  bind:this={containerRef}
+>
+  <div class="lightbox">
+    <div class="lightbox-header">
+      <h2 class="title">{title}</h2>
+      <button class="close-button" on:click={() => onPressDismiss()}>
+        <Icon kind={"x"} />
+      </button>
+    </div>
+    <div class="scroll-area">
       <slot />
     </div>
   </div>
 </button>
 
 <style>
-  .container {
+  .lightbox-container {
     all: unset;
     position: fixed;
     top: 0px;
@@ -50,17 +62,32 @@
     background-color: rgba(0, 0, 0, 0.2);
   }
 
-  .box {
+  .lightbox {
     display: grid;
     grid-column: 2;
     grid-row: 2;
-    padding: 16px;
+    grid-template-rows: auto 1fr;
+    row-gap: 32px;
+    padding: 32px;
     background-color: white;
     cursor: default;
     overflow-y: auto;
   }
 
-  .box-inner {
+  .lightbox-header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+  }
+
+  .title {
+    margin: 0px;
+  }
+
+  .close-button {
+    align-items: center;
+  }
+
+  .scroll-area {
     display: grid;
     overflow-y: scroll;
   }

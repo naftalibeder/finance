@@ -33,6 +33,7 @@
     Lightbox,
     Extractions,
     Icon,
+    Settings,
   } from ".";
   import { delay } from "../utils";
 
@@ -93,6 +94,7 @@
   }
 
   let isShowingExtractionsHistory = false;
+  let isShowingSettings = false;
 
   let accountIdShowingDetail: UUID | undefined = undefined;
   $: accountShowingDetail = accounts.find(
@@ -300,6 +302,10 @@
     await fetchExtractions();
   };
 
+  const onClickSettings = async () => {
+    isShowingSettings = true;
+  };
+
   const onClickSendMfaCode = async (bankId: string, code: string) => {
     try {
       await post("mfa/code", { bankId, code });
@@ -342,21 +348,21 @@
 <div class="container">
   <div class="content">
     <div class="header">
-      <div class="row">
-        <h1 style={"flex: 2"}>Finance</h1>
-        <input
-          id={"search-input"}
-          style={"flex: 1"}
-          placeholder={searchPlaceholderText}
-          on:focus={() => (isSearchFocused = true)}
-          on:blur={() => (isSearchFocused = false)}
-          bind:value={query}
-          bind:this={searchInputFieldRef}
-        />
-        <button on:click={() => onClickExtractionsHistory()}>
-          <Icon kind={"clock"} />
-        </button>
-      </div>
+      <a class="title" href="/"><h1>Finance</h1></a>
+      <input
+        id={"search-input"}
+        placeholder={searchPlaceholderText}
+        on:focus={() => (isSearchFocused = true)}
+        on:blur={() => (isSearchFocused = false)}
+        bind:value={query}
+        bind:this={searchInputFieldRef}
+      />
+      <button on:click={() => onClickExtractionsHistory()}>
+        <Icon kind={"clock"} />
+      </button>
+      <button on:click={() => onClickSettings()}>
+        <Icon kind={"menu"} />
+      </button>
     </div>
 
     {#if extractionMfaInfos.length > 0}
@@ -392,6 +398,9 @@
 
   {#if accountShowingDetail}
     <Lightbox
+      title={accountShowingDetail.display.length > 0
+        ? accountShowingDetail.display
+        : "Edit account"}
       onPressDismiss={() => {
         accountIdShowingDetail = undefined;
       }}
@@ -409,11 +418,36 @@
 
   {#if isShowingExtractionsHistory}
     <Lightbox
+      title={"Extraction history"}
       onPressDismiss={() => {
         isShowingExtractionsHistory = false;
       }}
     >
       <Extractions {extractions} {accounts} />
     </Lightbox>
+  {:else if isShowingSettings}
+    <Lightbox
+      title={"Settings"}
+      onPressDismiss={() => {
+        isShowingSettings = false;
+      }}
+    >
+      <Settings />
+    </Lightbox>
   {/if}
 </div>
+
+<style>
+  .header {
+    display: grid;
+    grid-template-columns: 2fr 1fr auto auto;
+    column-gap: 16px;
+    align-items: center;
+    padding: 0px var(--gutter);
+  }
+
+  a.title {
+    all: unset;
+    cursor: pointer;
+  }
+</style>
