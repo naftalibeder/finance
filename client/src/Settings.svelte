@@ -45,6 +45,6 @@
 
   .list {
     display: grid;
-    row-gap: 32px;
+    row-gap: 8px;
   }
 </style>
