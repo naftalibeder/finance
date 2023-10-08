@@ -40,7 +40,7 @@
         <Icon kind={"x"} />
       </button>
     </div>
-    <div class="scroll-area">
+    <div class="lightbox-scroll-area">
       <slot />
     </div>
   </div>
@@ -68,7 +68,7 @@
     grid-row: 2;
     grid-template-rows: auto 1fr;
     row-gap: 32px;
-    padding: 32px;
+    padding: 32px 16px;
     background-color: white;
     cursor: default;
     overflow-y: auto;
@@ -77,6 +77,7 @@
   .lightbox-header {
     display: grid;
     grid-template-columns: 1fr auto;
+    padding: 0px 16px;
   }
 
   .title {
@@ -87,9 +88,10 @@
     align-items: center;
   }
 
-  .scroll-area {
+  .lightbox-scroll-area {
     display: grid;
     align-items: start;
+    padding: 0px 16px;
     overflow-y: scroll;
   }
 </style>
