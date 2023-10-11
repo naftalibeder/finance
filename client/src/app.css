@@ -191,3 +191,9 @@ button.destructive {
   padding-left: 12px;
   opacity: 0.5;
 }
+
+hr {
+  width: 100%;
+  border-bottom: 0px;
+  border-color: var(--text-gray-100);
+}

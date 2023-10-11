@@ -22,6 +22,8 @@
     AddExtractionsApiArgs,
     MfaInfo,
     GetMfaInfoApiPayload,
+    User,
+    GetUserApiPayload,
   } from "shared";
   import { post } from "../api";
   import {
@@ -42,6 +44,7 @@
     currency: "USD",
   };
 
+  let user: User | undefined;
   let banks: Bank[] = [];
   let accounts: Account[] = [];
   let accountsSum: Price = zeroPrice;
@@ -114,10 +117,21 @@
   });
 
   const fetchAll = async () => {
+    await fetchUser();
     await fetchBanks();
     await fetchAccounts();
     await fetchTransactions(query);
     await fetchExtractionStatus();
+  };
+
+  const fetchUser = async () => {
+    try {
+      const payload = await post<undefined, GetUserApiPayload>("user");
+      user = payload.data.user;
+      console.log(`Fetched user with email ${user.email}`);
+    } catch (e) {
+      console.log("Error fetching user:", e);
+    }
   };
 
   const fetchBanks = async () => {
@@ -430,6 +444,7 @@
       }}
     >
       <Settings
+        {user}
         {banks}
         {bankCredsExistMap}
         onClickSubmitBankCreds={updateBankCreds}

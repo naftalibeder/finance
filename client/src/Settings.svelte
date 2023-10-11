@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Bank, BankCreds } from "shared";
+  import { Bank, BankCreds, User } from "shared";
   import { BankCredsItem, Icon } from ".";
 
   type Item = {
@@ -7,6 +7,7 @@
     exists: boolean;
   };
 
+  export let user: User;
   export let banks: Bank[];
   export let bankCredsExistMap: Record<string, boolean>;
   export let onClickSubmitBankCreds: (
@@ -62,6 +63,10 @@
       />
     {/each}
   </div>
+
+  <hr />
+
+  <div>Signed in as {user.email}.</div>
 </div>
 
 <style>

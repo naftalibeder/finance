@@ -23,10 +23,12 @@ import {
   ExtractApiPayloadChunk,
   Bank,
   GetExtractorBanksApiPayload,
+  User,
+  GetUserApiPayload,
 } from "shared";
 import db from "./db.js";
 import { accountsSumPrice } from "./utils/math.js";
-import { Device, User } from "./types.js";
+import { Device } from "./types.js";
 
 const app = express();
 const port = process.env.SERVER_PORT;
@@ -37,6 +39,23 @@ const start = async () => {
     res.setHeader("Access-Control-Allow-Headers", "*");
     res.setHeader("Access-Control-Allow-Origin", "*");
     next();
+  });
+
+  app.post("/user", async (req, res) => {
+    let user: User | undefined;
+    try {
+      user = await db.getUser();
+    } catch (e) {
+      res.status(400).send({ error: "User not found" });
+      return;
+    }
+
+    const payload: GetUserApiPayload = {
+      data: {
+        user,
+      },
+    };
+    res.status(200).send(payload);
   });
 
   app.post("/signIn", async (req, res) => {

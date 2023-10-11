@@ -9,8 +9,9 @@ import {
   BankCredsMap,
   Extraction,
   MfaInfo,
+  User,
 } from "shared";
-import { Device, User } from "./types.js";
+import { Device } from "./types.js";
 import {
   buildFiltersFromQuery,
   transactionMatchesFilters,

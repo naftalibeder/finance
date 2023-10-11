@@ -1,5 +1,13 @@
 import { UUID } from "crypto";
 
+/** Well, a user. */
+export type User = {
+  _id: UUID;
+  email: string;
+  password: string;
+  bankCredentials: string;
+};
+
 /** A universal description of a bank, unrelated to any particular user. */
 export type Bank = {
   id: string;
@@ -119,6 +127,12 @@ export type PaginationApiPayload = {
   start: number;
   ct: number;
   totalCt: number;
+};
+
+export type GetUserApiPayload = {
+  data: {
+    user: User;
+  };
 };
 
 export type SignInApiArgs = {
