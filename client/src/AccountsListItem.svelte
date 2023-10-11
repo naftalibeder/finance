@@ -42,7 +42,7 @@
         <Icon kind="reload" size="small" />
       </div>
     {:else}
-      <button class="refresh hover-fade" on:click={() => onClickExtract()}>
+      <button class="refresh" on:click={() => onClickExtract()}>
         <Icon kind="reload" size="small" />
       </button>
       <div class="timestamp">{prettyTimeAgo(account._updatedAt)}</div>

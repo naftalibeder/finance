@@ -22,7 +22,7 @@
         <h3>
           {accounts.length} accounts
         </h3>
-        <button class="add hover-fade" on:click={(evt) => onClickCreate()}>
+        <button class="add" on:click={(evt) => onClickCreate()}>
           <Icon kind="plus" />
         </button>
       </div>
@@ -31,7 +31,7 @@
       </h3>
       <div class="cell account gutter-r">
         {#if unfinishedExtractions.length === 0}
-          <button class="hover-fade" on:click={() => onClickExtract()}>
+          <button on:click={() => onClickExtract()}>
             <Icon kind="reload" size="small" />
           </button>
         {/if}

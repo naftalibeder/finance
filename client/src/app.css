@@ -49,17 +49,17 @@
   align-items: center;
 }
 
-h1 {
-  font-family: var(--font-display);
-  margin: 8px 0px;
-}
-
 h1,
 h2,
 h3,
 h4 {
+  margin: 8px 0px;
   font-family: var(--font-display);
   text-align: left;
+}
+
+h4 {
+  font-size: 14px;
 }
 
 div,
@@ -98,10 +98,6 @@ textarea:disabled {
   opacity: 0.5;
 }
 
-.hover-fade:hover {
-  opacity: 0.5;
-}
-
 button {
   display: grid;
   font-family: var(--font-body);
@@ -113,7 +109,7 @@ button {
 }
 
 button:hover {
-  opacity: 0.8;
+  opacity: 0.6;
 }
 
 button:disabled {

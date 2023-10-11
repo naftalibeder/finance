@@ -194,6 +194,7 @@
         username: creds.username,
         password: creds.password,
       });
+      await fetchBanks();
     } catch (e) {
       console.log("Error updating bank credentials:", e);
     }
@@ -431,7 +432,7 @@
       <Settings
         {banks}
         {bankCredsExistMap}
-        onSubmitBankCreds={updateBankCreds}
+        onClickSubmitBankCreds={updateBankCreds}
       />
     </Lightbox>
   {/if}

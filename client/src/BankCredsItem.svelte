@@ -1,38 +1,49 @@
 <script lang="ts">
   import { Bank, BankCreds } from "shared";
   import { onMount } from "svelte";
-  import Icon from "./Icon.svelte";
+  import { Icon } from ".";
 
   export let banks: Bank[];
   export let initialBankId: string;
   export let credsExist: boolean;
-  export let onSubmit: (creds: BankCreds) => Promise<void>;
+  export let onClickSubmit: (creds: BankCreds) => Promise<void>;
 
   let bankId: string | undefined;
   let bankUsername = "";
   let bankPassword = "";
+  let isEditing = false;
   let isSubmitting = false;
 
   $: bank = banks.find((o) => o.id === bankId);
 
   onMount(() => {
     bankId = initialBankId;
+    if (!credsExist) {
+      isEditing = true;
+    }
   });
 
-  const onClickSubmit = async () => {
+  const _onClickSubmit = async () => {
     if (bankUsername === "" || bankPassword === "") {
       return;
     }
 
     isSubmitting = true;
 
-    await onSubmit({
-      username: bankUsername,
-      password: bankPassword,
-    });
+    try {
+      await onClickSubmit({
+        username: bankUsername,
+        password: bankPassword,
+      });
+    } catch (e) {
+      console.log("Error updating bank credentials:", e);
+      isSubmitting = false;
+      return;
+    }
 
     bankUsername = "";
     bankPassword = "";
+    isEditing = false;
     isSubmitting = false;
   };
 </script>
@@ -56,31 +67,50 @@
       {/each}
     </select>
 
-    <label for="bank-username">Username</label>
-    <input
-      type="email"
-      id={"bank-username"}
-      placeholder={credsExist ? "************" : "Enter username"}
-      bind:value={bankUsername}
-    />
-
-    <label for="bank-password">Password</label>
-    <input
-      type="password"
-      id={"bank-password"}
-      placeholder={credsExist ? "************" : "Enter password"}
-      bind:value={bankPassword}
-    />
-  </div>
-
-  <div class="actions">
-    {#if isSubmitting}
-      <div class="spin faded">
-        <Icon kind={"reload"} size={"small"} />
+    <label for="bank-username">Credentials</label>
+    {#if isEditing}
+      <div class="creds-row">
+        <input
+          type="email"
+          id={"bank-username"}
+          placeholder={"Username"}
+          bind:value={bankUsername}
+        />
+        <input
+          type="password"
+          id={"bank-password"}
+          placeholder={"Password"}
+          bind:value={bankPassword}
+        />
+        <div class="actions">
+          {#if isSubmitting}
+            <div class="spin">
+              <Icon kind={"reload"} size={"small"} />
+            </div>
+          {:else}
+            {#if credsExist}
+              <button on:click={() => (isEditing = false)}>Cancel</button>
+            {/if}
+            <button on:click={() => _onClickSubmit()}>Submit</button>
+          {/if}
+        </div>
       </div>
-      <div class="faded">Saving</div>
     {:else}
-      <button on:click={() => onClickSubmit()}>Save</button>
+      <div class="creds-row">
+        <input
+          class="input-button faded"
+          value="****************"
+          on:click={() => (isEditing = true)}
+        />
+        <input
+          class="input-button faded"
+          value="****************"
+          on:click={() => (isEditing = true)}
+        />
+        <div>
+          <button on:click={() => (isEditing = true)}>Change</button>
+        </div>
+      </div>
     {/if}
   </div>
 </div>
@@ -89,6 +119,7 @@
   .container {
     display: grid;
     grid-template-columns: 1fr;
+    row-gap: 8px;
   }
 
   .inputs {
@@ -99,11 +130,21 @@
     row-gap: 8px;
   }
 
+  .creds-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    align-items: center;
+    column-gap: 8px;
+  }
+
+  .input-button {
+    outline: 0px;
+  }
+
   .actions {
     display: grid;
     grid-auto-flow: column;
+    align-items: center;
     column-gap: 8px;
-    justify-content: end;
-    margin-top: 16px;
   }
 </style>

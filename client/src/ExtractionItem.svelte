@@ -63,7 +63,13 @@
         {:else}
           <div class="cell faded">{"N/A"}</div>
         {/if}
-        <div class="cell h-scroll">{statusDisplay(e)}</div>
+        <div class="cell">
+          {#if e.error}
+            <button on:click={() => alert(e.error)}>Error</button>
+          {:else}
+            {statusDisplay(e)}
+          {/if}
+        </div>
       {/each}
     </div>
   {/if}
@@ -79,10 +85,5 @@
   .section {
     grid-column: 1 / 6;
     cursor: pointer;
-  }
-
-  .h-scroll {
-    overflow: scroll;
-    white-space: nowrap;
   }
 </style>
