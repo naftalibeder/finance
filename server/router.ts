@@ -25,6 +25,7 @@ import {
   GetExtractorBanksApiPayload,
   User,
   GetUserApiPayload,
+  DeleteBankCredsApiArgs,
 } from "shared";
 import db from "./db.js";
 import { accountsSumPrice } from "./utils/math.js";
@@ -175,6 +176,21 @@ const start = async () => {
       );
     } catch (e) {
       console.log("Error updating bank credentials:", e);
+      res.status(501).send(e);
+      return;
+    }
+
+    res.status(200).send({ message: "ok" });
+  });
+
+  app.post("/banks/deleteCredentials", async (req, res) => {
+    try {
+      const args = req.body as DeleteBankCredsApiArgs;
+      const { bankId } = args;
+
+      await db.deleteBankCreds(bankId, process.env.USER_PASSWORD);
+    } catch (e) {
+      console.log("Error deleting bank credentials:", e);
       res.status(501).send(e);
       return;
     }

@@ -14,59 +14,76 @@
     bankId: string,
     creds: BankCreds
   ) => Promise<void>;
+  export let onClickDeleteBankCreds: (bankId: string) => Promise<void>;
 
-  let showAddedItem = false;
+  let showNewItem = false;
 
   $: items = ((): Item[] => {
     let items: Item[] = [];
     for (const [bankId, exists] of Object.entries(bankCredsExistMap)) {
       items.push({ bankId, exists });
     }
-    if (showAddedItem) {
+    if (showNewItem) {
       items.push({ bankId: undefined, exists: false });
     }
     return items;
   })();
 
   const onClickCreate = async () => {
-    showAddedItem = true;
+    showNewItem = true;
   };
 
   const _onClickSubmit = async (bankId: string, creds: BankCreds) => {
     await onClickSubmitBankCreds(bankId, creds);
-    showAddedItem = false;
+    showNewItem = false;
+  };
+
+  const _onClickDelete = async (bankId: string) => {
+    await onClickDeleteBankCreds(bankId);
+    showNewItem = false;
   };
 </script>
 
 <div class="container">
-  <div class="section">
-    <h3>Bank credentials</h3>
-    <button
-      class="add"
-      on:click={() => {
-        onClickCreate();
-      }}
-    >
-      <Icon kind="plus" />
-    </button>
-  </div>
-
-  <div class="list">
-    {#each items as item}
-      <BankCredsItem
-        {banks}
-        initialBankId={item.bankId}
-        credsExist={item.exists}
-        onClickSubmit={async (creds) => {
-          _onClickSubmit(item.bankId, creds);
+  <div class="section-group">
+    <div class="section-label">
+      <h3>Bank credentials</h3>
+      <button
+        class="add"
+        on:click={() => {
+          onClickCreate();
         }}
-      />
-    {/each}
+      >
+        <Icon kind="plus" />
+      </button>
+    </div>
+
+    <div class="list">
+      {#each items as item}
+        <BankCredsItem
+          {banks}
+          initialBankId={item.bankId}
+          credsExist={item.exists}
+          onClickCancelNew={async () => {
+            showNewItem = false;
+          }}
+          onClickSubmit={async (bankId, creds) => {
+            _onClickSubmit(bankId, creds);
+          }}
+          onClickDelete={async (bankId) => {
+            _onClickDelete(bankId);
+          }}
+        />
+      {/each}
+    </div>
   </div>
 
-  <hr />
-
-  <div>Signed in as {user.email}.</div>
+  <div class="section-group">
+    <div class="section-label">
+      <h3>Account</h3>
+    </div>
+    <div>Signed in as {user.email}.</div>
+  </div>
 </div>
 
 <style>
@@ -74,10 +91,16 @@
     display: grid;
     grid-template-rows: auto 1fr;
     grid-template-columns: 1fr;
+    row-gap: 24px;
+  }
+
+  .section-group {
+    display: grid;
+    grid-auto-flow: row;
     row-gap: 16px;
   }
 
-  .section {
+  .section-label {
     display: grid;
     grid-template-columns: auto auto;
     align-items: center;
@@ -87,6 +110,7 @@
 
   .list {
     display: grid;
-    row-gap: 24px;
+    grid-auto-flow: row;
+    row-gap: 16px;
   }
 </style>

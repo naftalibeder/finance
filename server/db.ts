@@ -234,7 +234,7 @@ const getBankCreds = async (
 
 const setBankCreds = async (
   bankId: string,
-  creds: BankCreds,
+  creds?: BankCreds,
   userPassword?: string
 ) => {
   if (!userPassword) {
@@ -242,9 +242,12 @@ const setBankCreds = async (
   }
 
   const credsMap = await getBankCredsMap(userPassword);
-  credsMap[bankId] = creds;
+  if (creds) {
+    credsMap[bankId] = creds;
+  } else {
+    delete credsMap[bankId];
+  }
   const credsStr = JSON.stringify(credsMap);
-
   const encryptedCreds = encrypt(credsStr, userPassword);
 
   const user = await getUser();
@@ -252,6 +255,10 @@ const setBankCreds = async (
     ...user,
     bankCredentials: encryptedCreds,
   });
+};
+
+const deleteBankCreds = async (bankId: string, userPassword?: string) => {
+  return setBankCreds(bankId, undefined, userPassword);
 };
 
 const getAccounts = async (): Promise<Account[]> => {
@@ -1026,6 +1033,7 @@ export default {
   getBankCredsMap,
   getBankCreds,
   setBankCreds,
+  deleteBankCreds,
   getAccounts,
   getAccount,
   addAccount,

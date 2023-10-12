@@ -24,6 +24,7 @@
     GetMfaInfoApiPayload,
     User,
     GetUserApiPayload,
+    DeleteBankCredsApiArgs,
   } from "shared";
   import { post } from "../api";
   import {
@@ -211,6 +212,17 @@
       await fetchBanks();
     } catch (e) {
       console.log("Error updating bank credentials:", e);
+    }
+  };
+
+  const deleteBankCreds = async (bankId: string) => {
+    try {
+      await post<DeleteBankCredsApiArgs, undefined>("banks/deleteCredentials", {
+        bankId,
+      });
+      await fetchBanks();
+    } catch (e) {
+      console.log("Error deleting bank credentials:", e);
     }
   };
 
@@ -448,6 +460,7 @@
         {banks}
         {bankCredsExistMap}
         onClickSubmitBankCreds={updateBankCreds}
+        onClickDeleteBankCreds={deleteBankCreds}
       />
     </Lightbox>
   {/if}

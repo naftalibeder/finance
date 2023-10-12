@@ -161,6 +161,10 @@ export type UpdateBankCredsApiArgs = BankCreds & {
   bankId: string;
 };
 
+export type DeleteBankCredsApiArgs = {
+  bankId: string;
+};
+
 export type GetAccountsApiPayload = {
   data: {
     accounts: Account[];
