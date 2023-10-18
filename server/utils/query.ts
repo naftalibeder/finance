@@ -1,10 +1,4 @@
-import {
-  ComparisonOperator,
-  Filter,
-  PriceFilter,
-  DateFilter,
-  Transaction,
-} from "shared";
+import { ComparisonOperator, Filter, PriceFilter, DateFilter } from "shared";
 
 const comparisonOperatorMap: Record<string, ComparisonOperator> = {
   "<": "lt",
@@ -101,66 +95,4 @@ export const buildFiltersFromQuery = (query: string): Filter[] => {
   }
 
   return filters;
-};
-
-export const transactionMatchesFilters = (
-  t: Transaction,
-  filters: Filter[]
-): boolean => {
-  let isMatch = true;
-
-  for (const f of filters) {
-    switch (f.type) {
-      case "text":
-        const area = [t.payee, t.description, t.type, t.price.amount]
-          .join(" ")
-          .toLowerCase();
-        if (!area.includes(f.text)) {
-          isMatch = false;
-        }
-        break;
-      case "comparison": {
-        let transactionValue: number = 0;
-        let filterValue: number = 0;
-        if (f.valueType === "price") {
-          transactionValue = Math.abs(t.price.amount);
-          filterValue = Math.abs(f.value.amount);
-        } else if (f.valueType === "date") {
-          transactionValue = new Date(t.date).valueOf();
-          filterValue = f.value.valueOf();
-        }
-        switch (f.operator) {
-          case "lt":
-            if (!(transactionValue < filterValue)) {
-              isMatch = false;
-            }
-            break;
-          case "lte":
-            if (!(transactionValue <= filterValue)) {
-              isMatch = false;
-            }
-            break;
-          case "gt":
-            if (!(transactionValue > filterValue)) {
-              isMatch = false;
-            }
-            break;
-          case "gte":
-            if (!(transactionValue >= filterValue)) {
-              isMatch = false;
-            }
-            ``;
-            break;
-          case "eq":
-            if (transactionValue !== filterValue) {
-              isMatch = false;
-            }
-            break;
-        }
-        break;
-      }
-    }
-  }
-
-  return isMatch;
 };

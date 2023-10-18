@@ -1,20 +1,20 @@
 <script lang="ts">
   import { UUID } from "crypto";
-  import { Transaction, Price, Account } from "shared";
+  import { Transaction, Price, Account, PaginationApiPayload } from "shared";
   import { prettyCurrency, prettyNumber } from "../utils";
   import { TransactionsListItem } from ".";
 
   export let isLoading: boolean;
   export let transactions: Transaction[];
   export let transactionsSumPrice: Price;
-  export let transactionsTotalCt: number;
+  export let transactionsPagination: PaginationApiPayload;
   export let query: string;
   export let accountsDict: Record<UUID, Account>;
   export let onClickShowMore: () => void;
 
   $: sectionText = buildSectionText(
     transactions.length,
-    transactionsTotalCt,
+    transactionsPagination?.itemCt ?? 0,
     query
   );
 
@@ -57,17 +57,19 @@
     {/each}
   </div>
 
-  <div class="footer-container">
-    {#if transactions.length > 0 && isLoading}
-      <div class="faded">Loading more transactions</div>
-    {:else if transactions.length < transactionsTotalCt}
-      <button on:click={() => onClickShowMore()}>
-        Load more transactions
-      </button>
-    {:else if transactions.length === transactionsTotalCt}
-      <div class="faded">No more transactions</div>
-    {/if}
-  </div>
+  {#if transactionsPagination}
+    <div class="footer-container">
+      {#if transactions.length > 0 && isLoading}
+        <div class="faded">Loading more transactions</div>
+      {:else if transactionsPagination.page < transactionsPagination.pagesCt}
+        <button on:click={() => onClickShowMore()}>
+          Load more transactions
+        </button>
+      {:else if transactionsPagination.page === transactionsPagination.pagesCt}
+        <div class="faded">No more transactions</div>
+      {/if}
+    </div>
+  {/if}
 </div>
 
 <style>

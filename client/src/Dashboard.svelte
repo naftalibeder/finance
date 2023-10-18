@@ -123,7 +123,7 @@
     await fetchUser();
     await fetchBanks();
     await fetchAccounts();
-    await fetchTransactions(query, 0);
+    await fetchTransactions(query, 1);
     await fetchExtractionStatus();
   };
 
@@ -228,19 +228,12 @@
     }
   };
 
-  const fetchTransactions = async (_query: string, start: number) => {
+  const fetchTransactions = async (_query: string, page: number) => {
     if (isLoadingTransactions) {
       return;
     }
 
-    if (transactionsPagination && start === transactionsPagination.start) {
-      console.log("Not fetching transactions; start position has not changed");
-      return;
-    }
-
-    console.log(
-      `Fetching transactions with query '${_query}' starting at index ${start}`
-    );
+    console.log(`Fetching transactions with query '${_query}'`);
 
     isLoadingTransactions = true;
 
@@ -250,16 +243,13 @@
         GetTransactionsApiPayload
       >("transactions", {
         query: _query,
-        pagination: {
-          start,
-          limit: 1000,
-        },
+        page,
       });
-      transactions = [...transactions, ...payload.data.result];
+      transactions = payload.data.result;
       transactionsSumPrice = payload.data.resultSum;
       transactionsPagination = payload.data.pagination;
       console.log(
-        `Fetched ${transactions.length} of ${transactionsPagination.totalCt} transactions with a total sum of ${transactionsSumPrice.amount}`
+        `Fetched ${transactions.length} of ${transactionsPagination.itemCt} transactions with a total sum of ${transactionsSumPrice.amount}`
       );
     } catch (e) {
       console.log("Error fetching transactions:", e);
@@ -322,7 +312,7 @@
       if (pendingCt !== pendingCtPrev || updatedAts !== updatedAtsPrev) {
         console.log(`Pending accounts or extractions changed; refetching data`);
         await fetchAccounts();
-        await fetchTransactions(query, 0);
+        await fetchTransactions(query, 1);
         await fetchExtractions();
       }
 
@@ -373,7 +363,7 @@
   const onChangeQuery = async (_query: string) => {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(async () => {
-      await fetchTransactions(_query, 0);
+      await fetchTransactions(_query, 1);
     }, 100);
   };
 
@@ -436,15 +426,11 @@
       isLoading={isLoadingTransactions}
       {transactions}
       {transactionsSumPrice}
-      transactionsTotalCt={transactionsPagination?.totalCt ?? 0}
+      {transactionsPagination}
       query={transactionsResponseQuery}
       {accountsDict}
       onClickShowMore={async () => {
-        let nextStart = 0;
-        if (transactionsPagination) {
-          nextStart = transactionsPagination.start + transactionsPagination.ct;
-        }
-        await fetchTransactions(query, nextStart);
+        await fetchTransactions(query, 1); // TODO: Increment page.
       }}
     />
   </div>
