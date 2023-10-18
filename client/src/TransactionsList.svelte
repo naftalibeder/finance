@@ -5,10 +5,11 @@
   import { TransactionsListItem } from ".";
 
   export let transactions: Transaction[];
-  export let transactionsTotalCt: number;
   export let transactionsSumPrice: Price;
+  export let transactionsTotalCt: number;
   export let query: string;
   export let accountsDict: Record<UUID, Account>;
+  export let onClickShowMore: () => void;
 
   $: sectionText = buildSectionText(
     transactions.length,
@@ -54,6 +55,12 @@
       />
     {/each}
   </div>
+
+  {#if transactions.length < transactionsTotalCt}
+    <button class="more-button" on:click={() => onClickShowMore()}>
+      Show more transactions
+    </button>
+  {/if}
 </div>
 
 <style>
@@ -71,5 +78,9 @@
   .cell.transaction-section.action {
     grid-column: price;
     justify-content: end;
+  }
+
+  .more-button {
+    padding: 0px var(--gutter);
   }
 </style>

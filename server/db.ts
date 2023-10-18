@@ -402,25 +402,47 @@ const getTransactions = async (
   start: number,
   limit: number
 ): Promise<GetTransactionsApiPayload["data"]> => {
-  const transactions = await new Promise<Transaction[]>((res, rej) => {
-    db.all<Record<string, any>[]>(
-      `
-      select * from transactions 
-      order by date desc
-      limit $limit offset $offset
-      `,
-      {
-        $offset: start,
-        $limit: limit,
-      },
-      (e, rows) => {
-        if (e) {
-          rej(e);
-        } else {
-          res(rows.map(transactionFromRow));
+  // let filtered = [...transactions];
+  // if (query.length > 0) {
+  //   filtered = [];
+  //   // TODO: Filter transactions in sql query instead.
+  //   const filters = buildFiltersFromQuery(query);
+  //   for (const t of transactions) {
+  //     if (transactionMatchesFilters(t, filters)) {
+  //       filtered.push(t);
+  //     }
+  //   }
+  // }
+
+  const filtered = await new Promise<Transaction[]>((res, rej) => {
+    const wheres: string[] = [];
+    const args: Record<string, any> = {};
+
+    const filters = buildFiltersFromQuery(query);
+    for (const filter of filters) {
+      if (filter.type === "text" && query.length > 0) {
+        wheres.push("instr(lower(payee), lower($query)) > 0");
+        args.$query = query;
+      } else if (filter.type === "comparison") {
+        if (filter.operator === "eq") {
+          // TODO
         }
       }
-    );
+    }
+
+    let sql = "select * from transactions";
+    if (wheres.length > 0) {
+      sql += " where " + wheres.join(" and ");
+    }
+    sql += " order by date desc";
+
+    db.all<Record<string, any>[]>(sql, args, (e, rows) => {
+      if (e) {
+        rej(e);
+      } else {
+        res(rows.map(transactionFromRow));
+      }
+    });
   });
 
   const totals = await new Promise<{
@@ -435,11 +457,13 @@ const getTransactions = async (
       sum_price: number;
       earliest_date: string;
     }>(
-      `select
+      `
+      select
         count(*) as ct,
         max(price_amount) as max_price,
         min(date) as earliest_date
-      from transactions;`,
+      from transactions
+      `,
       (e, row) => {
         if (e) {
           rej(e);
@@ -455,27 +479,17 @@ const getTransactions = async (
     );
   });
 
-  let filtered = [...transactions];
-  if (query.length > 0) {
-    filtered = [];
-    // TODO: Filter transactions in sql query instead.
-    const filters = buildFiltersFromQuery(query);
-    for (const t of transactions) {
-      if (transactionMatchesFilters(t, filters)) {
-        filtered.push(t);
-      }
-    }
-  }
+  const filteredAndPaginated = filtered.slice(start, start + limit);
 
   let payload: GetTransactionsApiPayload["data"] = {
-    transactions: filtered,
-    sum: transactionsSumPrice(transactions),
+    result: filteredAndPaginated,
+    resultSum: transactionsSumPrice(filtered),
     totalSum: { amount: totals.sumPrice, currency: "USD" },
     totalMax: { amount: totals.maxPrice, currency: "USD" },
     totalEarliest: totals.earliestDate,
     pagination: {
       start,
-      ct: filtered.length,
+      ct: filteredAndPaginated.length,
       totalCt: totals.ct,
     },
   };

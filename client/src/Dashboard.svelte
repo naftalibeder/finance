@@ -25,6 +25,7 @@
     User,
     GetUserApiPayload,
     DeleteBankCredsApiArgs,
+    PaginationApiPayload,
   } from "shared";
   import { post } from "../api";
   import {
@@ -45,6 +46,8 @@
     currency: "USD",
   };
 
+  let isLoading = false;
+
   let user: User | undefined;
   let banks: Bank[] = [];
   let accounts: Account[] = [];
@@ -60,10 +63,9 @@
 
   let transactions: Transaction[] = [];
   let transactionsSumPrice: Price = zeroPrice;
-  let transactionsTotalCt = 0;
+  let transactionsPagination: PaginationApiPayload | undefined;
   let transactionsResponseQuery: string = "";
-
-  let isLoading = false;
+  let isFetchingTransactions = false;
 
   /** A list of all extractions ever completed or in progress. */
   let extractions: Extraction[] = [];
@@ -121,7 +123,7 @@
     await fetchUser();
     await fetchBanks();
     await fetchAccounts();
-    await fetchTransactions(query);
+    await fetchTransactions(query, 0);
     await fetchExtractionStatus();
   };
 
@@ -226,29 +228,45 @@
     }
   };
 
-  const fetchTransactions = async (q: string) => {
+  const fetchTransactions = async (_query: string, start: number) => {
+    if (isFetchingTransactions) {
+      return;
+    }
+
+    if (transactionsPagination && start === transactionsPagination.start) {
+      console.log("Not fetching transactions; start position has not changed");
+      return;
+    }
+
+    console.log(
+      `Fetching transactions with query '${_query}' starting at index ${start}`
+    );
+
+    isFetchingTransactions = true;
+
     try {
       const payload = await post<
         GetTransactionsApiArgs,
         GetTransactionsApiPayload
       >("transactions", {
-        query: q,
+        query: _query,
         pagination: {
-          start: 0,
+          start,
           limit: 1000,
         },
       });
-      transactions = payload.data.transactions;
-      transactionsSumPrice = payload.data.sum;
-      transactionsTotalCt = payload.data.pagination.totalCt;
-      transactionsResponseQuery = q;
+      transactions = [...transactions, ...payload.data.result];
+      transactionsSumPrice = payload.data.resultSum;
+      transactionsPagination = payload.data.pagination;
       console.log(
-        `Fetched ${transactions.length} of ${transactionsTotalCt} transactions with a sum of ${transactionsSumPrice.amount}`
+        `Fetched ${transactions.length} of ${transactionsPagination.totalCt} transactions with a total sum of ${transactionsSumPrice.amount}`
       );
     } catch (e) {
-      transactionsResponseQuery = q;
       console.log("Error fetching transactions:", e);
     }
+
+    transactionsResponseQuery = _query;
+    isFetchingTransactions = false;
   };
 
   const fetchExtractions = async () => {
@@ -304,7 +322,7 @@
       if (pendingCt !== pendingCtPrev || updatedAts !== updatedAtsPrev) {
         console.log(`Pending accounts or extractions changed; refetching data`);
         await fetchAccounts();
-        await fetchTransactions(query);
+        await fetchTransactions(query, 0);
         await fetchExtractions();
       }
 
@@ -352,10 +370,10 @@
     await fetchExtractionStatus();
   };
 
-  const onChangeQuery = async (q: string) => {
+  const onChangeQuery = async (_query: string) => {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(async () => {
-      await fetchTransactions(q);
+      await fetchTransactions(_query, 0);
     }, 100);
   };
 
@@ -416,10 +434,17 @@
 
     <TransactionsList
       {transactions}
-      {transactionsTotalCt}
       {transactionsSumPrice}
+      transactionsTotalCt={transactionsPagination?.totalCt ?? 0}
       query={transactionsResponseQuery}
       {accountsDict}
+      onClickShowMore={async () => {
+        let nextStart = 0;
+        if (transactionsPagination) {
+          nextStart = transactionsPagination.start + transactionsPagination.ct;
+        }
+        await fetchTransactions(query, nextStart);
+      }}
     />
   </div>
 
