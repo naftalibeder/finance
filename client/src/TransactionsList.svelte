@@ -4,6 +4,7 @@
   import { prettyCurrency, prettyNumber } from "../utils";
   import { TransactionsListItem } from ".";
 
+  export let isLoading: boolean;
   export let transactions: Transaction[];
   export let transactionsSumPrice: Price;
   export let transactionsTotalCt: number;
@@ -56,11 +57,17 @@
     {/each}
   </div>
 
-  {#if transactions.length < transactionsTotalCt}
-    <button class="more-button" on:click={() => onClickShowMore()}>
-      Show more transactions
-    </button>
-  {/if}
+  <div class="footer-container">
+    {#if transactions.length > 0 && isLoading}
+      <div class="faded">Loading more transactions</div>
+    {:else if transactions.length < transactionsTotalCt}
+      <button on:click={() => onClickShowMore()}>
+        Load more transactions
+      </button>
+    {:else if transactions.length === transactionsTotalCt}
+      <div class="faded">No more transactions</div>
+    {/if}
+  </div>
 </div>
 
 <style>
@@ -80,7 +87,8 @@
     justify-content: end;
   }
 
-  .more-button {
-    padding: 0px var(--gutter);
+  .footer-container {
+    display: grid;
+    justify-content: center;
   }
 </style>

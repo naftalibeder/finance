@@ -61,11 +61,11 @@
   })(accounts);
   let bankCredsExistMap: Record<string, boolean> = {};
 
+  let isLoadingTransactions = false;
   let transactions: Transaction[] = [];
   let transactionsSumPrice: Price = zeroPrice;
   let transactionsPagination: PaginationApiPayload | undefined;
   let transactionsResponseQuery: string = "";
-  let isFetchingTransactions = false;
 
   /** A list of all extractions ever completed or in progress. */
   let extractions: Extraction[] = [];
@@ -229,7 +229,7 @@
   };
 
   const fetchTransactions = async (_query: string, start: number) => {
-    if (isFetchingTransactions) {
+    if (isLoadingTransactions) {
       return;
     }
 
@@ -242,7 +242,7 @@
       `Fetching transactions with query '${_query}' starting at index ${start}`
     );
 
-    isFetchingTransactions = true;
+    isLoadingTransactions = true;
 
     try {
       const payload = await post<
@@ -266,7 +266,7 @@
     }
 
     transactionsResponseQuery = _query;
-    isFetchingTransactions = false;
+    isLoadingTransactions = false;
   };
 
   const fetchExtractions = async () => {
@@ -433,6 +433,7 @@
     />
 
     <TransactionsList
+      isLoading={isLoadingTransactions}
       {transactions}
       {transactionsSumPrice}
       transactionsTotalCt={transactionsPagination?.totalCt ?? 0}
