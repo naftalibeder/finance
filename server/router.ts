@@ -233,9 +233,11 @@ const start = async () => {
   app.post("/transactions", async (req, res) => {
     const args = req.body as GetTransactionsApiArgs;
     const { query, page } = args;
-    const data = await db.getTransactions(query, page);
+    const payload: GetTransactionsApiPayload = await db.getTransactions(
+      query,
+      page
+    );
 
-    const payload: GetTransactionsApiPayload = { data };
     res.status(200).send(payload);
   });
 

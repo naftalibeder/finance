@@ -120,9 +120,10 @@ export type Filter = TextFilter | PriceFilter | DateFilter;
 
 export type PaginationApiPayload = {
   page: number;
-  pageSize: number;
-  pagesCt: number;
-  itemCt: number;
+  pageItemCt: number;
+  pageItemMaxCt: number;
+  totalItemCt: number;
+  totalPageCt: number;
 };
 
 export type GetUserApiPayload = {
@@ -195,13 +196,12 @@ export type GetTransactionsApiArgs = {
 
 export type GetTransactionsApiPayload = {
   data: {
-    result: Transaction[];
-    resultSum: Price;
+    items: Transaction[];
+    itemsSum: Price;
     totalSum: Price;
     totalMax: Price;
-    totalEarliest?: string;
-    pagination: PaginationApiPayload;
   };
+  pagination: PaginationApiPayload;
 };
 
 export type ExtractApiArgs = {

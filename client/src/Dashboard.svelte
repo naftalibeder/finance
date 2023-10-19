@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy, onMount } from "svelte";
+  import { onMount } from "svelte";
   import { UUID } from "crypto";
   import {
     Account,
@@ -36,7 +36,7 @@
     MfaInputList,
     Lightbox,
     Extractions,
-    Icon,
+    Header,
     Settings,
   } from ".";
   import { delay } from "../utils";
@@ -46,26 +46,25 @@
     currency: "USD",
   };
 
-  let isLoading = false;
+  const zeroPagination: PaginationApiPayload = {
+    page: 1,
+    pageItemCt: 0,
+    pageItemMaxCt: 0,
+    totalItemCt: 0,
+    totalPageCt: 0,
+  };
 
   let user: User | undefined;
   let banks: Bank[] = [];
+  let bankCredsExistMap: Record<string, boolean> = {};
   let accounts: Account[] = [];
   let accountsSum: Price = zeroPrice;
-  $: accountsDict = ((_accounts: Account[]): Record<UUID, Account> => {
-    const dict: Record<UUID, Account> = {};
-    for (const a of _accounts) {
-      dict[a._id] = a;
-    }
-    return dict;
-  })(accounts);
-  let bankCredsExistMap: Record<string, boolean> = {};
 
   let isLoadingTransactions = false;
   let transactions: Transaction[] = [];
   let transactionsSumPrice: Price = zeroPrice;
-  let transactionsPagination: PaginationApiPayload | undefined;
-  let transactionsResponseQuery: string = "";
+  let transactionsPagination: PaginationApiPayload = zeroPagination;
+  let transactionsFilterQuery = "";
 
   /** A list of all extractions ever completed or in progress. */
   let extractions: Extraction[] = [];
@@ -74,33 +73,9 @@
   /** Multi-factor request information for an extraction currently in progress. */
   let extractionMfaInfos: MfaInfo[] = [];
 
-  let searchTimer: NodeJS.Timer | undefined;
-  let searchInputFieldRef: HTMLInputElement;
-  let isSearchFocused = false;
-  let searchPlaceholderText: string;
-  $: {
-    if (!isSearchFocused) {
-      searchPlaceholderText = "Search (⌘K)";
-    } else {
-      const options: string[] = [
-        "coffee",
-        accounts[Math.floor(Math.random() * accounts.length)].display,
-        ">250 <350",
-        "<15.20",
-        ">2000",
-        "~10",
-      ];
-      const randOption = options[Math.floor(Math.random() * options.length)];
-      searchPlaceholderText = `E.g. ${randOption}`;
-    }
-  }
   let query = "";
-  $: {
-    onChangeQuery(query);
-  }
 
-  let isShowingExtractionsHistory = false;
-  let isShowingSettings = false;
+  let visibleOverlay: "extractionsHistory" | "settings" | undefined;
 
   let accountIdShowingDetail: UUID | undefined = undefined;
   $: accountShowingDetail = accounts.find(
@@ -108,15 +83,7 @@
   );
 
   onMount(async () => {
-    document.addEventListener("keydown", onKeyPress);
-
-    isLoading = true;
     await fetchAll();
-    isLoading = false;
-  });
-
-  onDestroy(() => {
-    document.removeEventListener("keydown", onKeyPress);
   });
 
   const fetchAll = async () => {
@@ -233,8 +200,7 @@
       return;
     }
 
-    console.log(`Fetching transactions with query '${_query}'`);
-
+    console.log(`Fetching transactions page ${page} with query '${_query}'`);
     isLoadingTransactions = true;
 
     try {
@@ -245,17 +211,21 @@
         query: _query,
         page,
       });
-      transactions = payload.data.result;
-      transactionsSumPrice = payload.data.resultSum;
-      transactionsPagination = payload.data.pagination;
+      if (page > transactionsPagination.page) {
+        transactions = [...transactions, ...payload.data.items];
+      } else {
+        transactions = payload.data.items;
+      }
+      transactionsSumPrice = payload.data.itemsSum;
+      transactionsPagination = payload.pagination;
       console.log(
-        `Fetched ${transactions.length} of ${transactionsPagination.itemCt} transactions with a total sum of ${transactionsSumPrice.amount}`
+        `Fetched ${payload.pagination.pageItemCt} of ${payload.pagination.totalItemCt} transactions with a sum of ${transactionsSumPrice.amount}`
       );
     } catch (e) {
       console.log("Error fetching transactions:", e);
     }
 
-    transactionsResponseQuery = _query;
+    transactionsFilterQuery = _query;
     isLoadingTransactions = false;
   };
 
@@ -332,13 +302,22 @@
     }
   };
 
+  const onClickShowMoreTransactions = async () => {
+    await fetchTransactions(query, transactionsPagination.page + 1);
+  };
+
+  const onQueryChanged = async (_query: string) => {
+    query = _query;
+    await fetchTransactions(query, 1);
+  };
+
   const onClickExtractionsHistory = async () => {
-    isShowingExtractionsHistory = true;
+    visibleOverlay = "extractionsHistory";
     await fetchExtractions();
   };
 
   const onClickSettings = async () => {
-    isShowingSettings = true;
+    visibleOverlay = "settings";
   };
 
   const onClickSendMfaCode = async (bankId: string, code: string) => {
@@ -359,46 +338,11 @@
     await post<undefined, undefined>("extract");
     await fetchExtractionStatus();
   };
-
-  const onChangeQuery = async (_query: string) => {
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(async () => {
-      await fetchTransactions(_query, 1);
-    }, 100);
-  };
-
-  const onKeyPress = (evt: KeyboardEvent) => {
-    if (evt.metaKey && evt.key === "k") {
-      evt.preventDefault();
-      searchInputFieldRef.focus();
-    } else if (evt.key === "Escape") {
-      evt.preventDefault();
-      searchInputFieldRef.value = "";
-      query = "";
-      searchInputFieldRef.blur();
-    }
-  };
 </script>
 
 <div class="container">
   <div class="content">
-    <div class="header">
-      <a class="title" href="/"><h1>Finance</h1></a>
-      <input
-        id={"search-input"}
-        placeholder={searchPlaceholderText}
-        on:focus={() => (isSearchFocused = true)}
-        on:blur={() => (isSearchFocused = false)}
-        bind:value={query}
-        bind:this={searchInputFieldRef}
-      />
-      <button on:click={() => onClickExtractionsHistory()}>
-        <Icon kind={"clock"} />
-      </button>
-      <button on:click={() => onClickSettings()}>
-        <Icon kind={"menu"} />
-      </button>
-    </div>
+    <Header {onQueryChanged} {onClickExtractionsHistory} {onClickSettings} />
 
     {#if extractionMfaInfos.length > 0}
       <MfaInputList
@@ -427,11 +371,9 @@
       {transactions}
       {transactionsSumPrice}
       {transactionsPagination}
-      query={transactionsResponseQuery}
-      {accountsDict}
-      onClickShowMore={async () => {
-        await fetchTransactions(query, 1); // TODO: Increment page.
-      }}
+      {accounts}
+      query={transactionsFilterQuery}
+      onClickShowMore={onClickShowMoreTransactions}
     />
   </div>
 
@@ -451,20 +393,20 @@
     </Lightbox>
   {/if}
 
-  {#if isShowingExtractionsHistory}
+  {#if visibleOverlay === "extractionsHistory"}
     <Lightbox
       title={"Extraction history"}
       onPressDismiss={() => {
-        isShowingExtractionsHistory = false;
+        visibleOverlay = undefined;
       }}
     >
       <Extractions {extractions} {accounts} />
     </Lightbox>
-  {:else if isShowingSettings}
+  {:else if visibleOverlay === "settings"}
     <Lightbox
       title={"Settings"}
       onPressDismiss={() => {
-        isShowingSettings = false;
+        visibleOverlay = undefined;
       }}
     >
       <Settings
@@ -488,18 +430,5 @@
   .content {
     display: grid;
     grid-template-columns: 1fr;
-  }
-
-  .header {
-    display: grid;
-    grid-template-columns: 2fr 1fr auto auto;
-    column-gap: 16px;
-    align-items: center;
-    padding: 0px var(--gutter) 32px var(--gutter);
-  }
-
-  a.title {
-    all: unset;
-    cursor: pointer;
   }
 </style>

@@ -9,29 +9,25 @@
   export let transactionsSumPrice: Price;
   export let transactionsPagination: PaginationApiPayload;
   export let query: string;
-  export let accountsDict: Record<UUID, Account>;
+  export let accounts: Account[];
   export let onClickShowMore: () => void;
 
-  $: sectionText = buildSectionText(
-    transactions.length,
-    transactionsPagination?.itemCt ?? 0,
-    query
-  );
+  $: sectionText = buildSectionText(transactionsPagination.totalItemCt, query);
 
-  const buildSectionText = (
-    ct: number,
-    totalCt: number,
-    query: string
-  ): string => {
-    const prettyCt = prettyNumber(ct);
-    const prettyTotalCt = prettyNumber(totalCt);
+  $: accountsDict = ((_accounts: Account[]): Record<UUID, Account> => {
+    const dict: Record<UUID, Account> = {};
+    for (const a of _accounts) {
+      dict[a._id] = a;
+    }
+    return dict;
+  })(accounts);
 
-    if (query.length > 0 && ct < totalCt) {
-      return `${prettyCt} of ${prettyTotalCt} transactions (matching "${query}")`;
-    } else if (query.length > 0 && ct === totalCt) {
-      return `${prettyCt} transactions (matching "${query}")`;
+  const buildSectionText = (totalCt: number, query: string): string => {
+    const prettyCt = prettyNumber(totalCt);
+    if (query.length > 0) {
+      return `${prettyCt} transactions matching "${query}"`;
     } else {
-      return `${prettyTotalCt} transactions`;
+      return `${prettyCt} transactions`;
     }
   };
 
@@ -61,11 +57,11 @@
     <div class="footer-container">
       {#if transactions.length > 0 && isLoading}
         <div class="faded">Loading more transactions</div>
-      {:else if transactionsPagination.page < transactionsPagination.pagesCt}
+      {:else if transactionsPagination.page < transactionsPagination.totalPageCt}
         <button on:click={() => onClickShowMore()}>
           Load more transactions
         </button>
-      {:else if transactionsPagination.page === transactionsPagination.pagesCt}
+      {:else if transactionsPagination.page === transactionsPagination.totalPageCt}
         <div class="faded">No more transactions</div>
       {/if}
     </div>
@@ -74,10 +70,15 @@
 
 <style>
   .grid.transactions {
-    grid-template-areas: "gutter-l date account payee description type price gutter-r";
-    grid-template-columns: var(--gutter) auto auto auto 1fr auto auto var(
-        --gutter
-      );
+    grid-template-columns:
+      [gutter-l] var(--gutter)
+      [date] minmax(80px, auto)
+      [account] minmax(80px, auto)
+      [payee] minmax(120px, 1fr)
+      [description] auto
+      [type] auto
+      [price] minmax(100px, auto)
+      [gutter-r] var(--gutter);
   }
 
   .cell.transaction-section.title {

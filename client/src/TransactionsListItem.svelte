@@ -6,6 +6,8 @@
   export let transaction: Transaction;
   export let account: Account | undefined;
 
+  $: isNegative = transaction.price.amount < 0;
+  $: prettyPrice = prettyCurrency(transaction.price);
   $: isRecent = msAgo(transaction._createdAt) < 1000 * 60 * 60;
 </script>
 
@@ -13,13 +15,35 @@
   <div class="cell date">
     {prettyDate(transaction.date)}
   </div>
-  <div class="cell account">{account?.display ?? ""}</div>
-  <div class="cell payee">{transaction.payee}</div>
-  <div class="cell description">{transaction.description}</div>
-  <div class="cell type">{transaction.type}</div>
-  <div class={`cell price ${transaction.price.amount < 0 ? "neg" : ""}`}>
-    {prettyCurrency(transaction.price)}
+
+  {#if account.display && account.display.length > 0}
+    <div class="cell account">
+      {account.display}
+    </div>
+  {/if}
+
+  {#if transaction.payee && transaction.payee.length > 0}
+    <div class="cell payee">
+      {transaction.payee}
+    </div>
+  {/if}
+
+  {#if transaction.description && transaction.description.length > 0}
+    <div class="cell description">
+      {transaction.description}
+    </div>
+  {/if}
+
+  {#if transaction.type && transaction.type.length > 0}
+    <div class="cell type">
+      {transaction.type}
+    </div>
+  {/if}
+
+  <div class={`cell price ${isNegative ? "neg" : ""}`}>
+    {prettyPrice}
   </div>
+
   {#if isRecent}
     <div class="cell gutter-r">
       <Icon kind="dot" size="small" />

@@ -53,12 +53,16 @@
 
 <style>
   .grid.accounts {
-    grid-template-areas: "gutter-l name bank price gutter-r";
-    grid-template-columns: var(--gutter) 1fr 2fr auto var(--gutter);
+    grid-template-columns:
+      [gutter-l] var(--gutter)
+      [name] 160px
+      [bank] 1fr
+      [price] minmax(100px, auto)
+      [gutter-r] var(--gutter);
   }
 
   .cell.account-section.title {
-    grid-column: name / bank;
+    grid-column: name / price;
   }
 
   .cell.account-section.action {

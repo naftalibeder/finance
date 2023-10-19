@@ -392,8 +392,8 @@ const deleteAccount = async (id: UUID) => {
 const getTransactions = async (
   query: string,
   page: number
-): Promise<GetTransactionsApiPayload["data"]> => {
-  const filtered = await new Promise<Transaction[]>((res, rej) => {
+): Promise<GetTransactionsApiPayload> => {
+  const allFiltered = await new Promise<Transaction[]>((res, rej) => {
     const wheres: string[] = [];
     const args: Record<string, any> = {};
 
@@ -460,22 +460,31 @@ const getTransactions = async (
     );
   });
 
-  const pageSize = 1000;
+  const pageItemMaxCt = 1000;
+  const totalItemCt = allFiltered.length;
+  const totalPageCt = Math.ceil(allFiltered.length / pageItemMaxCt);
 
-  let payload: GetTransactionsApiPayload["data"] = {
-    result: filtered.slice((page - 1) * pageSize, pageSize),
-    resultSum: transactionsSumPrice(filtered),
-    totalSum: { amount: totals.sumPrice, currency: "USD" },
-    totalMax: { amount: totals.maxPrice, currency: "USD" },
-    totalEarliest: totals.earliestDate,
+  const startIndex = (page - 1) * pageItemMaxCt;
+  const endIndex = startIndex + pageItemMaxCt;
+  const items = allFiltered.slice(startIndex, endIndex);
+
+  const pageItemCt = items.length;
+
+  let payload: GetTransactionsApiPayload = {
+    data: {
+      items,
+      itemsSum: transactionsSumPrice(items),
+      totalSum: { amount: totals.sumPrice, currency: "USD" },
+      totalMax: { amount: totals.maxPrice, currency: "USD" },
+    },
     pagination: {
       page,
-      pageSize,
-      pagesCt: Math.ceil(filtered.length / pageSize),
-      itemCt: filtered.length,
+      pageItemCt,
+      pageItemMaxCt,
+      totalItemCt,
+      totalPageCt,
     },
   };
-
   return payload;
 };
 

@@ -12,6 +12,7 @@
     _date.setMilliseconds(0);
     return _date.toISOString();
   })(new Date());
+
   $: earliestDate = ((_date) => {
     _date.setDate(_date.getDate() - 30);
     _date.setHours(0);
@@ -92,9 +93,11 @@
     {#each transactionDateGroups as item, i}
       <TimeChartBar {item} {maxPrice} faded={isHover} />
     {/each}
+
     {#if isHover}
       <TimeChartBar item={hoverGroup} {maxPrice} faded={false} />
     {/if}
+
     <line
       class="axis"
       x1="0%"
@@ -106,6 +109,7 @@
       pointer-events="none"
     />
   </svg>
+
   {#if transactionDateGroups.length > 0}
     <svg width="100%" height="20" overflow="visible">
       {#if isHover}
@@ -117,10 +121,9 @@
 
 <style>
   .container {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    padding: 0px var(--gutter);
+    display: grid;
+    height: 40px;
+    padding: 0px calc(var(--gutter) + 8px);
   }
 
   line.axis {
