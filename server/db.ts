@@ -400,11 +400,11 @@ const getTransactions = async (
     const parts = query.split(" ");
     parts.forEach((part, i) => {
       if (part.startsWith("=")) {
-        wheres.push("price_amount = $priceAmount");
-        args.$priceAmount = part.replace("=", "");
+        wheres.push(`price_amount = $priceAmount${i}`);
+        args[`$priceAmount${i}`] = part.replace("=", "");
       } else {
-        wheres.push("instr(lower(payee), lower($query)) > 0");
-        args.$query = part;
+        wheres.push(`instr(lower(payee), lower($query${i})) > 0`);
+        args[`$query${i}`] = part;
       }
     });
 
