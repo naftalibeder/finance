@@ -113,7 +113,7 @@
   </svg>
 
   {#if transactionDateGroups.length > 0}
-    <svg width="100%" height="20" overflow="visible">
+    <svg width="100%" height="40" overflow="visible">
       {#if isHover}
         <TimeChartCallout item={hoverItem} />
       {/if}
@@ -126,6 +126,7 @@
     display: grid;
     height: 40px;
     padding: 0px calc(var(--gutter) + 8px);
+    z-index: 0;
   }
 
   line.axis {
