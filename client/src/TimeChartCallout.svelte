@@ -32,11 +32,12 @@
   $: posX = item.ratioAlongRange * 100;
 
   $: dateDisp = prettyDate(item.date);
-  $: posSumDisp = `${prettyCurrency({ amount: posSum, currency: "USD" })}`;
-  $: negSumDisp = `${prettyCurrency({ amount: -negSum, currency: "USD" })}`;
+  $: posSumDisp = `+${prettyCurrency({ amount: posSum, currency: "USD" })}`;
+  $: negSumDisp = `${prettyCurrency({ amount: negSum, currency: "USD" })}`;
 </script>
 
 <svg x={`${posX}%`} overflow="visible">
+  <rect /> // TODO: add w, h, bg
   <text>
     <tspan
       y="10"
@@ -50,10 +51,10 @@
 
   <text y={36} text-anchor="middle" dominant-baseline="hanging">
     <tspan class="default">
-      +{posSumDisp}
+      {posSumDisp}
     </tspan>
     <tspan class="red">
-      -{negSumDisp}
+      {negSumDisp}
     </tspan>
   </text>
 </svg>

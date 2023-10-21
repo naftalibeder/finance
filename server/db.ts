@@ -394,28 +394,91 @@ const getTransactions = async (
   page: number
 ): Promise<GetTransactionsApiPayload> => {
   const allFiltered = await new Promise<Transaction[]>((res, rej) => {
-    const wheres: string[] = [];
+    const ands: string[] = [];
     const args: Record<string, any> = {};
 
-    const parts = query.split(" ");
-    parts.forEach((part, i) => {
-      if (part.startsWith("=")) {
-        wheres.push(`price_amount = $priceAmount${i}`);
-        args[`$priceAmount${i}`] = part.replace("=", "");
-      } else {
-        wheres.push(`instr(lower(payee), lower($query${i})) > 0`);
-        args[`$query${i}`] = part;
+    const parts = query.split(" ").map((o) => o.trim());
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      const argKey = (s: string) => `$${s}${i}`;
+
+      const priceRegex = /^(>|>=|<|<=|=|~)(-{0,1}(\d)*(\.\d*)?)$/;
+      const priceMatches = priceRegex.exec(part);
+      if (priceMatches) {
+        const [, op, amountStr] = priceMatches;
+
+        if (op === "") {
+          continue;
+        }
+
+        const amount = Math.abs(parseFloat(amountStr));
+        if (isNaN(amount)) {
+          continue;
+        }
+
+        const key = argKey("amount");
+
+        if (op === "=") {
+          ands.push(`abs(price_amount) = ${key}`);
+          args[key] = amount;
+        } else if (op === "~") {
+          const keyMin = argKey("amountMin");
+          const keyMax = argKey("amountMax");
+          ands.push(`abs(price_amount) > ${keyMin}`);
+          ands.push(`abs(price_amount) < ${keyMax}`);
+          const delta = amount * 0.2;
+          args[keyMin] = amount - delta;
+          args[keyMax] = amount + delta;
+        } else if (op === ">") {
+          const key = argKey("amount");
+          ands.push(`abs(price_amount) > ${key}`);
+          args[key] = amount;
+        } else if (op === ">=") {
+          const key = argKey("amount");
+          ands.push(`abs(price_amount) >= ${key}`);
+          args[key] = amount;
+        } else if (op === "<") {
+          const key = argKey("amount");
+          ands.push(`abs(price_amount) < ${key}`);
+          args[key] = amount;
+        } else if (op === "<=") {
+          const key = argKey("amount");
+          ands.push(`abs(price_amount) <= ${key}`);
+          args[key] = amount;
+        }
+
+        continue;
       }
-    });
+
+      if (part.length > 0) {
+        const key = argKey("query");
+
+        const ors: string[] = [];
+        const colNames = [
+          "payee",
+          "price_amount",
+          "price_currency",
+          "type",
+          "description",
+        ];
+        for (const colName of colNames) {
+          ors.push(`instr(lower(${colName}), lower(${key})) > 0`);
+        }
+        ands.push(`(${ors.join(" or ")})`);
+        args[key] = part;
+
+        continue;
+      }
+    }
 
     let sql = "select * from transactions";
-    if (wheres.length > 0) {
-      sql += " where " + wheres.join(" and ");
+    if (ands.length > 0) {
+      sql += " where " + ands.join(" and ");
     }
     sql += " order by date desc";
 
-    console.log("sql:\n", sql);
-    console.log("args:\n", JSON.stringify(args));
+    console.log("Sql:\n", sql);
+    console.log("Args:\n", JSON.stringify(args));
 
     db.all<Record<string, any>[]>(sql, args, (e, rows) => {
       if (e) {

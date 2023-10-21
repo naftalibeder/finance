@@ -16,7 +16,7 @@
     {prettyDate(transaction.date)}
   </div>
 
-  {#if account.display && account.display.length > 0}
+  {#if account?.display && account.display.length > 0}
     <div class="cell account">
       {account.display}
     </div>

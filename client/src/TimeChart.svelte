@@ -14,7 +14,7 @@
   })(new Date());
 
   $: earliestDate = ((_date) => {
-    _date.setDate(_date.getDate() - 30);
+    _date.setDate(_date.getDate() - 60);
     _date.setHours(0);
     _date.setMinutes(0);
     _date.setSeconds(0);
@@ -43,8 +43,8 @@
   })(transactions);
 
   let barHoverIndex: number | undefined;
-  $: hoverGroup = transactionDateGroups[barHoverIndex] ?? undefined;
-  $: isHover = barHoverIndex !== undefined;
+  $: hoverItem = transactionDateGroups[barHoverIndex];
+  $: isHover = hoverItem !== undefined;
 
   const onHoverMove = (evt: MouseEvent) => {
     const target = evt.target as HTMLElement;
@@ -90,12 +90,14 @@
     on:focus={() => {}}
     on:blur={() => {}}
   >
-    {#each transactionDateGroups as item, i}
-      <TimeChartBar {item} {maxPrice} faded={isHover} />
+    {#each transactionDateGroups as item}
+      {#if item}
+        <TimeChartBar {item} {maxPrice} faded={isHover} />
+      {/if}
     {/each}
 
-    {#if isHover}
-      <TimeChartBar item={hoverGroup} {maxPrice} faded={false} />
+    {#if hoverItem}
+      <TimeChartBar item={hoverItem} {maxPrice} faded={false} />
     {/if}
 
     <line
@@ -113,7 +115,7 @@
   {#if transactionDateGroups.length > 0}
     <svg width="100%" height="20" overflow="visible">
       {#if isHover}
-        <TimeChartCallout item={hoverGroup} />
+        <TimeChartCallout item={hoverItem} />
       {/if}
     </svg>
   {/if}
