@@ -29,14 +29,14 @@ class ChaseBankExtractor implements Extractor {
     switch (accountKind) {
       case "credit":
         return {
-          date: 0,
-          postDate: 1,
-          payee: 2,
+          date: 1,
+          postDate: 2,
+          payee: 3,
           price: undefined,
           priceWithdrawal: undefined,
-          priceDeposit: 5,
-          type: 4,
-          description: undefined,
+          priceDeposit: 6,
+          type: 5,
+          description: 4,
         };
     }
   };
