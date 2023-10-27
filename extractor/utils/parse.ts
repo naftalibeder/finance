@@ -12,8 +12,13 @@ export const parseTransactions = async (
   transactionData: string,
   account: Account,
   extractor: Extractor
-): Promise<{ transactions: Transaction[]; skipCt: number }> => {
+): Promise<{
+  transactions: Transaction[];
+  lineCt: number;
+  skipCt: number;
+}> => {
   let transactions: Transaction[] = [];
+  let lineCt = 0;
   let skipCt = 0;
 
   const columnMap = extractor.getColumnMap(account.kind);
@@ -30,11 +35,11 @@ export const parseTransactions = async (
     parser.on("readable", () => {
       let row: string[];
       while ((row = parser.read()) !== null) {
+        lineCt += 1;
         try {
           const t = buildTransaction(row, account, columnMap);
           if (!t) {
-            skipCt += 1;
-            continue;
+            throw "Transaction could not be parsed from row";
           }
           ts.push(t);
         } catch (e) {
@@ -53,7 +58,7 @@ export const parseTransactions = async (
     parser.end();
   });
 
-  return { transactions, skipCt };
+  return { transactions, lineCt, skipCt };
 };
 
 const buildTransaction = (

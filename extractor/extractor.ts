@@ -181,6 +181,7 @@ export const getAccountData = async (
       const prettyRange = `[${prettyDate(start)}, ${prettyDate(end)}]`;
 
       let transactionsChunk: Transaction[] = [];
+      let lineCt = 0;
       let skipCt = 0;
 
       try {
@@ -205,7 +206,11 @@ export const getAccountData = async (
         onEvent({ message: "Parsing transactions" });
         const res = await parseTransactions(data, account, extractor);
         transactionsChunk = res.transactions;
+        lineCt = res.lineCt;
         skipCt = res.skipCt;
+        if (transactionsChunk.length === 0) {
+          throw `No transactions found in ${lineCt} total lines`;
+        }
       } catch (e) {
         onEvent({
           message: `Error getting transaction data for range ${prettyRange}; stopping loop; error: ${e}`,
@@ -213,20 +218,17 @@ export const getAccountData = async (
         break;
       }
 
-      if (transactionsChunk.length === 0) {
-        onEvent({
-          message: `No new transactions for range ${prettyRange}; stopping loop`,
-        });
-        break;
-      }
-
       onEvent({
-        message: `Found ${transactionsChunk.length} transactions for range ${prettyRange}; skipped ${skipCt} non-transaction rows`,
+        message: `Found ${transactionsChunk.length} transactions for range ${prettyRange} in ${lineCt} total lines, skipping ${skipCt} lines`,
         transactions: transactionsChunk,
       });
       transactions = [...transactions, ...transactionsChunk];
 
       end = start;
+    }
+
+    if (transactions.length === 0) {
+      throw "No transactions found";
     }
 
     onEvent({ message: `Found ${transactions.length} total transactions` });
