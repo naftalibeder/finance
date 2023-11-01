@@ -62,7 +62,7 @@ describe("Identify page kinds", () => {
           `Found incorrect page kind of '${pageKind}'; expected '${kind}'`
         );
       }
-    }).timeout(0);
+    });
   }
 });
 
