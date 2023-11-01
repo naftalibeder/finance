@@ -119,7 +119,6 @@ const setUp = async (): Promise<[Browser, BrowserContext]> => {
   const launchOptions: LaunchOptions = {
     headless: HEADLESS,
     timeout: 0,
-    executablePath: process.env.BROWSER_EXECUTABLE,
   };
   const browser = await firefox.launch(launchOptions);
 

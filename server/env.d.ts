@@ -8,7 +8,6 @@ declare global {
       SERVER_PORT: string;
       EXTRACTOR_URL_LOCALHOST: string;
       EXTRACTOR_PORT: string;
-      BROWSER_EXECUTABLE: string;
       USER_PASSWORD: string;
     }
   }

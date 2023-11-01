@@ -16,12 +16,7 @@ npm run setup
 
 ```sh
 npm install
-cd server && npx playwright install firefox --with-deps
 ```
-
-3. Update `.env` with a value for `BROWSER_EXECUTABLE` output by the previous command[^1], and change any other variables as needed.
-
-[^1] This is finicky due to a bug in Playwright related to Firefox. You'll need to verify it's pointing to an actual executable.
 
 ### Running
 
