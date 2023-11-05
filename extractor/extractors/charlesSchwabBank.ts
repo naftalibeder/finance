@@ -28,27 +28,26 @@ class CharlesSchwabBankExtractor implements Extractor {
   ): ExtractorColumnMap | undefined => {
     switch (accountKind) {
       case "checking":
-        return {
-          date: 0,
-          postDate: undefined,
-          payee: 3,
-          price: undefined,
-          priceWithdrawal: 4,
-          priceDeposit: 5,
-          type: 1,
-          description: undefined,
-        };
+        return [
+          "date", // Date
+          "type", // Type
+          "memo", // Check #
+          "description", // Description
+          "priceWithdrawal", // Withdrawal (-)
+          "priceDeposit", // Deposit (+)
+          undefined, // RunningBalance
+        ];
       case "brokerage":
-        return {
-          date: 0,
-          postDate: undefined,
-          payee: 2,
-          price: 7,
-          priceWithdrawal: undefined,
-          priceDeposit: undefined,
-          type: 1,
-          description: 3,
-        };
+        return [
+          "date", // Date
+          "type", // Action
+          "payee", // Symbol
+          "description", // Description
+          "memo", // Quantity
+          "price", // Price
+          undefined, // Fees & Comm
+          "price", // Amount
+        ];
     }
   };
 

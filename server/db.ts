@@ -79,6 +79,7 @@ const migrate = async () => {
         price_currency text,
         type text,
         description text,
+        memo text,
         foreign key(account_id) references accounts(id)
         unique (account_id, post_date, price_amount, price_currency) on conflict fail
       )
@@ -460,6 +461,7 @@ const getTransactions = async (
           "price_currency",
           "type",
           "description",
+          "memo",
         ];
         for (const colName of colNames) {
           ors.push(`instr(lower(${colName}), lower(${key})) > 0`);
@@ -572,7 +574,8 @@ const addTransactions = async (
           $price_amount,
           $price_currency,
           $type,
-          $description
+          $description,
+          $memo
         )
         `,
           {
@@ -587,6 +590,7 @@ const addTransactions = async (
             $price_currency: t.price.currency,
             $type: t.type,
             $description: t.description,
+            $memo: t.memo,
           },
           (e) => {
             if (e) {
@@ -1048,6 +1052,7 @@ const transactionFromRow = (row: Record<string, any>): Transaction => {
     },
     type: row.type,
     description: row.description,
+    memo: row.memo,
   };
   return transaction;
 };

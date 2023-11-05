@@ -5,7 +5,7 @@ import { toDate, toPrice } from "./index.js";
 import {
   Extractor,
   ExtractorColumnMap,
-  ExtractorColumnMapKey,
+  ExtractorColumnKind,
 } from "../types.js";
 
 export const parseTransactions = async (
@@ -16,10 +16,12 @@ export const parseTransactions = async (
   transactions: Transaction[];
   lineCt: number;
   skipCt: number;
+  errors: string[];
 }> => {
   let transactions: Transaction[] = [];
   let lineCt = 0;
   let skipCt = 0;
+  let errors: string[] = [];
 
   const columnMap = extractor.getColumnMap(account.kind);
   if (!columnMap) {
@@ -38,11 +40,13 @@ export const parseTransactions = async (
         lineCt += 1;
         try {
           const t = buildTransaction(row, account, columnMap);
-          if (!t) {
-            throw "Transaction could not be parsed from row";
-          }
           ts.push(t);
         } catch (e) {
+          errors.push(
+            `Transaction could not be parsed from row: ${e}
+            ${row}
+            ${columnMap}`
+          );
           skipCt += 1;
           continue;
         }
@@ -58,34 +62,38 @@ export const parseTransactions = async (
     parser.end();
   });
 
-  return { transactions, lineCt, skipCt };
+  return { transactions, lineCt, skipCt, errors };
 };
 
 const buildTransaction = (
   row: string[],
   account: Account,
   columnMap: ExtractorColumnMap
-): Transaction | undefined => {
-  const val = (i?: number) => (i !== undefined ? row[i] ?? "" : "");
-
-  const rowNorm: Record<ExtractorColumnMapKey, string> = {
-    date: val(columnMap.date),
-    postDate: val(columnMap.postDate),
-    payee: val(columnMap.payee),
-    price: val(columnMap.price),
-    priceWithdrawal: val(columnMap.priceWithdrawal),
-    priceDeposit: val(columnMap.priceDeposit),
-    type: val(columnMap.type),
-    description: val(columnMap.description),
+): Transaction => {
+  const dict: Record<ExtractorColumnKind, string> = {
+    date: "",
+    postDate: "",
+    payee: "",
+    price: "",
+    priceWithdrawal: "",
+    priceDeposit: "",
+    type: "",
+    description: "",
+    memo: "",
   };
+  columnMap.forEach((kind, i) => {
+    if (kind) {
+      dict[kind] = row[i] ?? "";
+    }
+  });
 
-  const date = toDate(rowNorm.date);
+  const date = toDate(dict.date);
   if (!date) {
-    return undefined;
+    throw `Date could not be parsed from '${dict.date}'`;
   }
   const dateStr = date.toISOString();
 
-  let postDate = toDate(rowNorm.postDate);
+  let postDate = toDate(dict.postDate);
   if (!postDate) {
     postDate = date;
   }
@@ -93,17 +101,17 @@ const buildTransaction = (
 
   let priceStr = "";
   let multiplier = 1;
-  if (rowNorm.price.length > 0) {
-    priceStr = rowNorm.price;
-  } else if (rowNorm.priceWithdrawal.length > 0) {
-    priceStr = rowNorm.priceWithdrawal;
+  if (dict.price.length > 0) {
+    priceStr = dict.price;
+  } else if (dict.priceWithdrawal.length > 0) {
+    priceStr = dict.priceWithdrawal;
     multiplier = -1;
-  } else if (rowNorm.priceDeposit.length > 0) {
-    priceStr = rowNorm.priceDeposit;
+  } else if (dict.priceDeposit.length > 0) {
+    priceStr = dict.priceDeposit;
   }
   const price = toPrice(priceStr);
   if (!price) {
-    return undefined;
+    throw `Price could not be parsed from '${priceStr}'`;
   }
   price.amount = price.amount * multiplier;
 
@@ -114,10 +122,11 @@ const buildTransaction = (
     date: dateStr,
     postDate: postDateStr,
     accountId: account._id,
-    payee: rowNorm.payee,
+    payee: dict.payee,
     price,
-    type: rowNorm.type,
-    description: rowNorm.description,
+    type: dict.type,
+    description: dict.description,
+    memo: dict.memo,
   };
   return transaction;
 };

@@ -26,15 +26,12 @@ export interface ExtractorRangeFuncArgs extends ExtractorFuncArgs {
   range: ExtractorDateRange;
 }
 
-export type ExtractorColumnMapKey =
+export type ExtractorColumnKind =
   | keyof Omit<Transaction, "_id" | "_createdAt" | "_updatedAt" | "accountId">
   | "priceWithdrawal"
   | "priceDeposit";
 
-export type ExtractorColumnMap = Record<
-  ExtractorColumnMapKey,
-  number | undefined
->;
+export type ExtractorColumnMap = (ExtractorColumnKind | undefined)[];
 
 export interface Extractor {
   /** Whether the extractor is included in a request for all extractors. */

@@ -8,7 +8,7 @@
 
   $: isNegative = transaction.price.amount < 0;
   $: prettyPrice = prettyCurrency(transaction.price);
-  $: isRecent = msAgo(transaction._createdAt) < 1000 * 60 * 60;
+  $: isRecent = msAgo(transaction._createdAt) < 1000 * 60 * 60 * 12;
 </script>
 
 <div class={"grid contents"}>

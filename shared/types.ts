@@ -68,6 +68,7 @@ export type Transaction = {
   price: Price;
   type: string;
   description: string;
+  memo: string;
 };
 
 /** An amount of money in a specific currency. */

@@ -28,16 +28,15 @@ class ChaseBankExtractor implements Extractor {
   ): ExtractorColumnMap | undefined => {
     switch (accountKind) {
       case "credit":
-        return {
-          date: 1,
-          postDate: 2,
-          payee: 3,
-          price: undefined,
-          priceWithdrawal: undefined,
-          priceDeposit: 6,
-          type: 5,
-          description: 4,
-        };
+        return [
+          "date", // Transaction Date
+          "postDate", // Post Date
+          "payee", // Description
+          "description", // Category
+          "type", // Type
+          "priceDeposit", // Amount
+          "memo", // Memo
+        ];
     }
   };
 

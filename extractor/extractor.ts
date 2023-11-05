@@ -208,7 +208,9 @@ export const getAccountData = async (
         lineCt = res.lineCt;
         skipCt = res.skipCt;
         if (transactionsChunk.length === 0) {
-          throw `No transactions found in ${lineCt} total lines`;
+          throw `No transactions found in ${lineCt} total lines\n${res.errors.join(
+            "\n"
+          )}`;
         }
       } catch (e) {
         onEvent({

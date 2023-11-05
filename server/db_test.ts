@@ -57,6 +57,7 @@ describe("database", () => {
             price: { amount: i * 10, currency: "USD" },
             type: "Sale",
             description: "",
+            memo: "",
           };
         })
     );
@@ -77,6 +78,7 @@ describe("database", () => {
         price: { amount: 20, currency: "USD" },
         type: "Sale",
         description: "",
+        memo: "",
       },
     ]);
     if (addCt2 !== 0) {
