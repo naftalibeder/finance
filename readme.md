@@ -36,6 +36,14 @@ cd server && npm run start
 cd extractor && npm run start
 ```
 
+### Triggering extractions
+
+To initiate an extraction of all accounts with an HTTP request (e.g. from a cron job):
+
+```sh
+curl -X POST <SERVER_URL>/extractAll
+```
+
 ### Testing
 
 #### Executing tests
