@@ -182,6 +182,8 @@ export const getAccountData = async (
       let transactionsChunk: Transaction[] = [];
       let lineCt = 0;
       let skipCt = 0;
+      let chunkHash = "";
+      let chunkHashPrev = "";
 
       try {
         // Reloading prevents weird file download misbehavior on some sites.
@@ -207,14 +209,17 @@ export const getAccountData = async (
         transactionsChunk = res.transactions;
         lineCt = res.lineCt;
         skipCt = res.skipCt;
+        chunkHash = res.hash;
+        const errorsStr = res.errors.join("\n");
         if (transactionsChunk.length === 0) {
-          throw `No transactions found in ${lineCt} total lines\n${res.errors.join(
-            "\n"
-          )}`;
+          throw `No transactions found in ${lineCt} total lines\n${errorsStr}`;
+        }
+        if (chunkHash === chunkHashPrev) {
+          throw `Current transactions hash matched previous hash\n${errorsStr}`;
         }
       } catch (e) {
         onEvent({
-          message: `Error getting transaction data for range ${prettyRange}; stopping loop; error: ${e}`,
+          message: `Failed to get transaction data for range ${prettyRange}, so stopping loop: ${e}`,
         });
         break;
       }

@@ -8,16 +8,22 @@ import {
   ExtractorColumnKind,
 } from "../types.js";
 
+type ParseTransactionsChunk = {
+  transactions: Transaction[];
+  /** The total number of rows found in the data. */
+  lineCt: number;
+  /** The number of non-transaction rows that were skipped. */
+  skipCt: number;
+  errors: string[];
+  /** An identifier for comparing chunks for equality. */
+  hash: string;
+};
+
 export const parseTransactions = async (
   transactionData: string,
   account: Account,
   extractor: Extractor
-): Promise<{
-  transactions: Transaction[];
-  lineCt: number;
-  skipCt: number;
-  errors: string[];
-}> => {
+): Promise<ParseTransactionsChunk> => {
   let transactions: Transaction[] = [];
   let lineCt = 0;
   let skipCt = 0;
@@ -62,7 +68,20 @@ export const parseTransactions = async (
     parser.end();
   });
 
-  return { transactions, lineCt, skipCt, errors };
+  const transactionsSorted = transactions.sort(
+    (a, b) => a.price.amount - b.price.amount
+  );
+  const hash = transactionsSorted
+    .map((o) => `${o.date}-${o.price.amount}`)
+    .join("-");
+
+  return {
+    transactions,
+    lineCt,
+    skipCt,
+    errors,
+    hash,
+  };
 };
 
 const buildTransaction = (
