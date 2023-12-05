@@ -30,11 +30,12 @@ class CharlesSchwabBankExtractor implements Extractor {
       case "checking":
         return [
           "date", // Date
+          "description", // Status
           "type", // Type
-          "memo", // Check #
-          "description", // Description
-          "priceWithdrawal", // Withdrawal (-)
-          "priceDeposit", // Deposit (+)
+          "memo", // CheckNumber
+          "payee", // Description
+          "priceWithdrawal", // Withdrawal
+          "priceDeposit", // Deposit
           undefined, // RunningBalance
         ];
       case "brokerage":
@@ -162,9 +163,6 @@ class CharlesSchwabBankExtractor implements Extractor {
     await loc?.click();
     await page.waitForTimeout(1000);
 
-    // TODO: This works with `page.locator` but fails with `findFirst`.
-    // Can we do a more custom filter, like:
-    // page.locator(...).filter(node => node.replace('-', '') === ${account.number})
     loc = page
       .locator(".sdps-account-selector__list-item")
       .filter({ hasText: account.display });
@@ -173,19 +171,22 @@ class CharlesSchwabBankExtractor implements Extractor {
 
     // Set date range.
 
-    loc = await findFirst(page, "#statements-daterange1");
-    await loc?.selectOption({ value: "Custom" });
+    loc = await findFirst(page, "#date-range-select-id");
+    await loc?.selectOption({ value: "SpecifyDateRange" });
     await page.waitForTimeout(1000);
 
-    loc = await findFirst(page, "#calendar-FromDate");
+    loc = page.locator("#datepicker-input");
+    const locs = await loc.all();
+
+    loc = locs[0];
     await loc?.fill(range.start.toLocaleDateString("en-US"));
     await loc?.blur();
 
-    loc = await findFirst(page, "#calendar-ToDate");
+    loc = locs[1];
     await loc?.fill(range.end.toLocaleDateString("en-US"));
     await loc?.blur();
 
-    loc = await findFirst(page, "#btnSearch");
+    loc = await findFirst(page, ".search-btn");
     await loc?.click();
     await page.waitForTimeout(2000);
 
@@ -200,22 +201,13 @@ class CharlesSchwabBankExtractor implements Extractor {
       throw "Invalid date range";
     }
 
-    // Open export popup.
+    // Open and accept export overlay.
 
-    const popupPromise = page.waitForEvent("popup");
-
-    loc = await findFirst(page, "#bttnExport button");
+    loc = await findFirst(page, "[aria-label='Export']");
     await loc?.click();
 
-    const popupPage = await popupPromise;
-    await popupPage.waitForLoadState("domcontentloaded");
-
-    loc = popupPage.locator(".button-primary");
-    try {
-      await loc?.click();
-    } catch (e) {
-      // Silence 'target closed' error.
-    }
+    loc = await findFirst(page, "[variation='primary']");
+    await loc?.click();
 
     // Get downloaded file.
 
